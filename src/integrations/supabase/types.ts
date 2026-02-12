@@ -204,29 +204,38 @@ export type Database = {
       services: {
         Row: {
           base_price: number
+          category: string
+          commission_eligible: boolean
           created_at: string
           description: string | null
           id: string
           is_active: boolean
           name: string
+          pricing_model: string
           updated_at: string
         }
         Insert: {
           base_price?: number
+          category?: string
+          commission_eligible?: boolean
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          pricing_model?: string
           updated_at?: string
         }
         Update: {
           base_price?: number
+          category?: string
+          commission_eligible?: boolean
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          pricing_model?: string
           updated_at?: string
         }
         Relationships: []
