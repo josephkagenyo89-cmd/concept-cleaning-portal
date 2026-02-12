@@ -114,11 +114,20 @@ export default function AgentBooking() {
               <Select onValueChange={handleServiceChange}>
                 <SelectTrigger><SelectValue placeholder="Select a service" /></SelectTrigger>
                 <SelectContent>
-                  {services.map(s => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} — Ksh {Number(s.base_price).toLocaleString()}
-                    </SelectItem>
-                  ))}
+                  {['Cleaning Services', 'Upholstery & Carpet Cleaning', 'Car Detailing'].map(cat => {
+                    const catServices = services.filter(s => s.category === cat);
+                    if (catServices.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{cat}</div>
+                        {catServices.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}{Number(s.base_price) > 0 ? ` — Ksh ${Number(s.base_price).toLocaleString()}` : ''}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
