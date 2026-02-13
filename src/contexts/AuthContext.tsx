@@ -65,40 +65,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Listener for ONGOING auth changes (does NOT control loading)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(async () => {
-            await Promise.all([
+          setTimeout(() => {
+            if (!isMounted) return;
+            Promise.all([
               fetchProfile(session.user.id),
               fetchRoles(session.user.id),
-            ]);
-            setLoading(false);
+            ]).then(() => {
+              if (isMounted) setLoading(false);
+            });
           }, 0);
         } else {
           setProfile(null);
           setRoles([]);
-          setLoading(false);
+          if (isMounted) setLoading(false);
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        Promise.all([
-          fetchProfile(session.user.id),
-          fetchRoles(session.user.id),
-        ]).then(() => setLoading(false));
-      } else {
-        setLoading(false);
+    // INITIAL load (controls loading)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await Promise.all([
+            fetchProfile(session.user.id),
+            fetchRoles(session.user.id),
+          ]);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
