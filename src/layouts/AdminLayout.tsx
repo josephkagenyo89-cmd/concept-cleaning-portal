@@ -28,7 +28,7 @@ export default function AdminLayout() {
       <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-bold">CleanBook Admin</span>
+          <span className="font-bold">Concept Admin</span>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -42,7 +42,7 @@ export default function AdminLayout() {
       )}>
         <div className="flex items-center gap-2 border-b px-4 py-4 hidden md:flex">
           <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-bold">CleanBook Admin</span>
+          <span className="font-bold">Concept Admin</span>
         </div>
         <nav className="flex flex-col gap-1 p-3 mt-14 md:mt-0">
           {navItems.map(({ to, icon: Icon, label, end }) => (

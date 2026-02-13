@@ -52,7 +52,7 @@ export default function Signup() {
             <Sparkles className="h-6 w-6 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl">Agent Sign Up</CardTitle>
-          <CardDescription>Join CleanBook Nairobi as an agent</CardDescription>
+          <CardDescription>Join Concept Cleaning Services as an agent</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-3">

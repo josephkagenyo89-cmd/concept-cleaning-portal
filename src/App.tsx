@@ -21,6 +21,7 @@ import AdminPayouts from "@/pages/admin/AdminPayouts";
 import AdminServices from "@/pages/admin/AdminServices";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <InstallPrompt />
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />

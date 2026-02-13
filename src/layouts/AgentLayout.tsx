@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import AgentBottomNav from '@/components/agent/AgentBottomNav';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 export default function AgentLayout() {
   return (
@@ -7,6 +8,7 @@ export default function AgentLayout() {
       <div className="mx-auto max-w-lg px-4 py-6">
         <Outlet />
       </div>
+      <WhatsAppButton />
       <AgentBottomNav />
     </div>
   );
