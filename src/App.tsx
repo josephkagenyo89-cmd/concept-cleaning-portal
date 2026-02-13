@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,8 +31,18 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background transition-opacity duration-500">
+        <div className="flex flex-col items-center gap-6 animate-fade-in">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
+            <Sparkles className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Concept Cleaning Services</h1>
+          <div className="h-10 w-10 rounded-full border-4 border-muted border-t-primary animate-spin" />
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium text-foreground">Preparing your workspace...</p>
+            <p className="text-xs text-muted-foreground">Please wait while we load your dashboard.</p>
+          </div>
+        </div>
       </div>
     );
   }
