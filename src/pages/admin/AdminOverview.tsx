@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ProfileHeader from '@/components/ProfileHeader';
 import { BookOpen, Users, CreditCard, TrendingUp, Clock, UserCheck } from 'lucide-react';
 
 export default function AdminOverview() {
@@ -41,6 +42,7 @@ export default function AdminOverview() {
 
   return (
     <div>
+      <ProfileHeader />
       <h1 className="text-2xl font-bold mb-6">Overview</h1>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {cards.map(({ label, value, icon: Icon, color }) => (
