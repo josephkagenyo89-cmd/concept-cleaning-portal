@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import PendingApproval from "@/pages/PendingApproval";
 import AgentLayout from "@/layouts/AgentLayout";
 import AgentDashboard from "@/pages/agent/AgentDashboard";
@@ -23,11 +25,14 @@ import AdminServices from "@/pages/admin/AdminServices";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 import InstallPrompt from "@/components/InstallPrompt";
+import NetworkStatus from "@/components/NetworkStatus";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 const queryClient = new QueryClient();
 
 function AppRoutes() {
   const { user, loading, isAdmin, isAgent, profile } = useAuth();
+  useOfflineSync();
 
   if (loading) {
     return (
@@ -52,6 +57,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -120,6 +127,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <InstallPrompt />
+      <NetworkStatus />
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />

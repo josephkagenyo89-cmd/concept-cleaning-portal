@@ -15,6 +15,7 @@ import TierBadge from '@/components/agent/TierBadge';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { savePending } from '@/lib/offlineDb';
 
 export default function AgentBooking() {
   const { user } = useAuth();
@@ -62,7 +63,8 @@ export default function AgentBooking() {
     e.preventDefault();
     if (!user || !selectedService || !date || priceError) return;
     setLoading(true);
-    const { error } = await supabase.from('bookings').insert({
+
+    const bookingData = {
       agent_id: user.id,
       client_name: form.client_name,
       client_phone: form.client_phone,
@@ -70,7 +72,23 @@ export default function AgentBooking() {
       service_id: selectedService.id,
       service_date: format(date, 'yyyy-MM-dd'),
       price: Number(form.price),
-    });
+    };
+
+    if (!navigator.onLine) {
+      await savePending({
+        localId: crypto.randomUUID(),
+        type: 'booking',
+        data: bookingData,
+        createdAt: new Date().toISOString(),
+        synced: false,
+      });
+      setLoading(false);
+      toast({ title: 'Saved offline', description: 'Booking will sync when you reconnect.' });
+      navigate('/agent');
+      return;
+    }
+
+    const { error } = await supabase.from('bookings').insert(bookingData);
     setLoading(false);
     if (error) {
       toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
