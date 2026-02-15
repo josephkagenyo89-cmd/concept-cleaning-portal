@@ -18,12 +18,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
-    } else {
-      navigate('/');
     }
+    // On success, don't navigate manually — AuthContext will detect the session
+    // change and AppRoutes will render the correct dashboard automatically.
   };
 
   return (
