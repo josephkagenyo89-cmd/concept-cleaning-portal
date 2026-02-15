@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Sparkles } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,22 +12,24 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import PendingApproval from "@/pages/PendingApproval";
 import AgentLayout from "@/layouts/AgentLayout";
-import AgentDashboard from "@/pages/agent/AgentDashboard";
-import AgentBooking from "@/pages/agent/AgentBooking";
-import AgentWallet from "@/pages/agent/AgentWallet";
-import AgentProfile from "@/pages/agent/AgentProfile";
 import AdminLayout from "@/layouts/AdminLayout";
-import AdminOverview from "@/pages/admin/AdminOverview";
-import AdminBookings from "@/pages/admin/AdminBookings";
-import AdminAgents from "@/pages/admin/AdminAgents";
-import AdminCommissions from "@/pages/admin/AdminCommissions";
-import AdminPayouts from "@/pages/admin/AdminPayouts";
-import AdminServices from "@/pages/admin/AdminServices";
-import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 import InstallPrompt from "@/components/InstallPrompt";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+
+// Lazy-loaded dashboard pages
+const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
+const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
+const AgentWallet = lazy(() => import("@/pages/agent/AgentWallet"));
+const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
+const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
+const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
+const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
+const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
+const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
+const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
+const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 
 const queryClient = new QueryClient();
 
@@ -89,35 +92,43 @@ function AppRoutes() {
     );
   }
 
+  const suspenseFallback = (
+    <div className="flex items-center justify-center p-8 text-muted-foreground">
+      <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+    </div>
+  );
+
   return (
-    <Routes>
-      {/* Admin routes */}
-      {isAdmin && (
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="bookings" element={<AdminBookings />} />
-          <Route path="agents" element={<AdminAgents />} />
-          <Route path="commissions" element={<AdminCommissions />} />
-          <Route path="payouts" element={<AdminPayouts />} />
-          <Route path="services" element={<AdminServices />} />
-          <Route path="analytics" element={<AdminAnalytics />} />
-        </Route>
-      )}
+    <Suspense fallback={suspenseFallback}>
+      <Routes>
+        {/* Admin routes */}
+        {isAdmin && (
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverview />} />
+            <Route path="bookings" element={<AdminBookings />} />
+            <Route path="agents" element={<AdminAgents />} />
+            <Route path="commissions" element={<AdminCommissions />} />
+            <Route path="payouts" element={<AdminPayouts />} />
+            <Route path="services" element={<AdminServices />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+          </Route>
+        )}
 
-      {/* Agent routes */}
-      {isAgent && (
-        <Route path="/agent" element={<AgentLayout />}>
-          <Route index element={<AgentDashboard />} />
-          <Route path="book" element={<AgentBooking />} />
-          <Route path="wallet" element={<AgentWallet />} />
-          <Route path="profile" element={<AgentProfile />} />
-        </Route>
-      )}
+        {/* Agent routes */}
+        {isAgent && (
+          <Route path="/agent" element={<AgentLayout />}>
+            <Route index element={<AgentDashboard />} />
+            <Route path="book" element={<AgentBooking />} />
+            <Route path="wallet" element={<AgentWallet />} />
+            <Route path="profile" element={<AgentProfile />} />
+          </Route>
+        )}
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
