@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import TierBadge from '@/components/agent/TierBadge';
+import EditProfileDialog from '@/components/EditProfileDialog';
 import { getTier } from '@/lib/commission';
 import { LogOut, User, Phone, MapPin, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -37,6 +38,7 @@ export default function AgentProfile() {
             <CardTitle className="text-base">{profile.full_name}</CardTitle>
             <TierBadge tier={tier} />
           </div>
+          <EditProfileDialog />
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3 text-sm">

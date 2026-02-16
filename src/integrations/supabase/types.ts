@@ -162,6 +162,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_edit_requests: {
+        Row: {
+          created_at: string
+          id: string
+          proposed_data: Json
+          reviewed_at: string | null
+          reviewer_id: string | null
+          reviewer_notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposed_data: Json
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposed_data?: Json
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -296,6 +329,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_profile_edit: { Args: { request_id: string }; Returns: undefined }
       get_profile_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["agent_status"]
