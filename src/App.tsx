@@ -30,6 +30,7 @@ const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
 const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
 const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
+const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,7 @@ function AppRoutes() {
             <Route path="payouts" element={<AdminPayouts />} />
             <Route path="services" element={<AdminServices />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="notices" element={<AdminNotices />} />
           </Route>
         )}
 

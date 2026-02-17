@@ -10,6 +10,7 @@ import StatusBadge from '@/components/agent/StatusBadge';
 import { getTier, getTierProgress, TIER_THRESHOLDS } from '@/lib/commission';
 import { PlusCircle, Wallet, TrendingUp, Calendar } from 'lucide-react';
 import ProfileHeader from '@/components/ProfileHeader';
+import NoticeBoard from '@/components/notices/NoticeBoard';
 
 export default function AgentDashboard() {
   const { user } = useAuth();
@@ -88,6 +89,7 @@ export default function AgentDashboard() {
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <ProfileHeader />
+      <NoticeBoard />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Link to="/agent/book">

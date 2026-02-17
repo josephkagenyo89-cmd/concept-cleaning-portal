@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
-  Settings, BarChart3, LogOut, Sparkles, Menu, X,
+  Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone,
 } from 'lucide-react';
 import { useState } from 'react';
+import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
+import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
@@ -16,14 +18,17 @@ const navItems = [
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
 ];
 
 export default function AdminLayout() {
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { blockingNotices, refresh } = useBlockingNotices();
 
   return (
     <div className="min-h-screen flex bg-background">
+      <BlockingNoticeModal notices={blockingNotices} onAcknowledged={refresh} />
       {/* Mobile header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">

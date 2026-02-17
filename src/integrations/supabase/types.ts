@@ -132,6 +132,89 @@ export type Database = {
           },
         ]
       }
+      notice_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          id: string
+          ip_address: string | null
+          notice_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          id?: string
+          ip_address?: string | null
+          notice_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          id?: string
+          ip_address?: string | null
+          notice_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notice_acknowledgements_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "notices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notices: {
+        Row: {
+          acknowledgement_deadline: string | null
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_blocking: boolean
+          is_pinned: boolean
+          message: string
+          priority: Database["public"]["Enums"]["notice_priority"]
+          requires_acknowledgement: boolean
+          target_role: Database["public"]["Enums"]["notice_target_role"]
+          title: string
+        }
+        Insert: {
+          acknowledgement_deadline?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          is_pinned?: boolean
+          message: string
+          priority?: Database["public"]["Enums"]["notice_priority"]
+          requires_acknowledgement?: boolean
+          target_role?: Database["public"]["Enums"]["notice_target_role"]
+          title: string
+        }
+        Update: {
+          acknowledgement_deadline?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          is_pinned?: boolean
+          message?: string
+          priority?: Database["public"]["Enums"]["notice_priority"]
+          requires_acknowledgement?: boolean
+          target_role?: Database["public"]["Enums"]["notice_target_role"]
+          title?: string
+        }
+        Relationships: []
+      }
       payout_requests: {
         Row: {
           admin_notes: string | null
@@ -349,6 +432,8 @@ export type Database = {
       booking_status: "pending" | "confirmed" | "completed" | "cancelled"
       commission_tier: "bronze" | "silver" | "gold"
       ledger_type: "credit" | "debit"
+      notice_priority: "normal" | "important" | "urgent"
+      notice_target_role: "agent" | "admin" | "all"
       payout_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -482,6 +567,8 @@ export const Constants = {
       booking_status: ["pending", "confirmed", "completed", "cancelled"],
       commission_tier: ["bronze", "silver", "gold"],
       ledger_type: ["credit", "debit"],
+      notice_priority: ["normal", "important", "urgent"],
+      notice_target_role: ["agent", "admin", "all"],
       payout_status: ["pending", "approved", "rejected"],
     },
   },
