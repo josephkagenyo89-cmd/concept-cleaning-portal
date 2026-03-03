@@ -36,7 +36,7 @@ export default function NoticeBoard() {
     const load = async () => {
       const { data } = await supabase
         .from('notices')
-        .select('id, title, message, priority, is_pinned, created_at, requires_acknowledgement')
+        .select('id, title, message, priority, is_pinned, created_at, requires_acknowledgement, link_url, link_label, open_in_new_tab')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
