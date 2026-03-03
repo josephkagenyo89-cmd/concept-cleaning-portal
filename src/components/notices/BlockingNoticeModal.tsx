@@ -14,6 +14,9 @@ interface Notice {
   priority: 'normal' | 'important' | 'urgent';
   acknowledgement_deadline: string | null;
   is_blocking: boolean;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 interface BlockingNoticeModalProps {
