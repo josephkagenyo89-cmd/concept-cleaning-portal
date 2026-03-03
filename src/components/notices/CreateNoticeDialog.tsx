@@ -29,6 +29,9 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
     is_blocking: false,
     acknowledgement_deadline: '',
     expires_at: '',
+    link_url: '',
+    link_label: '',
+    open_in_new_tab: true,
   });
 
   const handleSubmit = async () => {
