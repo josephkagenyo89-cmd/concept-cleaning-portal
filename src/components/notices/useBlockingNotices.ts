@@ -25,7 +25,7 @@ export function useBlockingNotices() {
     // Get notices that require acknowledgement
     const { data: notices } = await supabase
       .from('notices')
-      .select('id, title, message, priority, acknowledgement_deadline, is_blocking, requires_acknowledgement')
+      .select('id, title, message, priority, acknowledgement_deadline, is_blocking, requires_acknowledgement, link_url, link_label, open_in_new_tab')
       .eq('is_active', true)
       .eq('requires_acknowledgement', true);
 
