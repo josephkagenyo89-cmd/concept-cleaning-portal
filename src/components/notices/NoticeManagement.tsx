@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Megaphone, Trash2 } from 'lucide-react';
+import { Megaphone, Trash2, Link } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import CreateNoticeDialog from './CreateNoticeDialog';
@@ -23,6 +23,9 @@ interface Notice {
   is_blocking: boolean;
   created_at: string;
   created_by: string;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 const priorityStyles: Record<string, string> = {
@@ -88,6 +91,7 @@ export default function NoticeManagement() {
                     <Badge variant="outline">{n.target_role}</Badge>
                     {n.is_blocking && <Badge variant="destructive">Blocking</Badge>}
                     {n.requires_acknowledgement && <Badge variant="secondary">Ack Required</Badge>}
+                    {n.link_url && <Badge variant="outline" className="gap-1"><Link className="h-3 w-3" />Link</Badge>}
                   </div>
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{n.message}</p>

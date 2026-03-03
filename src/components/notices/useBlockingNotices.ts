@@ -9,6 +9,9 @@ interface BlockingNotice {
   priority: 'normal' | 'important' | 'urgent';
   acknowledgement_deadline: string | null;
   is_blocking: boolean;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 export function useBlockingNotices() {
@@ -22,7 +25,7 @@ export function useBlockingNotices() {
     // Get notices that require acknowledgement
     const { data: notices } = await supabase
       .from('notices')
-      .select('id, title, message, priority, acknowledgement_deadline, is_blocking, requires_acknowledgement')
+      .select('id, title, message, priority, acknowledgement_deadline, is_blocking, requires_acknowledgement, link_url, link_label, open_in_new_tab')
       .eq('is_active', true)
       .eq('requires_acknowledgement', true);
 

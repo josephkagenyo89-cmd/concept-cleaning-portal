@@ -29,12 +29,31 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
     is_blocking: false,
     acknowledgement_deadline: '',
     expires_at: '',
+    link_url: '',
+    link_label: '',
+    open_in_new_tab: true,
   });
 
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.message.trim() || !user) return;
     setSaving(true);
     try {
+      // Validate link URL if provided
+      if (form.link_url.trim()) {
+        const allowedPrefixes = ['https://', 'http://', 'mailto:', 'tel:', 'https://wa.me/'];
+        const blocked = ['javascript:', 'data:'];
+        const url = form.link_url.trim();
+        if (blocked.some(b => url.toLowerCase().startsWith(b))) {
+          toast.error('Invalid link URL');
+          setSaving(false);
+          return;
+        }
+        if (!allowedPrefixes.some(p => url.toLowerCase().startsWith(p))) {
+          toast.error('Link must start with https://, http://, mailto:, tel:, or https://wa.me/');
+          setSaving(false);
+          return;
+        }
+      }
       const { error } = await supabase.from('notices').insert({
         title: form.title,
         message: form.message,
@@ -46,11 +65,14 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
         acknowledgement_deadline: form.acknowledgement_deadline || null,
         expires_at: form.expires_at || null,
         created_by: user.id,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+        open_in_new_tab: form.open_in_new_tab,
       });
       if (error) throw error;
       toast.success('Notice created');
       setOpen(false);
-      setForm({ title: '', message: '', target_role: 'agent', priority: 'normal', is_pinned: false, requires_acknowledgement: false, is_blocking: false, acknowledgement_deadline: '', expires_at: '' });
+      setForm({ title: '', message: '', target_role: 'agent', priority: 'normal', is_pinned: false, requires_acknowledgement: false, is_blocking: false, acknowledgement_deadline: '', expires_at: '', link_url: '', link_label: '', open_in_new_tab: true });
       onCreated();
     } catch (e: any) {
       toast.error(e.message || 'Failed to create notice');
@@ -125,6 +147,21 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
             <div>
               <Label>Expires At (optional)</Label>
               <Input type="datetime-local" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} />
+            </div>
+            <div className="border-t pt-3 space-y-3">
+              <p className="text-sm font-medium">Link (optional)</p>
+              <div>
+                <Label>Link URL</Label>
+                <Input placeholder="https://example.com" value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Link Label</Label>
+                <Input placeholder="View More" value={form.link_label} onChange={e => setForm(f => ({ ...f, link_label: e.target.value }))} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Open in New Tab</Label>
+                <Switch checked={form.open_in_new_tab} onCheckedChange={v => setForm(f => ({ ...f, open_in_new_tab: v }))} />
+              </div>
             </div>
           </div>
           <Button onClick={handleSubmit} disabled={saving || !form.title.trim()} className="w-full">

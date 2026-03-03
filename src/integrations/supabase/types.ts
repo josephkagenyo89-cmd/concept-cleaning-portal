@@ -180,7 +180,10 @@ export type Database = {
           is_active: boolean
           is_blocking: boolean
           is_pinned: boolean
+          link_label: string | null
+          link_url: string | null
           message: string
+          open_in_new_tab: boolean
           priority: Database["public"]["Enums"]["notice_priority"]
           requires_acknowledgement: boolean
           target_role: Database["public"]["Enums"]["notice_target_role"]
@@ -195,7 +198,10 @@ export type Database = {
           is_active?: boolean
           is_blocking?: boolean
           is_pinned?: boolean
+          link_label?: string | null
+          link_url?: string | null
           message: string
+          open_in_new_tab?: boolean
           priority?: Database["public"]["Enums"]["notice_priority"]
           requires_acknowledgement?: boolean
           target_role?: Database["public"]["Enums"]["notice_target_role"]
@@ -210,7 +216,10 @@ export type Database = {
           is_active?: boolean
           is_blocking?: boolean
           is_pinned?: boolean
+          link_label?: string | null
+          link_url?: string | null
           message?: string
+          open_in_new_tab?: boolean
           priority?: Database["public"]["Enums"]["notice_priority"]
           requires_acknowledgement?: boolean
           target_role?: Database["public"]["Enums"]["notice_target_role"]

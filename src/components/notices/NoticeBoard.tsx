@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Megaphone, Pin } from 'lucide-react';
+import { Megaphone, Pin, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 interface Notice {
   id: string;
@@ -14,6 +15,9 @@ interface Notice {
   is_pinned: boolean;
   created_at: string;
   requires_acknowledgement: boolean;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 const priorityStyles: Record<string, string> = {
@@ -32,7 +36,7 @@ export default function NoticeBoard() {
     const load = async () => {
       const { data } = await supabase
         .from('notices')
-        .select('id, title, message, priority, is_pinned, created_at, requires_acknowledgement')
+        .select('id, title, message, priority, is_pinned, created_at, requires_acknowledgement, link_url, link_label, open_in_new_tab')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
@@ -66,6 +70,22 @@ export default function NoticeBoard() {
                   </div>
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
+                  {n.link_url && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 mt-1 text-xs"
+                      asChild
+                    >
+                      <a
+                        href={n.link_url}
+                        {...(n.open_in_new_tab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      >
+                        {n.link_label || 'View More'}
+                        {n.open_in_new_tab && <ExternalLink className="ml-1 h-3 w-3" />}
+                      </a>
+                    </Button>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
