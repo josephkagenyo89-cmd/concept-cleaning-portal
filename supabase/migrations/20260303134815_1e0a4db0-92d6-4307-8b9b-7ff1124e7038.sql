@@ -1,0 +1,1 @@
+ALTER TABLE public.commissions ADD CONSTRAINT commissions_agent_booking_unique UNIQUE (agent_id, booking_id);
