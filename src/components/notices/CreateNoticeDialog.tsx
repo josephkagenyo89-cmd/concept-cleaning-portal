@@ -38,6 +38,22 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
     if (!form.title.trim() || !form.message.trim() || !user) return;
     setSaving(true);
     try {
+      // Validate link URL if provided
+      if (form.link_url.trim()) {
+        const allowedPrefixes = ['https://', 'http://', 'mailto:', 'tel:', 'https://wa.me/'];
+        const blocked = ['javascript:', 'data:'];
+        const url = form.link_url.trim();
+        if (blocked.some(b => url.toLowerCase().startsWith(b))) {
+          toast.error('Invalid link URL');
+          setSaving(false);
+          return;
+        }
+        if (!allowedPrefixes.some(p => url.toLowerCase().startsWith(p))) {
+          toast.error('Link must start with https://, http://, mailto:, tel:, or https://wa.me/');
+          setSaving(false);
+          return;
+        }
+      }
       const { error } = await supabase.from('notices').insert({
         title: form.title,
         message: form.message,
@@ -49,6 +65,9 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
         acknowledgement_deadline: form.acknowledgement_deadline || null,
         expires_at: form.expires_at || null,
         created_by: user.id,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+        open_in_new_tab: form.open_in_new_tab,
       });
       if (error) throw error;
       toast.success('Notice created');
