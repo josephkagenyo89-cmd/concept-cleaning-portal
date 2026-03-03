@@ -23,6 +23,9 @@ interface Notice {
   is_blocking: boolean;
   created_at: string;
   created_by: string;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 const priorityStyles: Record<string, string> = {
