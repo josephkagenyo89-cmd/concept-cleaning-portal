@@ -219,14 +219,14 @@ export default function AdminBookings() {
                   <div className="flex gap-2 mt-2 flex-wrap">
                     {b.status === 'pending' && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(b.id, 'confirmed', b.agent_id, Number(b.price))}>Confirm</Button>
-                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price))}>Cancel</Button>
+                        <Button size="sm" onClick={() => updateStatus(b.id, 'confirmed', b.agent_id, Number(b.price), b.commission_created)}>Confirm</Button>
+                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
                     {b.status === 'confirmed' && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(b.id, 'completed', b.agent_id, Number(b.price))}>Mark Completed</Button>
-                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price))}>Cancel</Button>
+                        <Button size="sm" onClick={() => updateStatus(b.id, 'completed', b.agent_id, Number(b.price), b.commission_created)}>Mark Completed</Button>
+                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
                     <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
