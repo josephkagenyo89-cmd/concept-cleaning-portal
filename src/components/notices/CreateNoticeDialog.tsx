@@ -72,7 +72,7 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
       if (error) throw error;
       toast.success('Notice created');
       setOpen(false);
-      setForm({ title: '', message: '', target_role: 'agent', priority: 'normal', is_pinned: false, requires_acknowledgement: false, is_blocking: false, acknowledgement_deadline: '', expires_at: '' });
+      setForm({ title: '', message: '', target_role: 'agent', priority: 'normal', is_pinned: false, requires_acknowledgement: false, is_blocking: false, acknowledgement_deadline: '', expires_at: '', link_url: '', link_label: '', open_in_new_tab: true });
       onCreated();
     } catch (e: any) {
       toast.error(e.message || 'Failed to create notice');
