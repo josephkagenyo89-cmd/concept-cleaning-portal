@@ -67,20 +67,30 @@ export default function AdminBookings() {
     return b.client_name?.toLowerCase().includes(s) || b.agent_name?.toLowerCase().includes(s) || b.id?.toLowerCase().includes(s);
   });
 
-  const updateStatus = async (id: string, status: Database['public']['Enums']['booking_status'], agentId: string, price: number) => {
+  const updateStatus = async (id: string, status: Database['public']['Enums']['booking_status'], agentId: string, price: number, commissionCreated: boolean) => {
     const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
     if (error) {
       toast({ title: 'Failed', description: error.message, variant: 'destructive' });
       return;
     }
-    if (status === 'completed' && user) {
+    // Only create commission if completing AND commission hasn't been created yet
+    if (status === 'completed' && user && !commissionCreated) {
       const { data: completed } = await supabase.from('bookings').select('price').eq('agent_id', agentId).eq('status', 'completed');
       const cumRev = (completed || []).reduce((s, b) => s + Number(b.price), 0);
       const { getTier, calculateCommission } = await import('@/lib/commission');
       const tier = getTier(cumRev);
       const comm = calculateCommission(price, tier);
-      await supabase.from('commissions').insert({ booking_id: id, agent_id: agentId, amount: comm.commission, bonus_amount: comm.bonus, tier_at_time: tier });
-      await supabase.from('wallet_ledger').insert({ agent_id: agentId, type: 'credit', amount: comm.total, description: `Commission for booking`, reference_id: id });
+      const { error: commError } = await supabase.from('commissions').insert({ booking_id: id, agent_id: agentId, amount: comm.commission, bonus_amount: comm.bonus, tier_at_time: tier });
+      if (commError) {
+        // Unique constraint violation means commission already exists — skip
+        if (!commError.message.includes('duplicate') && !commError.code?.includes('23505')) {
+          toast({ title: 'Commission error', description: commError.message, variant: 'destructive' });
+        }
+      } else {
+        await supabase.from('wallet_ledger').insert({ agent_id: agentId, type: 'credit', amount: comm.total, description: `Commission for booking`, reference_id: id });
+        // Mark booking as commission created
+        await supabase.from('bookings').update({ commission_created: true } as any).eq('id', id);
+      }
       await supabase.from('audit_logs').insert({ admin_id: user.id, action: 'booking_completed', target_type: 'booking', target_id: id, details: { commission: comm.total, tier } });
     }
     toast({ title: `Booking ${status}` });
@@ -209,14 +219,14 @@ export default function AdminBookings() {
                   <div className="flex gap-2 mt-2 flex-wrap">
                     {b.status === 'pending' && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(b.id, 'confirmed', b.agent_id, Number(b.price))}>Confirm</Button>
-                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price))}>Cancel</Button>
+                        <Button size="sm" onClick={() => updateStatus(b.id, 'confirmed', b.agent_id, Number(b.price), b.commission_created)}>Confirm</Button>
+                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
                     {b.status === 'confirmed' && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(b.id, 'completed', b.agent_id, Number(b.price))}>Mark Completed</Button>
-                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price))}>Cancel</Button>
+                        <Button size="sm" onClick={() => updateStatus(b.id, 'completed', b.agent_id, Number(b.price), b.commission_created)}>Mark Completed</Button>
+                        <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
                     <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>

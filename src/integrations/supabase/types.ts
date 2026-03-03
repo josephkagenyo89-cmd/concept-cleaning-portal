@@ -49,6 +49,7 @@ export type Database = {
           agent_id: string
           client_name: string
           client_phone: string
+          commission_created: boolean
           created_at: string
           id: string
           location: string
@@ -62,6 +63,7 @@ export type Database = {
           agent_id: string
           client_name: string
           client_phone: string
+          commission_created?: boolean
           created_at?: string
           id?: string
           location: string
@@ -75,6 +77,7 @@ export type Database = {
           agent_id?: string
           client_name?: string
           client_phone?: string
+          commission_created?: boolean
           created_at?: string
           id?: string
           location?: string
