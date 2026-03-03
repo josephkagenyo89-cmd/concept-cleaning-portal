@@ -70,6 +70,22 @@ export default function NoticeBoard() {
                   </div>
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
+                  {n.link_url && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 mt-1 text-xs"
+                      asChild
+                    >
+                      <a
+                        href={n.link_url}
+                        {...(n.open_in_new_tab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      >
+                        {n.link_label || 'View More'}
+                        {n.open_in_new_tab && <ExternalLink className="ml-1 h-3 w-3" />}
+                      </a>
+                    </Button>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}

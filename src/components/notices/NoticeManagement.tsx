@@ -91,6 +91,7 @@ export default function NoticeManagement() {
                     <Badge variant="outline">{n.target_role}</Badge>
                     {n.is_blocking && <Badge variant="destructive">Blocking</Badge>}
                     {n.requires_acknowledgement && <Badge variant="secondary">Ack Required</Badge>}
+                    {n.link_url && <Badge variant="outline" className="gap-1"><Link className="h-3 w-3" />Link</Badge>}
                   </div>
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{n.message}</p>

@@ -148,6 +148,21 @@ export default function CreateNoticeDialog({ onCreated }: Props) {
               <Label>Expires At (optional)</Label>
               <Input type="datetime-local" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} />
             </div>
+            <div className="border-t pt-3 space-y-3">
+              <p className="text-sm font-medium">Link (optional)</p>
+              <div>
+                <Label>Link URL</Label>
+                <Input placeholder="https://example.com" value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Link Label</Label>
+                <Input placeholder="View More" value={form.link_label} onChange={e => setForm(f => ({ ...f, link_label: e.target.value }))} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Open in New Tab</Label>
+                <Switch checked={form.open_in_new_tab} onCheckedChange={v => setForm(f => ({ ...f, open_in_new_tab: v }))} />
+              </div>
+            </div>
           </div>
           <Button onClick={handleSubmit} disabled={saving || !form.title.trim()} className="w-full">
             {saving ? 'Creating...' : 'Create Notice'}

@@ -72,6 +72,17 @@ export default function BlockingNoticeModal({ notices, onAcknowledged }: Blockin
             {notice.message}
           </DialogDescription>
         </DialogHeader>
+        {notice.link_url && (
+          <Button variant="outline" size="sm" asChild className="w-full">
+            <a
+              href={notice.link_url}
+              {...(notice.open_in_new_tab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              {notice.link_label || 'View More'}
+              {notice.open_in_new_tab && <ExternalLink className="ml-2 h-3.5 w-3.5" />}
+            </a>
+          </Button>
+        )}
         {notice.acknowledgement_deadline && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
