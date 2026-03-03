@@ -1,0 +1,1 @@
+ALTER TABLE public.bookings ADD COLUMN commission_created boolean NOT NULL DEFAULT false;
