@@ -15,6 +15,9 @@ interface Notice {
   is_pinned: boolean;
   created_at: string;
   requires_acknowledgement: boolean;
+  link_url: string | null;
+  link_label: string | null;
+  open_in_new_tab: boolean;
 }
 
 const priorityStyles: Record<string, string> = {
