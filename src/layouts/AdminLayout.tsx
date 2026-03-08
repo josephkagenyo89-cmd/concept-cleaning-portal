@@ -22,6 +22,7 @@ const navItems = [
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/admin/mass-emails', icon: Mail, label: 'Mass Emails' },
+  { to: '/admin/smtp-settings', icon: Settings, label: 'SMTP Settings' },
 ];
 
 export default function AdminLayout() {

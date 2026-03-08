@@ -119,6 +119,7 @@ function AppRoutes() {
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="mass-emails" element={<AdminMassEmails />} />
+            <Route path="smtp-settings" element={<AdminSmtpSettings />} />
           </Route>
         )}
 
