@@ -23,6 +23,7 @@ const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
 const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
 const AgentWallet = lazy(() => import("@/pages/agent/AgentWallet"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
+const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
