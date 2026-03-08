@@ -20,6 +20,7 @@ const navItems = [
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
+  { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
 export default function AdminLayout() {
