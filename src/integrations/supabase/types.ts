@@ -159,6 +159,86 @@ export type Database = {
         }
         Relationships: []
       }
+      mass_email_logs: {
+        Row: {
+          created_at: string
+          email_id: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_id: string
+          recipient_role: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email_id: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_id: string
+          recipient_role: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email_id?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_id?: string
+          recipient_role?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_email_logs_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "mass_emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_emails: {
+        Row: {
+          audience_type: string
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          audience_type?: string
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          audience_type?: string
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           conversation_id: string
