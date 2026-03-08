@@ -22,7 +22,7 @@ const PRICING_MODELS: { value: string; label: string }[] = [
 
 export default function AdminServices() {
   const [services, setServices] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: '', description: '', base_price: '', category: CATEGORIES[0], pricing_model: 'fixed', commission_eligible: true });
+  const [form, setForm] = useState({ name: '', description: '', base_price: '', category: CATEGORIES[0], pricing_model: 'fixed', commission_eligible: true, requires_size_input: false, price_per_sqm: '' });
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function AdminServices() {
   useEffect(() => { load(); }, []);
 
   const resetForm = () => {
-    setForm({ name: '', description: '', base_price: '', category: activeTab, pricing_model: 'fixed', commission_eligible: true });
+    setForm({ name: '', description: '', base_price: '', category: activeTab, pricing_model: 'fixed', commission_eligible: true, requires_size_input: false, price_per_sqm: '' });
     setEditId(null);
   };
 
@@ -54,6 +54,8 @@ export default function AdminServices() {
       category: s.category || CATEGORIES[0],
       pricing_model: s.pricing_model || 'fixed',
       commission_eligible: s.commission_eligible ?? true,
+      requires_size_input: s.requires_size_input ?? false,
+      price_per_sqm: s.price_per_sqm ? String(s.price_per_sqm) : '',
     });
     setEditId(s.id);
     setOpen(true);
@@ -68,6 +70,8 @@ export default function AdminServices() {
       category: form.category,
       pricing_model: form.pricing_model,
       commission_eligible: form.commission_eligible,
+      requires_size_input: form.requires_size_input,
+      price_per_sqm: form.requires_size_input ? Number(form.price_per_sqm) || 0 : 0,
     };
 
     const { error } = editId
@@ -121,6 +125,13 @@ export default function AdminServices() {
                 <Label>Commission Eligible</Label>
                 <Switch checked={form.commission_eligible} onCheckedChange={v => setForm(f => ({ ...f, commission_eligible: v }))} />
               </div>
+              <div className="flex items-center justify-between">
+                <Label>Requires Size Input (m²)</Label>
+                <Switch checked={form.requires_size_input} onCheckedChange={v => setForm(f => ({ ...f, requires_size_input: v }))} />
+              </div>
+              {form.requires_size_input && (
+                <div><Label>Price per m² (Ksh)</Label><Input type="number" value={form.price_per_sqm} onChange={e => setForm(f => ({ ...f, price_per_sqm: e.target.value }))} placeholder="150" /></div>
+              )}
               <Button onClick={handleSave} disabled={loading || !form.name} className="w-full">
                 {loading ? 'Saving...' : editId ? 'Update Service' : 'Create Service'}
               </Button>

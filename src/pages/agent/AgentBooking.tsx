@@ -23,7 +23,7 @@ export default function AgentBooking() {
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [form, setForm] = useState({
-    client_name: '', client_phone: '', location: '', price: '',
+    client_name: '', client_phone: '', location: '', price: '', size_sqm: '',
   });
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
@@ -48,7 +48,13 @@ export default function AgentBooking() {
   }, [user]);
 
   const tier = getTier(cumulativeRevenue);
-  const price = Number(form.price) || 0;
+  const requiresSize = selectedService?.requires_size_input === true;
+  const pricePerSqm = Number(selectedService?.price_per_sqm) || 0;
+  const sizeSqm = Number(form.size_sqm) || 0;
+
+  // Auto-calculate price for size-based services
+  const calculatedPrice = requiresSize && pricePerSqm > 0 && sizeSqm > 0 ? sizeSqm * pricePerSqm : 0;
+  const price = requiresSize && pricePerSqm > 0 ? calculatedPrice : (Number(form.price) || 0);
   const commission = price > 0 ? calculateCommission(price, tier) : null;
   const basePrice = selectedService ? Number(selectedService.base_price) : 0;
   const priceError = price > 0 && price < basePrice ? `Minimum price is Ksh ${basePrice.toLocaleString()}` : null;
@@ -56,12 +62,18 @@ export default function AgentBooking() {
   const handleServiceChange = (serviceId: string) => {
     const svc = services.find(s => s.id === serviceId);
     setSelectedService(svc);
-    if (svc) setForm(f => ({ ...f, price: String(svc.base_price) }));
+    if (svc) {
+      setForm(f => ({
+        ...f,
+        price: svc.requires_size_input && Number(svc.price_per_sqm) > 0 ? '' : String(svc.base_price),
+        size_sqm: '',
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedService || !date || priceError) return;
+    if (!user || !selectedService || !date || priceError || (requiresSize && sizeSqm <= 0)) return;
     setLoading(true);
 
     const bookingData = {
@@ -71,7 +83,8 @@ export default function AgentBooking() {
       location: form.location,
       service_id: selectedService.id,
       service_date: format(date, 'yyyy-MM-dd'),
-      price: Number(form.price),
+      price: requiresSize && pricePerSqm > 0 ? calculatedPrice : Number(form.price),
+      size_sqm: requiresSize ? sizeSqm : null,
     };
 
     if (!navigator.onLine) {
@@ -163,12 +176,32 @@ export default function AgentBooking() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="space-y-1.5">
-              <Label>Price (Ksh)</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required min={basePrice} />
-              {priceError && <p className="text-xs text-destructive">{priceError}</p>}
-              {basePrice > 0 && <p className="text-xs text-muted-foreground">Base: Ksh {basePrice.toLocaleString()}</p>}
-            </div>
+            {requiresSize && (
+              <div className="space-y-1.5">
+                <Label>Enter Size (Square Meters)</Label>
+                <Input type="number" value={form.size_sqm} onChange={e => setForm(f => ({ ...f, size_sqm: e.target.value }))} required min={1} placeholder="e.g. 50" />
+                {pricePerSqm > 0 && sizeSqm > 0 && (
+                  <p className="text-sm font-medium text-primary">
+                    Calculated Price: Ksh {calculatedPrice.toLocaleString()} ({sizeSqm} m² × Ksh {pricePerSqm.toLocaleString()}/m²)
+                  </p>
+                )}
+              </div>
+            )}
+            {!requiresSize || pricePerSqm === 0 ? (
+              <div className="space-y-1.5">
+                <Label>Price (Ksh)</Label>
+                <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required min={basePrice} />
+                {priceError && <p className="text-xs text-destructive">{priceError}</p>}
+                {basePrice > 0 && <p className="text-xs text-muted-foreground">Base: Ksh {basePrice.toLocaleString()}</p>}
+              </div>
+            ) : (
+              price > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Total Price (Ksh)</Label>
+                  <Input type="number" value={calculatedPrice} disabled />
+                </div>
+              )
+            )}
           </CardContent>
         </Card>
 
@@ -197,7 +230,7 @@ export default function AgentBooking() {
           </Card>
         )}
 
-        <Button type="submit" className="w-full" disabled={loading || !selectedService || !date || !!priceError}>
+        <Button type="submit" className="w-full" disabled={loading || !selectedService || !date || !!priceError || (requiresSize && sizeSqm <= 0)}>
           {loading ? 'Creating...' : 'Create Booking'}
         </Button>
       </form>
