@@ -117,6 +117,7 @@ function AppRoutes() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="mass-emails" element={<AdminMassEmails />} />
           </Route>
         )}
 

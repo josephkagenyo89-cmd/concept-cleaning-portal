@@ -21,6 +21,7 @@ const navItems = [
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/admin/mass-emails', icon: Mail, label: 'Mass Emails' },
 ];
 
 export default function AdminLayout() {
