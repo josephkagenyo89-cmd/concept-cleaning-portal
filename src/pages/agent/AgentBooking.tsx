@@ -73,7 +73,7 @@ export default function AgentBooking() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedService || !date || priceError) return;
+    if (!user || !selectedService || !date || priceError || (requiresSize && sizeSqm <= 0)) return;
     setLoading(true);
 
     const bookingData = {
