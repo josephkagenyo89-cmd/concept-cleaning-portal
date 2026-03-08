@@ -54,6 +54,8 @@ export default function AdminServices() {
       category: s.category || CATEGORIES[0],
       pricing_model: s.pricing_model || 'fixed',
       commission_eligible: s.commission_eligible ?? true,
+      requires_size_input: s.requires_size_input ?? false,
+      price_per_sqm: s.price_per_sqm ? String(s.price_per_sqm) : '',
     });
     setEditId(s.id);
     setOpen(true);
