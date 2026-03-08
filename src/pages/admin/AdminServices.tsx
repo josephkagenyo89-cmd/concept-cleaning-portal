@@ -125,6 +125,13 @@ export default function AdminServices() {
                 <Label>Commission Eligible</Label>
                 <Switch checked={form.commission_eligible} onCheckedChange={v => setForm(f => ({ ...f, commission_eligible: v }))} />
               </div>
+              <div className="flex items-center justify-between">
+                <Label>Requires Size Input (m²)</Label>
+                <Switch checked={form.requires_size_input} onCheckedChange={v => setForm(f => ({ ...f, requires_size_input: v }))} />
+              </div>
+              {form.requires_size_input && (
+                <div><Label>Price per m² (Ksh)</Label><Input type="number" value={form.price_per_sqm} onChange={e => setForm(f => ({ ...f, price_per_sqm: e.target.value }))} placeholder="150" /></div>
+              )}
               <Button onClick={handleSave} disabled={loading || !form.name} className="w-full">
                 {loading ? 'Saving...' : editId ? 'Update Service' : 'Create Service'}
               </Button>
