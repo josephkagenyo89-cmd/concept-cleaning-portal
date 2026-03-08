@@ -138,6 +138,65 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          sender_id?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notice_acknowledgements: {
         Row: {
           acknowledged_at: string

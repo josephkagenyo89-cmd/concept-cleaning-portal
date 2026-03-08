@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
-  Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone,
+  Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -20,6 +20,7 @@ const navItems = [
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
+  { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
 export default function AdminLayout() {

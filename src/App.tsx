@@ -23,6 +23,7 @@ const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
 const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
 const AgentWallet = lazy(() => import("@/pages/agent/AgentWallet"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
+const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
@@ -31,6 +32,7 @@ const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
 const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
+const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
 
 const queryClient = new QueryClient();
 
@@ -113,6 +115,7 @@ function AppRoutes() {
             <Route path="services" element={<AdminServices />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
+            <Route path="messages" element={<AdminMessages />} />
           </Route>
         )}
 
@@ -122,6 +125,7 @@ function AppRoutes() {
             <Route index element={<AgentDashboard />} />
             <Route path="book" element={<AgentBooking />} />
             <Route path="wallet" element={<AgentWallet />} />
+            <Route path="messages" element={<AgentMessages />} />
             <Route path="profile" element={<AgentProfile />} />
           </Route>
         )}
