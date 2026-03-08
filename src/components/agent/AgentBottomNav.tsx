@@ -1,10 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Wallet, User } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Wallet, User, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const links = [
   { to: '/agent', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/agent/book', icon: PlusCircle, label: 'Book' },
+  { to: '/agent/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/agent/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/agent/profile', icon: User, label: 'Profile' },
 ];
