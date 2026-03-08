@@ -62,7 +62,13 @@ export default function AgentBooking() {
   const handleServiceChange = (serviceId: string) => {
     const svc = services.find(s => s.id === serviceId);
     setSelectedService(svc);
-    if (svc) setForm(f => ({ ...f, price: String(svc.base_price) }));
+    if (svc) {
+      setForm(f => ({
+        ...f,
+        price: svc.requires_size_input && Number(svc.price_per_sqm) > 0 ? '' : String(svc.base_price),
+        size_sqm: '',
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
