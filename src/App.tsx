@@ -115,6 +115,7 @@ function AppRoutes() {
             <Route path="services" element={<AdminServices />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
+            <Route path="messages" element={<AdminMessages />} />
           </Route>
         )}
 
