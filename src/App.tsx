@@ -125,6 +125,7 @@ function AppRoutes() {
             <Route index element={<AgentDashboard />} />
             <Route path="book" element={<AgentBooking />} />
             <Route path="wallet" element={<AgentWallet />} />
+            <Route path="messages" element={<AgentMessages />} />
             <Route path="profile" element={<AgentProfile />} />
           </Route>
         )}
