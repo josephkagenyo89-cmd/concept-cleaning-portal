@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import AiChatAssistant from '@/components/AiChatAssistant';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -87,6 +88,7 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      <AiChatAssistant />
     </div>
   );
 }
