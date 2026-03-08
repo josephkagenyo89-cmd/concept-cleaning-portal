@@ -22,7 +22,7 @@ const PRICING_MODELS: { value: string; label: string }[] = [
 
 export default function AdminServices() {
   const [services, setServices] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: '', description: '', base_price: '', category: CATEGORIES[0], pricing_model: 'fixed', commission_eligible: true });
+  const [form, setForm] = useState({ name: '', description: '', base_price: '', category: CATEGORIES[0], pricing_model: 'fixed', commission_eligible: true, requires_size_input: false, price_per_sqm: '' });
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
