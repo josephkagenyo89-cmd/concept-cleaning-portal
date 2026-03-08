@@ -56,6 +56,7 @@ export type Database = {
           price: number
           service_date: string
           service_id: string
+          size_sqm: number | null
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
         }
@@ -70,6 +71,7 @@ export type Database = {
           price: number
           service_date: string
           service_id: string
+          size_sqm?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
         }
@@ -84,6 +86,7 @@ export type Database = {
           price?: number
           service_date?: string
           service_id?: string
+          size_sqm?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
         }
@@ -339,7 +342,9 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          price_per_sqm: number
           pricing_model: string
+          requires_size_input: boolean
           updated_at: string
         }
         Insert: {
@@ -351,7 +356,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          price_per_sqm?: number
           pricing_model?: string
+          requires_size_input?: boolean
           updated_at?: string
         }
         Update: {
@@ -363,7 +370,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          price_per_sqm?: number
           pricing_model?: string
+          requires_size_input?: boolean
           updated_at?: string
         }
         Relationships: []
