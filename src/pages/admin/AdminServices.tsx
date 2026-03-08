@@ -36,7 +36,7 @@ export default function AdminServices() {
   useEffect(() => { load(); }, []);
 
   const resetForm = () => {
-    setForm({ name: '', description: '', base_price: '', category: activeTab, pricing_model: 'fixed', commission_eligible: true });
+    setForm({ name: '', description: '', base_price: '', category: activeTab, pricing_model: 'fixed', commission_eligible: true, requires_size_input: false, price_per_sqm: '' });
     setEditId(null);
   };
 
