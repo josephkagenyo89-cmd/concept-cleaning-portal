@@ -83,7 +83,8 @@ export default function AgentBooking() {
       location: form.location,
       service_id: selectedService.id,
       service_date: format(date, 'yyyy-MM-dd'),
-      price: Number(form.price),
+      price: requiresSize && pricePerSqm > 0 ? calculatedPrice : Number(form.price),
+      size_sqm: requiresSize ? sizeSqm : null,
     };
 
     if (!navigator.onLine) {
