@@ -48,7 +48,13 @@ export default function AgentBooking() {
   }, [user]);
 
   const tier = getTier(cumulativeRevenue);
-  const price = Number(form.price) || 0;
+  const requiresSize = selectedService?.requires_size_input === true;
+  const pricePerSqm = Number(selectedService?.price_per_sqm) || 0;
+  const sizeSqm = Number(form.size_sqm) || 0;
+
+  // Auto-calculate price for size-based services
+  const calculatedPrice = requiresSize && pricePerSqm > 0 && sizeSqm > 0 ? sizeSqm * pricePerSqm : 0;
+  const price = requiresSize && pricePerSqm > 0 ? calculatedPrice : (Number(form.price) || 0);
   const commission = price > 0 ? calculateCommission(price, tier) : null;
   const basePrice = selectedService ? Number(selectedService.base_price) : 0;
   const priceError = price > 0 && price < basePrice ? `Minimum price is Ksh ${basePrice.toLocaleString()}` : null;
