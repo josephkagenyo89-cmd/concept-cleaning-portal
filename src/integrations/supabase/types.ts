@@ -516,6 +516,45 @@ export type Database = {
         }
         Relationships: []
       }
+      smtp_settings: {
+        Row: {
+          from_email: string
+          from_name: string
+          id: string
+          smtp_host: string
+          smtp_pass: string
+          smtp_port: number
+          smtp_user: string
+          updated_at: string
+          updated_by: string | null
+          use_tls: boolean
+        }
+        Insert: {
+          from_email?: string
+          from_name?: string
+          id?: string
+          smtp_host?: string
+          smtp_pass?: string
+          smtp_port?: number
+          smtp_user?: string
+          updated_at?: string
+          updated_by?: string | null
+          use_tls?: boolean
+        }
+        Update: {
+          from_email?: string
+          from_name?: string
+          id?: string
+          smtp_host?: string
+          smtp_pass?: string
+          smtp_port?: number
+          smtp_user?: string
+          updated_at?: string
+          updated_by?: string | null
+          use_tls?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

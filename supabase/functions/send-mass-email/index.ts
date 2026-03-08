@@ -40,6 +40,16 @@ Deno.serve(async (req) => {
       .single();
     if (emailErr || !email) throw new Error("Email not found");
 
+    // Get SMTP settings from DB
+    const { data: smtp, error: smtpErr } = await supabase
+      .from("smtp_settings")
+      .select("*")
+      .limit(1)
+      .single();
+    if (smtpErr || !smtp) throw new Error("SMTP not configured. Please configure SMTP settings first.");
+
+    const { smtp_host, smtp_port, smtp_user, smtp_pass, from_name, from_email, use_tls } = smtp;
+
     // Mark as sending
     await supabase.from("mass_emails").update({ status: "sending" }).eq("id", emailId);
 
@@ -59,28 +69,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get unique user IDs and their emails from auth (via profiles + auth)
     const uniqueUserIds = [...new Set(roleRows.map((r: any) => r.user_id))];
 
-    // Get profiles for names
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, full_name")
       .in("user_id", uniqueUserIds);
 
-    // Get emails from auth.users via admin API
     const recipients: { id: string; email: string; name: string; role: string }[] = [];
     for (const userId of uniqueUserIds) {
       const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
       if (!authUser?.email) continue;
       const profile = profiles?.find((p: any) => p.user_id === userId);
       const role = roleRows.find((r: any) => r.user_id === userId)?.role || "agent";
-      recipients.push({
-        id: userId,
-        email: authUser.email,
-        name: profile?.full_name || "User",
-        role,
-      });
+      recipients.push({ id: userId, email: authUser.email, name: profile?.full_name || "User", role });
     }
 
     // Create log entries
@@ -93,32 +95,22 @@ Deno.serve(async (req) => {
     }));
     await supabase.from("mass_email_logs").insert(logEntries);
 
-    // SMTP config
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = Deno.env.get("SMTP_PORT") || "587";
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
-    const fromEmail = Deno.env.get("SMTP_FROM_EMAIL") || smtpUser;
-    const fromName = Deno.env.get("SMTP_FROM_NAME") || "Concept Cleaning Services";
-
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      throw new Error("SMTP credentials not configured");
-    }
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const port = smtp_port || (use_tls ? 587 : 465);
 
     let sentCount = 0;
     let failCount = 0;
 
     for (const recipient of recipients) {
       try {
-        // Replace placeholders
         let body = email.body
           .replace(/\{\{firstName\}\}/g, recipient.name.split(" ")[0])
           .replace(/\{\{fullName\}\}/g, recipient.name);
 
-        // Build raw email
         const boundary = "boundary_" + crypto.randomUUID();
         const rawEmail = [
-          `From: ${fromName} <${fromEmail}>`,
+          `From: ${from_name} <${from_email}>`,
           `To: ${recipient.email}`,
           `Subject: ${email.subject}`,
           `MIME-Version: 1.0`,
@@ -137,63 +129,41 @@ Deno.serve(async (req) => {
           `--${boundary}--`,
         ].join("\r\n");
 
-        // Send via SMTP using Deno's built-in TCP
-        const conn = parseInt(smtpPort) === 465
-          ? await Deno.connectTls({ hostname: smtpHost, port: 465 })
-          : await Deno.connect({ hostname: smtpHost, port: parseInt(smtpPort) });
+        const conn = port === 465
+          ? await Deno.connectTls({ hostname: smtp_host, port: 465 })
+          : await Deno.connect({ hostname: smtp_host, port });
 
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder();
-
-        const read = async () => {
+        const read = async (c: Deno.Conn) => {
           const buf = new Uint8Array(1024);
-          const n = await conn.read(buf);
+          const n = await c.read(buf);
           return n ? decoder.decode(buf.subarray(0, n)) : "";
         };
 
-        const write = async (cmd: string) => {
-          await conn.write(encoder.encode(cmd + "\r\n"));
-          return await read();
+        const write = async (c: Deno.Conn, cmd: string) => {
+          await c.write(encoder.encode(cmd + "\r\n"));
+          return await read(c);
         };
 
-        await read(); // greeting
-        let resp = await write(`EHLO localhost`);
+        await read(conn);
+        let resp = await write(conn, "EHLO localhost");
 
-        // STARTTLS if not already TLS
-        if (parseInt(smtpPort) !== 465 && resp.includes("STARTTLS")) {
-          await write("STARTTLS");
-          const tlsConn = await Deno.startTls(conn as Deno.TcpConn, { hostname: smtpHost });
-          // Re-assign read/write for TLS
-          const tlsRead = async () => {
-            const buf = new Uint8Array(1024);
-            const n = await tlsConn.read(buf);
-            return n ? decoder.decode(buf.subarray(0, n)) : "";
-          };
-          const tlsWrite = async (cmd: string) => {
-            await tlsConn.write(encoder.encode(cmd + "\r\n"));
-            return await tlsRead();
-          };
-          await tlsWrite("EHLO localhost");
-          const authStr = btoa(`\0${smtpUser}\0${smtpPass}`);
-          await tlsWrite(`AUTH PLAIN ${authStr}`);
-          await tlsWrite(`MAIL FROM:<${fromEmail}>`);
-          await tlsWrite(`RCPT TO:<${recipient.email}>`);
-          await tlsWrite("DATA");
-          await tlsConn.write(encoder.encode(rawEmail + "\r\n.\r\n"));
-          await tlsRead();
-          await tlsWrite("QUIT");
-          tlsConn.close();
-        } else {
-          const authStr = btoa(`\0${smtpUser}\0${smtpPass}`);
-          await write(`AUTH PLAIN ${authStr}`);
-          await write(`MAIL FROM:<${fromEmail}>`);
-          await write(`RCPT TO:<${recipient.email}>`);
-          await write("DATA");
-          await conn.write(encoder.encode(rawEmail + "\r\n.\r\n"));
-          await read();
-          await write("QUIT");
-          conn.close();
+        let activeConn: Deno.Conn = conn;
+
+        if (port !== 465 && use_tls && resp.includes("STARTTLS")) {
+          await write(conn, "STARTTLS");
+          activeConn = await Deno.startTls(conn as Deno.TcpConn, { hostname: smtp_host });
+          await write(activeConn, "EHLO localhost");
         }
+
+        const authStr = btoa(`\0${smtp_user}\0${smtp_pass}`);
+        await write(activeConn, `AUTH PLAIN ${authStr}`);
+        await write(activeConn, `MAIL FROM:<${from_email}>`);
+        await write(activeConn, `RCPT TO:<${recipient.email}>`);
+        await write(activeConn, "DATA");
+        await activeConn.write(encoder.encode(rawEmail + "\r\n.\r\n"));
+        await read(activeConn);
+        await write(activeConn, "QUIT");
+        activeConn.close();
 
         await supabase.from("mass_email_logs").update({
           status: "sent",
@@ -210,7 +180,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update mass email status
     await supabase.from("mass_emails").update({
       status: failCount === recipients.length ? "failed" : "sent",
       sent_at: new Date().toISOString(),
