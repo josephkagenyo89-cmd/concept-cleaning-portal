@@ -23,7 +23,7 @@ export default function AgentBooking() {
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [form, setForm] = useState({
-    client_name: '', client_phone: '', location: '', price: '',
+    client_name: '', client_phone: '', location: '', price: '', size_sqm: '',
   });
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
