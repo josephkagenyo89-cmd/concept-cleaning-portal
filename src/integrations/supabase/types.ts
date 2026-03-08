@@ -437,6 +437,8 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_online: boolean
+          last_seen: string | null
           mpesa_number: string
           phone: string
           referral_code: string | null
@@ -449,6 +451,8 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          is_online?: boolean
+          last_seen?: string | null
           mpesa_number: string
           phone: string
           referral_code?: string | null
@@ -461,6 +465,8 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_online?: boolean
+          last_seen?: string | null
           mpesa_number?: string
           phone?: string
           referral_code?: string | null
