@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle, Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface Message {
   id: string;
@@ -20,11 +20,19 @@ interface Message {
 }
 
 const QUICK_REPLIES = [
-  'How do I check my commission?',
-  'I need help with a booking',
-  'When is my next payout?',
-  'I have a client complaint',
+  '💰 Check my commission',
+  '📋 Help with a booking',
+  '📅 Next payout date?',
+  '⚠️ Client complaint',
+  '👋 Hello!',
 ];
+
+function formatMsgTime(dateStr: string) {
+  const d = new Date(dateStr);
+  if (isToday(d)) return format(d, 'h:mm a');
+  if (isYesterday(d)) return 'Yesterday ' + format(d, 'h:mm a');
+  return format(d, 'MMM d, h:mm a');
+}
 
 export default function AgentMessages() {
   const { user } = useAuth();
@@ -34,12 +42,11 @@ export default function AgentMessages() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Get or create conversation
   useEffect(() => {
     if (!user) return;
     const init = async () => {
-      // Try to find existing conversation
       const { data: existing } = await supabase
         .from('conversations')
         .select('id')
@@ -61,7 +68,6 @@ export default function AgentMessages() {
     init();
   }, [user]);
 
-  // Load messages and subscribe to realtime
   useEffect(() => {
     if (!conversationId) return;
 
@@ -73,7 +79,6 @@ export default function AgentMessages() {
         .order('created_at', { ascending: true });
       if (data) setMessages(data as Message[]);
 
-      // Mark unread admin messages as read
       await supabase
         .from('messages')
         .update({ is_read: true })
@@ -94,7 +99,6 @@ export default function AgentMessages() {
       }, (payload) => {
         const msg = payload.new as Message;
         setMessages(prev => [...prev, msg]);
-        // Auto-mark admin messages as read
         if (msg.sender_role === 'admin') {
           supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then(() => {});
         }
@@ -119,6 +123,7 @@ export default function AgentMessages() {
       message: text.trim(),
     });
     setSending(false);
+    inputRef.current?.focus();
   };
 
   if (loading) {
@@ -131,39 +136,56 @@ export default function AgentMessages() {
 
   return (
     <div className="pb-20">
-      <Card className="flex flex-col h-[calc(100vh-10rem)]">
-        <CardHeader className="pb-3">
+      <Card className="flex flex-col h-[calc(100vh-10rem)] overflow-hidden">
+        <CardHeader className="pb-3 border-b bg-card">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            Messages — Admin Support
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageCircle className="h-4 w-4 text-primary" />
+            </div>
+            Admin Support
           </CardTitle>
+          <p className="text-xs text-muted-foreground">Chat with your admin team</p>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
           <ScrollArea className="flex-1 px-4">
             {messages.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                <p>No messages yet. Send a message or use a quick reply below.</p>
+              <div className="text-center py-16 px-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="h-8 w-8 text-primary" />
+                </div>
+                <p className="font-medium text-foreground mb-1">Start a conversation</p>
+                <p className="text-sm text-muted-foreground">Send a message or tap a quick reply below.</p>
               </div>
             )}
             <div className="space-y-3 py-4">
               {messages.map((msg) => {
                 const isMe = msg.sender_role === 'agent';
                 return (
-                  <div key={msg.id} className={cn('flex', isMe ? 'justify-end' : 'justify-start')}>
+                  <div key={msg.id} className={cn('flex gap-2', isMe ? 'justify-end' : 'justify-start')}>
+                    {!isMe && (
+                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <Bot className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                    )}
                     <div className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm',
+                      'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm',
                       isMe
                         ? 'bg-primary text-primary-foreground rounded-br-md'
                         : 'bg-muted text-foreground rounded-bl-md'
                     )}>
-                      <p className="whitespace-pre-wrap">{msg.message}</p>
+                      <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                       <p className={cn(
                         'text-[10px] mt-1',
                         isMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
                       )}>
-                        {format(new Date(msg.created_at), 'h:mm a')}
+                        {formatMsgTime(msg.created_at)}
                       </p>
                     </div>
+                    {isMe && (
+                      <div className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+                        <User className="h-3.5 w-3.5 text-secondary-foreground" />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -171,15 +193,14 @@ export default function AgentMessages() {
             </div>
           </ScrollArea>
 
-          {/* Quick replies */}
           {messages.length === 0 && (
-            <div className="flex flex-wrap gap-2 px-4 pb-2">
+            <div className="flex flex-wrap gap-2 px-4 pb-3">
               {QUICK_REPLIES.map((qr) => (
                 <Button
                   key={qr}
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs rounded-full"
                   onClick={() => sendMessage(qr)}
                 >
                   {qr}
@@ -188,17 +209,19 @@ export default function AgentMessages() {
             </div>
           )}
 
-          {/* Input */}
-          <div className="flex gap-2 p-4 border-t">
+          <div className="flex gap-2 p-3 border-t bg-card">
             <Input
+              ref={inputRef}
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(newMessage)}
               disabled={sending}
+              className="rounded-full"
             />
             <Button
               size="icon"
+              className="rounded-full shrink-0"
               onClick={() => sendMessage(newMessage)}
               disabled={sending || !newMessage.trim()}
             >

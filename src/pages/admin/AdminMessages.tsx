@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Send, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Send, MessageCircle, ArrowLeft, Bot, User, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface Conversation {
   id: string;
@@ -30,11 +30,25 @@ interface Message {
 }
 
 const QUICK_REPLIES = [
-  'Your payout is being processed.',
-  'Please provide more details.',
-  'This has been resolved.',
-  'I will look into this and get back to you.',
+  '✅ Your payout is being processed.',
+  '📝 Please provide more details.',
+  '🎉 This has been resolved.',
+  '🔍 I will look into this.',
 ];
+
+function formatMsgTime(dateStr: string) {
+  const d = new Date(dateStr);
+  if (isToday(d)) return format(d, 'h:mm a');
+  if (isYesterday(d)) return 'Yesterday ' + format(d, 'h:mm a');
+  return format(d, 'MMM d, h:mm a');
+}
+
+function formatConvoDate(dateStr: string) {
+  const d = new Date(dateStr);
+  if (isToday(d)) return format(d, 'h:mm a');
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'MMM d');
+}
 
 export default function AdminMessages() {
   const { user } = useAuth();
@@ -44,9 +58,10 @@ export default function AdminMessages() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load conversations with agent names and unread counts
   const loadConversations = async () => {
     const { data: convos } = await supabase
       .from('conversations')
@@ -55,14 +70,12 @@ export default function AdminMessages() {
 
     if (!convos) { setLoading(false); return; }
 
-    // Get agent profiles and unread counts
     const enriched = await Promise.all(convos.map(async (c: any) => {
       const [{ data: profile }, { count }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('user_id', c.agent_id).single(),
         supabase.from('messages').select('*', { count: 'exact', head: true })
           .eq('conversation_id', c.id).eq('sender_role', 'agent').eq('is_read', false),
       ]);
-      // Get last message
       const { data: lastMsg } = await supabase.from('messages')
         .select('message').eq('conversation_id', c.id)
         .order('created_at', { ascending: false }).limit(1).single();
@@ -81,7 +94,6 @@ export default function AdminMessages() {
 
   useEffect(() => { loadConversations(); }, []);
 
-  // Load messages for selected conversation
   useEffect(() => {
     if (!selectedConvo) return;
 
@@ -93,7 +105,6 @@ export default function AdminMessages() {
         .order('created_at', { ascending: true });
       if (data) setMessages(data as Message[]);
 
-      // Mark agent messages as read
       await supabase
         .from('messages')
         .update({ is_read: true })
@@ -101,7 +112,6 @@ export default function AdminMessages() {
         .eq('sender_role', 'agent')
         .eq('is_read', false);
 
-      // Update local unread count
       setConversations(prev => prev.map(c =>
         c.id === selectedConvo ? { ...c, unread_count: 0 } : c
       ));
@@ -127,7 +137,6 @@ export default function AdminMessages() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedConvo]);
 
-  // Realtime for new conversations/messages (list refresh)
   useEffect(() => {
     const channel = supabase
       .channel('admin-convos-realtime')
@@ -155,9 +164,9 @@ export default function AdminMessages() {
       sender_role: 'admin',
       message: text.trim(),
     });
-    // Update conversation timestamp
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', selectedConvo);
     setSending(false);
+    inputRef.current?.focus();
   };
 
   if (loading) {
@@ -172,12 +181,20 @@ export default function AdminMessages() {
   if (selectedConvo) {
     const convo = conversations.find(c => c.id === selectedConvo);
     return (
-      <Card className="flex flex-col h-[calc(100vh-8rem)]">
-        <CardHeader className="pb-3 flex-row items-center gap-3 space-y-0">
-          <Button variant="ghost" size="icon" onClick={() => { setSelectedConvo(null); loadConversations(); }}>
+      <Card className="flex flex-col h-[calc(100vh-8rem)] overflow-hidden">
+        <CardHeader className="pb-3 flex-row items-center gap-3 space-y-0 border-b">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setSelectedConvo(null); loadConversations(); }}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-lg">{convo?.agent_name || 'Agent'}</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">{convo?.agent_name || 'Agent'}</CardTitle>
+              <p className="text-xs text-muted-foreground">Agent</p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
           <ScrollArea className="flex-1 px-4">
@@ -188,21 +205,31 @@ export default function AdminMessages() {
               {messages.map((msg) => {
                 const isMe = msg.sender_role === 'admin';
                 return (
-                  <div key={msg.id} className={cn('flex', isMe ? 'justify-end' : 'justify-start')}>
+                  <div key={msg.id} className={cn('flex gap-2', isMe ? 'justify-end' : 'justify-start')}>
+                    {!isMe && (
+                      <div className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+                        <User className="h-3.5 w-3.5 text-secondary-foreground" />
+                      </div>
+                    )}
                     <div className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm',
+                      'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm',
                       isMe
                         ? 'bg-primary text-primary-foreground rounded-br-md'
                         : 'bg-muted text-foreground rounded-bl-md'
                     )}>
-                      <p className="whitespace-pre-wrap">{msg.message}</p>
+                      <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                       <p className={cn(
                         'text-[10px] mt-1',
                         isMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
                       )}>
-                        {format(new Date(msg.created_at), 'h:mm a')}
+                        {formatMsgTime(msg.created_at)}
                       </p>
                     </div>
+                    {isMe && (
+                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <Bot className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -210,24 +237,25 @@ export default function AdminMessages() {
             </div>
           </ScrollArea>
 
-          {/* Quick replies */}
           <div className="flex flex-wrap gap-2 px-4 pb-2">
             {QUICK_REPLIES.map((qr) => (
-              <Button key={qr} variant="outline" size="sm" className="text-xs" onClick={() => sendMessage(qr)}>
+              <Button key={qr} variant="outline" size="sm" className="text-xs rounded-full" onClick={() => sendMessage(qr)}>
                 {qr}
               </Button>
             ))}
           </div>
 
-          <div className="flex gap-2 p-4 border-t">
+          <div className="flex gap-2 p-3 border-t bg-card">
             <Input
+              ref={inputRef}
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(newMessage)}
               disabled={sending}
+              className="rounded-full"
             />
-            <Button size="icon" onClick={() => sendMessage(newMessage)} disabled={sending || !newMessage.trim()}>
+            <Button size="icon" className="rounded-full shrink-0" onClick={() => sendMessage(newMessage)} disabled={sending || !newMessage.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -237,41 +265,76 @@ export default function AdminMessages() {
   }
 
   // Conversation list
+  const filtered = conversations.filter(c =>
+    !search || c.agent_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-        <MessageCircle className="h-6 w-6 text-primary" />
-        Messages
-      </h1>
-      {conversations.length === 0 ? (
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <MessageCircle className="h-6 w-6 text-primary" />
+          Messages
+          {totalUnread > 0 && (
+            <Badge className="text-xs">{totalUnread}</Badge>
+          )}
+        </h1>
+      </div>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search agents..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 rounded-full"
+        />
+      </div>
+
+      {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No conversations yet. Agents will appear here when they message you.
+            {search ? 'No matching conversations.' : 'No conversations yet. Agents will appear here when they message you.'}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {conversations.map((convo) => (
+        <div className="space-y-1">
+          {filtered.map((convo) => (
             <Card
               key={convo.id}
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              className={cn(
+                'cursor-pointer transition-colors hover:bg-muted/50',
+                (convo.unread_count ?? 0) > 0 && 'border-primary/30 bg-primary/5'
+              )}
               onClick={() => setSelectedConvo(convo.id)}
             >
-              <CardContent className="flex items-center justify-between p-4">
+              <CardContent className="flex items-center gap-3 p-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{convo.agent_name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className={cn('font-medium truncate', (convo.unread_count ?? 0) > 0 && 'text-foreground')}>
+                      {convo.agent_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground ml-2 shrink-0">
+                      {formatConvoDate(convo.updated_at)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <p className={cn(
+                      'text-sm truncate',
+                      (convo.unread_count ?? 0) > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'
+                    )}>
+                      {convo.last_message || 'No messages yet'}
+                    </p>
                     {(convo.unread_count ?? 0) > 0 && (
-                      <Badge className="text-[10px] px-1.5 py-0">{convo.unread_count}</Badge>
+                      <Badge className="text-[10px] px-1.5 py-0 ml-2 shrink-0">{convo.unread_count}</Badge>
                     )}
                   </div>
-                  {convo.last_message && (
-                    <p className="text-sm text-muted-foreground truncate mt-0.5">{convo.last_message}</p>
-                  )}
                 </div>
-                <p className="text-xs text-muted-foreground ml-2 shrink-0">
-                  {format(new Date(convo.updated_at), 'MMM d')}
-                </p>
               </CardContent>
             </Card>
           ))}

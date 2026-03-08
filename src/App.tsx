@@ -33,6 +33,7 @@ const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
+const AdminMassEmails = lazy(() => import("@/pages/admin/AdminMassEmails"));
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ function AppRoutes() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="mass-emails" element={<AdminMassEmails />} />
           </Route>
         )}
 
