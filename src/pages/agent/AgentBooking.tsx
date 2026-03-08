@@ -176,12 +176,32 @@ export default function AgentBooking() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="space-y-1.5">
-              <Label>Price (Ksh)</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required min={basePrice} />
-              {priceError && <p className="text-xs text-destructive">{priceError}</p>}
-              {basePrice > 0 && <p className="text-xs text-muted-foreground">Base: Ksh {basePrice.toLocaleString()}</p>}
-            </div>
+            {requiresSize && (
+              <div className="space-y-1.5">
+                <Label>Enter Size (Square Meters)</Label>
+                <Input type="number" value={form.size_sqm} onChange={e => setForm(f => ({ ...f, size_sqm: e.target.value }))} required min={1} placeholder="e.g. 50" />
+                {pricePerSqm > 0 && sizeSqm > 0 && (
+                  <p className="text-sm font-medium text-primary">
+                    Calculated Price: Ksh {calculatedPrice.toLocaleString()} ({sizeSqm} m² × Ksh {pricePerSqm.toLocaleString()}/m²)
+                  </p>
+                )}
+              </div>
+            )}
+            {!requiresSize || pricePerSqm === 0 ? (
+              <div className="space-y-1.5">
+                <Label>Price (Ksh)</Label>
+                <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required min={basePrice} />
+                {priceError && <p className="text-xs text-destructive">{priceError}</p>}
+                {basePrice > 0 && <p className="text-xs text-muted-foreground">Base: Ksh {basePrice.toLocaleString()}</p>}
+              </div>
+            ) : (
+              price > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Total Price (Ksh)</Label>
+                  <Input type="number" value={calculatedPrice} disabled />
+                </div>
+              )
+            )}
           </CardContent>
         </Card>
 
