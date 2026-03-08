@@ -88,6 +88,7 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      <AiChatAssistant />
     </div>
   );
 }
