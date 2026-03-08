@@ -70,6 +70,8 @@ export default function AdminServices() {
       category: form.category,
       pricing_model: form.pricing_model,
       commission_eligible: form.commission_eligible,
+      requires_size_input: form.requires_size_input,
+      price_per_sqm: form.requires_size_input ? Number(form.price_per_sqm) || 0 : 0,
     };
 
     const { error } = editId
