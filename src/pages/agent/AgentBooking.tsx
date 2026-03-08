@@ -230,7 +230,7 @@ export default function AgentBooking() {
           </Card>
         )}
 
-        <Button type="submit" className="w-full" disabled={loading || !selectedService || !date || !!priceError}>
+        <Button type="submit" className="w-full" disabled={loading || !selectedService || !date || !!priceError || (requiresSize && sizeSqm <= 0)}>
           {loading ? 'Creating...' : 'Create Booking'}
         </Button>
       </form>
