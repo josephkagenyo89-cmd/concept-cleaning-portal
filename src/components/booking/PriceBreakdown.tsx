@@ -54,7 +54,7 @@ export default function PriceBreakdown({ serviceName, quantity, systemPrice, age
                 {commission.bonus > 0 && (
                   <>
                     <span className="text-muted-foreground">High-value bonus:</span>
-                    <span className="font-medium text-green-600">+Ksh {commission.bonus.toLocaleString()}</span>
+                    <span className="font-medium text-primary">+Ksh {commission.bonus.toLocaleString()}</span>
                   </>
                 )}
                 <span className="text-muted-foreground font-medium">Total commission:</span>
