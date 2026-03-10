@@ -47,6 +47,8 @@ export type Database = {
       bookings: {
         Row: {
           agent_id: string
+          agent_margin: number | null
+          agent_price: number | null
           client_name: string
           client_phone: string
           commission_created: boolean
@@ -54,14 +56,18 @@ export type Database = {
           id: string
           location: string
           price: number
+          quantity: string | null
           service_date: string
           service_id: string
           size_sqm: number | null
           status: Database["public"]["Enums"]["booking_status"]
+          system_price: number | null
           updated_at: string
         }
         Insert: {
           agent_id: string
+          agent_margin?: number | null
+          agent_price?: number | null
           client_name: string
           client_phone: string
           commission_created?: boolean
@@ -69,14 +75,18 @@ export type Database = {
           id?: string
           location: string
           price: number
+          quantity?: string | null
           service_date: string
           service_id: string
           size_sqm?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
+          system_price?: number | null
           updated_at?: string
         }
         Update: {
           agent_id?: string
+          agent_margin?: number | null
+          agent_price?: number | null
           client_name?: string
           client_phone?: string
           commission_created?: boolean
@@ -84,10 +94,12 @@ export type Database = {
           id?: string
           location?: string
           price?: number
+          quantity?: string | null
           service_date?: string
           service_id?: string
           size_sqm?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
+          system_price?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -484,11 +496,14 @@ export type Database = {
           commission_eligible: boolean
           created_at: string
           description: string | null
+          dropdown_options: Json | null
           id: string
+          input_type: string
           is_active: boolean
           name: string
           price_per_sqm: number
           pricing_model: string
+          pricing_unit: string
           requires_size_input: boolean
           updated_at: string
         }
@@ -498,11 +513,14 @@ export type Database = {
           commission_eligible?: boolean
           created_at?: string
           description?: string | null
+          dropdown_options?: Json | null
           id?: string
+          input_type?: string
           is_active?: boolean
           name: string
           price_per_sqm?: number
           pricing_model?: string
+          pricing_unit?: string
           requires_size_input?: boolean
           updated_at?: string
         }
@@ -512,11 +530,14 @@ export type Database = {
           commission_eligible?: boolean
           created_at?: string
           description?: string | null
+          dropdown_options?: Json | null
           id?: string
+          input_type?: string
           is_active?: boolean
           name?: string
           price_per_sqm?: number
           pricing_model?: string
+          pricing_unit?: string
           requires_size_input?: boolean
           updated_at?: string
         }
