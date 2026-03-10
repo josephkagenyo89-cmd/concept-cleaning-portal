@@ -33,8 +33,6 @@ const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
-const AdminMassEmails = lazy(() => import("@/pages/admin/AdminMassEmails"));
-const AdminSmtpSettings = lazy(() => import("@/pages/admin/AdminSmtpSettings"));
 
 const queryClient = new QueryClient();
 
