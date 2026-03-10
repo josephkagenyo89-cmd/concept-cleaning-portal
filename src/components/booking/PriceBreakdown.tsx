@@ -35,7 +35,7 @@ export default function PriceBreakdown({ serviceName, quantity, systemPrice, age
           {agentMargin > 0 && (
             <>
               <span className="text-muted-foreground">Agent Margin:</span>
-              <span className="font-medium text-green-600">+Ksh {agentMargin.toLocaleString()}</span>
+              <span className="font-medium text-primary">+Ksh {agentMargin.toLocaleString()}</span>
             </>
           )}
         </div>
