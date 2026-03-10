@@ -33,21 +33,22 @@ export function usePresence() {
 
     // Handle tab close / navigate away
     const handleBeforeUnload = () => {
-      // Use sendBeacon for reliability on unload
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?user_id=eq.${user.id}`;
       const body = JSON.stringify({ is_online: false, last_seen: new Date().toISOString() });
-      navigator.sendBeacon?.(url); // sendBeacon doesn't support PATCH, fallback below
-      // Fallback: fire-and-forget fetch
-      fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${(supabase as any).auth.currentSession?.access_token || ''}`,
-          'Prefer': 'return=minimal',
-        },
-        body,
-        keepalive: true,
+      // Use keepalive fetch for reliability on unload
+      supabase.auth.getSession().then(({ data }) => {
+        const token = data?.session?.access_token || '';
+        fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${token}`,
+            'Prefer': 'return=minimal',
+          },
+          body,
+          keepalive: true,
+        }).catch(() => {});
       }).catch(() => {});
     };
 
