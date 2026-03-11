@@ -24,6 +24,15 @@ export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, a
           <span className="text-muted-foreground">Service:</span>
           <span className="font-medium">{serviceName}</span>
 
+          {quantity > 1 && unitPrice != null && (
+            <>
+              <span className="text-muted-foreground">Unit Price:</span>
+              <span className="font-medium">Ksh {unitPrice.toLocaleString()}</span>
+              <span className="text-muted-foreground">Quantity:</span>
+              <span className="font-medium">{quantity}</span>
+            </>
+          )}
+
           <span className="text-muted-foreground">System Price:</span>
           <span className="font-medium">Ksh {systemPrice.toLocaleString()}</span>
 

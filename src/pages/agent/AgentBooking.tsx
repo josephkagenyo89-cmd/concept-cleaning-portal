@@ -250,6 +250,8 @@ export default function AgentBooking() {
             agentMargin={agentMargin}
             tier={tier}
             commission={commission}
+            quantity={quantity}
+            unitPrice={unitPrice}
           />
         )}
 
