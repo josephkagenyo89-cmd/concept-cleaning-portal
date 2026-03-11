@@ -51,7 +51,8 @@ export default function AgentBooking() {
 
   const tier = getTier(cumulativeRevenue);
 
-  const systemPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
+  const unitPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
+  const systemPrice = unitPrice * quantity;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
