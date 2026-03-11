@@ -9,11 +9,11 @@ interface PriceBreakdownProps {
   agentMargin: number;
   tier: Tier;
   commission: { commission: number; bonus: number; total: number } | null;
-  /** @deprecated kept for backward compat */
-  quantity?: string;
+  quantity?: number;
+  unitPrice?: number;
 }
 
-export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, agentMargin, tier, commission }: PriceBreakdownProps) {
+export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, agentMargin, tier, commission, quantity = 1, unitPrice }: PriceBreakdownProps) {
   if (systemPrice <= 0) return null;
 
   return (
