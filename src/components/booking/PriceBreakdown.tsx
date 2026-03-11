@@ -9,11 +9,11 @@ interface PriceBreakdownProps {
   agentMargin: number;
   tier: Tier;
   commission: { commission: number; bonus: number; total: number } | null;
-  /** @deprecated kept for backward compat */
-  quantity?: string;
+  quantity?: number;
+  unitPrice?: number;
 }
 
-export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, agentMargin, tier, commission }: PriceBreakdownProps) {
+export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, agentMargin, tier, commission, quantity = 1, unitPrice }: PriceBreakdownProps) {
   if (systemPrice <= 0) return null;
 
   return (
@@ -23,6 +23,15 @@ export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, a
         <div className="grid grid-cols-2 gap-2 text-sm">
           <span className="text-muted-foreground">Service:</span>
           <span className="font-medium">{serviceName}</span>
+
+          {quantity > 1 && unitPrice != null && (
+            <>
+              <span className="text-muted-foreground">Unit Price:</span>
+              <span className="font-medium">Ksh {unitPrice.toLocaleString()}</span>
+              <span className="text-muted-foreground">Quantity:</span>
+              <span className="font-medium">{quantity}</span>
+            </>
+          )}
 
           <span className="text-muted-foreground">System Price:</span>
           <span className="font-medium">Ksh {systemPrice.toLocaleString()}</span>

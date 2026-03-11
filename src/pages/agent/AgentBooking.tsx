@@ -26,6 +26,7 @@ export default function AgentBooking() {
     client_name: '', client_phone: '', location: '',
   });
   const [agentPrice, setAgentPrice] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,8 @@ export default function AgentBooking() {
 
   const tier = getTier(cumulativeRevenue);
 
-  const systemPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
+  const unitPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
+  const systemPrice = unitPrice * quantity;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
@@ -61,7 +63,18 @@ export default function AgentBooking() {
 
   const handleServiceSelect = (service: any) => {
     setSelectedService(service);
+    setQuantity(1);
     setAgentPrice(service ? String(Number(service.base_price) || 0) : '');
+  };
+
+  const handleQuantityChange = (newQty: number) => {
+    const q = Math.max(1, newQty);
+    setQuantity(q);
+    const newSystemPrice = unitPrice * q;
+    // Auto-update agent price if it was at the old system price (i.e. not manually adjusted upward)
+    if (currentAgentPrice <= unitPrice * quantity) {
+      setAgentPrice(String(newSystemPrice));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +93,7 @@ export default function AgentBooking() {
       system_price: systemPrice,
       agent_price: finalPrice,
       agent_margin: agentMargin,
-      quantity: '1',
+      quantity: String(quantity),
     };
 
     if (!navigator.onLine) {
@@ -169,6 +182,33 @@ export default function AgentBooking() {
                 </Popover>
               </div>
 
+              {/* Quantity */}
+              {unitPrice > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Quantity</Label>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1}>
+                      <span className="text-lg">−</span>
+                    </Button>
+                    <Input
+                      type="number"
+                      value={quantity}
+                      onChange={e => handleQuantityChange(Number(e.target.value) || 1)}
+                      min={1}
+                      className="text-center w-20"
+                    />
+                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)}>
+                      <span className="text-lg">+</span>
+                    </Button>
+                  </div>
+                  {quantity > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {quantity}× {selectedService?.name} @ Ksh {unitPrice.toLocaleString()} each
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* System Price (read-only) */}
               {systemPrice > 0 && (
                 <div className="space-y-1.5">
@@ -210,6 +250,8 @@ export default function AgentBooking() {
             agentMargin={agentMargin}
             tier={tier}
             commission={commission}
+            quantity={quantity}
+            unitPrice={unitPrice}
           />
         )}
 
