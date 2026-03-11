@@ -93,7 +93,7 @@ export default function AgentBooking() {
       system_price: systemPrice,
       agent_price: finalPrice,
       agent_margin: agentMargin,
-      quantity: '1',
+      quantity: String(quantity),
     };
 
     if (!navigator.onLine) {
