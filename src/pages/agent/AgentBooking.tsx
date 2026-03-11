@@ -15,7 +15,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { savePending } from '@/lib/offlineDb';
 import ServiceSearch from '@/components/booking/ServiceSearch';
-import DynamicServiceInput from '@/components/booking/DynamicServiceInput';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 
 export default function AgentBooking() {
@@ -26,7 +25,6 @@ export default function AgentBooking() {
   const [form, setForm] = useState({
     client_name: '', client_phone: '', location: '',
   });
-  const [quantity, setQuantity] = useState('');
   const [agentPrice, setAgentPrice] = useState('');
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
@@ -52,72 +50,23 @@ export default function AgentBooking() {
 
   const tier = getTier(cumulativeRevenue);
 
-  // Calculate system price based on service config
-  const getSystemPrice = (): number => {
-    if (!selectedService) return 0;
-    const basePrice = Number(selectedService.base_price) || 0;
-    const inputType = selectedService.input_type || 'number';
-    const pricingUnit = selectedService.pricing_unit || 'fixed';
-
-    if (inputType === 'dropdown') {
-      // For dropdown services, base_price is the price for the selected option
-      // or use price_per_sqm as multiplier if set
-      return basePrice;
-    }
-
-    if (pricingUnit === 'per_sqft' || pricingUnit === 'per_sqm' || pricingUnit === 'per_unit') {
-      const qty = Number(quantity) || 0;
-      const rate = Number(selectedService.price_per_sqm) || basePrice;
-      return qty > 0 ? qty * rate : 0;
-    }
-
-    return basePrice;
-  };
-
-  const systemPrice = getSystemPrice();
+  const systemPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
-  const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice 
-    ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}` 
+  const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
+    ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}`
     : null;
   const commission = finalPrice > 0 && !priceError ? calculateCommission(finalPrice, tier) : null;
 
   const handleServiceSelect = (service: any) => {
     setSelectedService(service);
-    setQuantity('');
-    setAgentPrice('');
-  };
-
-  const handleQuantityChange = (val: string) => {
-    setQuantity(val);
-    // Auto-set agent price to system price when quantity changes
-    const svc = selectedService;
-    if (!svc) return;
-    const inputType = svc.input_type || 'number';
-    const pricingUnit = svc.pricing_unit || 'fixed';
-
-    if (inputType === 'dropdown') {
-      setAgentPrice(String(Number(svc.base_price) || 0));
-    } else if (pricingUnit === 'per_sqft' || pricingUnit === 'per_sqm' || pricingUnit === 'per_unit') {
-      const qty = Number(val) || 0;
-      const rate = Number(svc.price_per_sqm) || Number(svc.base_price);
-      if (qty > 0) setAgentPrice(String(qty * rate));
-    } else {
-      setAgentPrice(String(Number(svc.base_price) || 0));
-    }
-  };
-
-  const isQuantityValid = () => {
-    if (!selectedService) return false;
-    const inputType = selectedService.input_type || 'number';
-    if (inputType === 'dropdown') return quantity !== '';
-    return Number(quantity) > 0;
+    setAgentPrice(service ? String(Number(service.base_price) || 0) : '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedService || !date || priceError || !isQuantityValid()) return;
+    if (!user || !selectedService || !date || priceError || currentAgentPrice < systemPrice) return;
     setLoading(true);
 
     const bookingData = {
@@ -131,8 +80,7 @@ export default function AgentBooking() {
       system_price: systemPrice,
       agent_price: finalPrice,
       agent_margin: agentMargin,
-      quantity: quantity,
-      size_sqm: selectedService.pricing_unit === 'per_sqm' ? Number(quantity) : null,
+      quantity: '1',
     };
 
     if (!navigator.onLine) {
@@ -158,15 +106,6 @@ export default function AgentBooking() {
       navigate('/agent');
     }
   };
-
-  const dropdownOptions = (() => {
-    try {
-      const opts = selectedService?.dropdown_options;
-      if (Array.isArray(opts)) return opts.map(String);
-      if (typeof opts === 'string') return JSON.parse(opts);
-      return [];
-    } catch { return []; }
-  })();
 
   return (
     <div className="max-w-lg mx-auto pb-20 md:pb-6">
@@ -207,7 +146,7 @@ export default function AgentBooking() {
           </CardContent>
         </Card>
 
-        {/* Service Configuration & Pricing */}
+        {/* Service Date & Pricing */}
         {selectedService && (
           <Card>
             <CardHeader className="pb-3">
@@ -229,15 +168,6 @@ export default function AgentBooking() {
                   </PopoverContent>
                 </Popover>
               </div>
-
-              {/* Dynamic Input */}
-              <DynamicServiceInput
-                inputType={selectedService.input_type || 'number'}
-                dropdownOptions={dropdownOptions}
-                pricingUnit={selectedService.pricing_unit || 'fixed'}
-                value={quantity}
-                onChange={handleQuantityChange}
-              />
 
               {/* System Price (read-only) */}
               {systemPrice > 0 && (
@@ -263,6 +193,10 @@ export default function AgentBooking() {
                   <p className="text-xs text-muted-foreground">You can increase the price but not below Ksh {systemPrice.toLocaleString()}</p>
                 </div>
               )}
+
+              {systemPrice === 0 && (
+                <p className="text-sm text-muted-foreground">Price not yet configured for this service. Contact admin.</p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -271,7 +205,6 @@ export default function AgentBooking() {
         {systemPrice > 0 && currentAgentPrice >= systemPrice && !priceError && (
           <PriceBreakdown
             serviceName={selectedService?.name || ''}
-            quantity={quantity}
             systemPrice={systemPrice}
             agentPrice={finalPrice}
             agentMargin={agentMargin}
@@ -283,7 +216,7 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !selectedService || !date || !!priceError || !isQuantityValid() || currentAgentPrice < systemPrice}
+          disabled={loading || !selectedService || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
         >
           {loading ? 'Creating...' : 'Create Booking'}
         </Button>
