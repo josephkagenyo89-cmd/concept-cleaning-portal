@@ -63,7 +63,18 @@ export default function AgentBooking() {
 
   const handleServiceSelect = (service: any) => {
     setSelectedService(service);
+    setQuantity(1);
     setAgentPrice(service ? String(Number(service.base_price) || 0) : '');
+  };
+
+  const handleQuantityChange = (newQty: number) => {
+    const q = Math.max(1, newQty);
+    setQuantity(q);
+    const newSystemPrice = unitPrice * q;
+    // Auto-update agent price if it was at the old system price (i.e. not manually adjusted upward)
+    if (currentAgentPrice <= unitPrice * quantity) {
+      setAgentPrice(String(newSystemPrice));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
