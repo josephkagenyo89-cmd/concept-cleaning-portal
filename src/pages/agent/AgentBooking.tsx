@@ -182,6 +182,33 @@ export default function AgentBooking() {
                 </Popover>
               </div>
 
+              {/* Quantity */}
+              {unitPrice > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Quantity</Label>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1}>
+                      <span className="text-lg">−</span>
+                    </Button>
+                    <Input
+                      type="number"
+                      value={quantity}
+                      onChange={e => handleQuantityChange(Number(e.target.value) || 1)}
+                      min={1}
+                      className="text-center w-20"
+                    />
+                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)}>
+                      <span className="text-lg">+</span>
+                    </Button>
+                  </div>
+                  {quantity > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {quantity}× {selectedService?.name} @ Ksh {unitPrice.toLocaleString()} each
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* System Price (read-only) */}
               {systemPrice > 0 && (
                 <div className="space-y-1.5">
