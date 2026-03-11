@@ -26,6 +26,7 @@ export default function AgentBooking() {
     client_name: '', client_phone: '', location: '',
   });
   const [agentPrice, setAgentPrice] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
