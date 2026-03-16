@@ -73,8 +73,15 @@ export default function AdminBookings() {
       toast({ title: 'Failed', description: error.message, variant: 'destructive' });
       return;
     }
-    // Only create commission if completing AND commission hasn't been created yet
+    // Only create commission if completing AND commission hasn't been created yet AND booking was created by agent
     if (status === 'completed' && user && !commissionCreated) {
+      // Check if booking was created by admin — skip commission
+      const booking = bookings.find(b => b.id === id);
+      if (booking?.created_by_role === 'admin') {
+        toast({ title: 'Booking completed', description: 'No commission — admin-created booking.' });
+        load();
+        return;
+      }
       const { data: completed } = await supabase.from('bookings').select('price').eq('agent_id', agentId).eq('status', 'completed');
       const cumRev = (completed || []).reduce((s, b) => s + Number(b.price), 0);
       const { getTier, calculateCommission } = await import('@/lib/commission');

@@ -15,6 +15,8 @@ import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
+  { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
+  { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
