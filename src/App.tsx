@@ -121,6 +121,11 @@ function AppRoutes() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="erp" element={<ErpDashboard />} />
+            <Route path="erp/income" element={<ErpIncome />} />
+            <Route path="erp/expenses" element={<ErpExpenses />} />
+            <Route path="erp/invoices" element={<ErpInvoices />} />
+            <Route path="erp/reports" element={<ErpReports />} />
           </Route>
         )}
 
