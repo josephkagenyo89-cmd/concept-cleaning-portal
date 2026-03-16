@@ -19,7 +19,7 @@ import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 
 export default function AgentBooking() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any>(null);
