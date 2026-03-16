@@ -73,8 +73,15 @@ export default function AdminBookings() {
       toast({ title: 'Failed', description: error.message, variant: 'destructive' });
       return;
     }
-    // Only create commission if completing AND commission hasn't been created yet
+    // Only create commission if completing AND commission hasn't been created yet AND booking was created by agent
     if (status === 'completed' && user && !commissionCreated) {
+      // Check if booking was created by admin — skip commission
+      const booking = bookings.find(b => b.id === id);
+      if (booking?.created_by_role === 'admin') {
+        toast({ title: 'Booking completed', description: 'No commission — admin-created booking.' });
+        load();
+        return;
+      }
       const { data: completed } = await supabase.from('bookings').select('price').eq('agent_id', agentId).eq('status', 'completed');
       const cumRev = (completed || []).reduce((s, b) => s + Number(b.price), 0);
       const { getTier, calculateCommission } = await import('@/lib/commission');
@@ -200,7 +207,7 @@ export default function AdminBookings() {
               <Card key={b.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <div className="space-y-0.5">
+                     <div className="space-y-0.5">
                       <p className="font-semibold">{b.client_name}</p>
                       <p className="text-xs text-muted-foreground">{b.client_phone} · {b.location}</p>
                       <p className="text-xs text-muted-foreground">Agent: {b.agent_name} · {b.agent_phone}</p>
@@ -209,6 +216,9 @@ export default function AdminBookings() {
                       </p>
                       <p className="text-xs text-muted-foreground">Date: {format(new Date(b.service_date), 'PPP')}</p>
                       <p className="text-xs text-muted-foreground">ID: {b.id.slice(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Created by: {b.created_by_name || b.agent_name} <span className="font-medium">({b.created_by_role || 'agent'})</span>
+                      </p>
                     </div>
                     <div className="text-right space-y-0.5">
                       <p className="font-bold">Ksh {Number(b.price).toLocaleString()}</p>
