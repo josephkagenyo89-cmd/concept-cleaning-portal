@@ -33,6 +33,11 @@ const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
+const ErpDashboard = lazy(() => import("@/pages/admin/ErpDashboard"));
+const ErpIncome = lazy(() => import("@/pages/admin/ErpIncome"));
+const ErpExpenses = lazy(() => import("@/pages/admin/ErpExpenses"));
+const ErpInvoices = lazy(() => import("@/pages/admin/ErpInvoices"));
+const ErpReports = lazy(() => import("@/pages/admin/ErpReports"));
 
 const queryClient = new QueryClient();
 
