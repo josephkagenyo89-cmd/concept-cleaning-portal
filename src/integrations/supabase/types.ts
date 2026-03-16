@@ -171,6 +171,142 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string
+          date: string
+          description: string | null
+          id: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          created_by: string
+          date?: string
+          description?: string | null
+          id?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      income_records: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          created_at: string
+          created_by: string
+          date: string
+          description: string | null
+          id: string
+          payment_method: string
+          service: string | null
+          source: string
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          description?: string | null
+          id?: string
+          payment_method?: string
+          service?: string | null
+          source?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string | null
+          id?: string
+          payment_method?: string
+          service?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          created_by: string
+          date: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          notes: string | null
+          payment_status: string
+          service: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          payment_status?: string
+          service: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          payment_status?: string
+          service?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mass_email_logs: {
         Row: {
           created_at: string
