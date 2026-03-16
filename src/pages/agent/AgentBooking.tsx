@@ -95,6 +95,8 @@ export default function AgentBooking() {
       agent_price: finalPrice,
       agent_margin: agentMargin,
       quantity: String(quantity),
+      created_by_name: profile?.full_name || 'Agent',
+      created_by_role: 'agent',
     };
 
     if (!navigator.onLine) {
