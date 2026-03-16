@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { savePending } from '@/lib/offlineDb';
 import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
+import QuotationActions from '@/components/booking/QuotationActions';
 
 export default function AgentBooking() {
   const { user } = useAuth();
