@@ -258,6 +258,25 @@ export default function AgentBooking() {
           />
         )}
 
+        {/* Quotation actions */}
+        {selectedService && form.client_name && form.client_phone && currentAgentPrice >= systemPrice && systemPrice > 0 && !priceError && (
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-2">Generate Quotation</p>
+              <QuotationActions
+                clientName={form.client_name}
+                clientPhone={form.client_phone}
+                serviceName={selectedService?.name || ''}
+                serviceDate={date}
+                price={finalPrice}
+                userId={user?.id || ''}
+                userName={profile?.full_name || 'Agent'}
+                userRole="agent"
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Button
           type="submit"
           className="w-full"
