@@ -24,6 +24,14 @@ const navItems = [
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
+const erpNavItems = [
+  { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
+  { to: '/admin/erp/income', icon: DollarSign, label: 'Income' },
+  { to: '/admin/erp/expenses', icon: Receipt, label: 'Expenses' },
+  { to: '/admin/erp/invoices', icon: FileText, label: 'Invoices' },
+  { to: '/admin/erp/reports', icon: PieChart, label: 'Reports' },
+];
+
 export default function AdminLayout() {
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
