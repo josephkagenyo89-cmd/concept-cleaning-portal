@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
+  Receipt, DollarSign, FileText, PieChart, Landmark,
 } from 'lucide-react';
 import { useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -21,6 +22,14 @@ const navItems = [
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+];
+
+const erpNavItems = [
+  { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
+  { to: '/admin/erp/income', icon: DollarSign, label: 'Income' },
+  { to: '/admin/erp/expenses', icon: Receipt, label: 'Expenses' },
+  { to: '/admin/erp/invoices', icon: FileText, label: 'Invoices' },
+  { to: '/admin/erp/reports', icon: PieChart, label: 'Reports' },
 ];
 
 export default function AdminLayout() {
@@ -51,7 +60,7 @@ export default function AdminLayout() {
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="font-bold">Concept Admin</span>
         </div>
-        <nav className="flex flex-col gap-1 p-3 mt-14 md:mt-0">
+        <nav className="flex flex-col gap-1 p-3 mt-14 md:mt-0 overflow-y-auto max-h-[calc(100vh-60px)]">
           {navItems.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
@@ -67,6 +76,24 @@ export default function AdminLayout() {
               {label}
             </NavLink>
           ))}
+          <div className="pt-3 mt-3 border-t">
+            <p className="px-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ERP & Accounting</p>
+            {erpNavItems.map(({ to, icon: Icon, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </NavLink>
+            ))}
+          </div>
           <div className="mt-auto pt-4 border-t">
             <button
               onClick={signOut}

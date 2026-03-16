@@ -33,6 +33,11 @@ const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
+const ErpDashboard = lazy(() => import("@/pages/admin/ErpDashboard"));
+const ErpIncome = lazy(() => import("@/pages/admin/ErpIncome"));
+const ErpExpenses = lazy(() => import("@/pages/admin/ErpExpenses"));
+const ErpInvoices = lazy(() => import("@/pages/admin/ErpInvoices"));
+const ErpReports = lazy(() => import("@/pages/admin/ErpReports"));
 
 const queryClient = new QueryClient();
 
@@ -116,6 +121,11 @@ function AppRoutes() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="erp" element={<ErpDashboard />} />
+            <Route path="erp/income" element={<ErpIncome />} />
+            <Route path="erp/expenses" element={<ErpExpenses />} />
+            <Route path="erp/invoices" element={<ErpInvoices />} />
+            <Route path="erp/reports" element={<ErpReports />} />
           </Route>
         )}
 
