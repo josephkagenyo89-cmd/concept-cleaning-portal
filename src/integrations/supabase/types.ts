@@ -53,6 +53,8 @@ export type Database = {
           client_phone: string
           commission_created: boolean
           created_at: string
+          created_by_name: string | null
+          created_by_role: string | null
           id: string
           location: string
           price: number
@@ -72,6 +74,8 @@ export type Database = {
           client_phone: string
           commission_created?: boolean
           created_at?: string
+          created_by_name?: string | null
+          created_by_role?: string | null
           id?: string
           location: string
           price: number
@@ -91,6 +95,8 @@ export type Database = {
           client_phone?: string
           commission_created?: boolean
           created_at?: string
+          created_by_name?: string | null
+          created_by_role?: string | null
           id?: string
           location?: string
           price?: number
@@ -622,6 +628,48 @@ export type Database = {
           town_estate?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      quotations: {
+        Row: {
+          client_name: string
+          client_phone: string
+          created_at: string
+          created_by: string
+          created_by_name: string
+          created_by_role: string
+          id: string
+          price: number
+          quotation_number: string
+          service_date: string | null
+          service_name: string
+        }
+        Insert: {
+          client_name: string
+          client_phone: string
+          created_at?: string
+          created_by: string
+          created_by_name: string
+          created_by_role?: string
+          id?: string
+          price: number
+          quotation_number: string
+          service_date?: string | null
+          service_name: string
+        }
+        Update: {
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          created_by?: string
+          created_by_name?: string
+          created_by_role?: string
+          id?: string
+          price?: number
+          quotation_number?: string
+          service_date?: string | null
+          service_name?: string
         }
         Relationships: []
       }
