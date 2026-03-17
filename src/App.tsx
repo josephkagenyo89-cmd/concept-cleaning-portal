@@ -40,6 +40,7 @@ const ErpInvoices = lazy(() => import("@/pages/admin/ErpInvoices"));
 const ErpReports = lazy(() => import("@/pages/admin/ErpReports"));
 const AdminBookService = lazy(() => import("@/pages/admin/AdminBookService"));
 const AdminQuotations = lazy(() => import("@/pages/admin/AdminQuotations"));
+const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
 
 const queryClient = new QueryClient();
 
