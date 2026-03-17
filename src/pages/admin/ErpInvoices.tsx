@@ -87,7 +87,33 @@ export default function ErpInvoices() {
   };
 
   const updateStatus = async (id: string, status: string) => {
+    const invoice = invoices.find(i => i.id === id);
     await supabase.from('invoices').update({ payment_status: status }).eq('id', id);
+
+    // Auto-create income record when marked as paid
+    if (status === 'paid' && invoice) {
+      // Check for existing income record to prevent duplicates
+      const { data: existing } = await supabase
+        .from('income_records')
+        .select('id')
+        .eq('invoice_id' as any, id)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabase.from('income_records').insert({
+          amount: Number(invoice.amount),
+          date: new Date().toISOString().split('T')[0],
+          description: `Invoice ${invoice.invoice_number} — ${invoice.client_name} — ${invoice.service}`,
+          service: invoice.service,
+          payment_method: 'mpesa',
+          source: 'client_payment',
+          created_by: user!.id,
+          invoice_id: id,
+        } as any);
+        toast({ title: 'Income record created automatically' });
+      }
+    }
+
     toast({ title: 'Status updated' });
     fetchData();
   };
