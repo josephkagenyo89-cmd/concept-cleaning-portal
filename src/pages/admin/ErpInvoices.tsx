@@ -10,8 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, Share2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
+import { format as fmtDate } from 'date-fns';
 
 interface Invoice {
   id: string;
@@ -47,15 +49,33 @@ export default function ErpInvoices() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const generateInvoiceNumber = () => {
-    const d = new Date();
-    return `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const generateInvoiceNumber = async () => {
+    const { data } = await supabase.rpc('next_invoice_number' as any);
+    return (data as string) || `INV-${Date.now()}`;
   };
+
+  const buildInvoiceDocData = (inv: Invoice): DocumentData => ({
+    documentType: 'invoice',
+    documentNumber: inv.invoice_number,
+    dateCreated: fmtDate(new Date(inv.created_at), 'PPP'),
+    createdBy: 'Admin',
+    createdByRole: 'Admin',
+    clientName: inv.client_name,
+    clientPhone: inv.client_phone || undefined,
+    lineItems: [{ name: inv.service, total: Number(inv.amount) }],
+    totalAmount: Number(inv.amount),
+    paymentStatus: inv.payment_status,
+    notes: inv.notes || undefined,
+  });
+
+  const handleDownloadPdf = (inv: Invoice) => downloadDocumentPdf(buildInvoiceDocData(inv));
+  const handleShareWhatsApp = (inv: Invoice) => shareDocumentWhatsApp(buildInvoiceDocData(inv));
 
   const handleSubmit = async () => {
     if (!form.client_name || !form.service || !form.amount) { toast({ title: 'Fill required fields', variant: 'destructive' }); return; }
+    const invNum = await generateInvoiceNumber();
     const { error } = await supabase.from('invoices').insert({
-      invoice_number: generateInvoiceNumber(), client_name: form.client_name, client_phone: form.client_phone || null,
+      invoice_number: invNum, client_name: form.client_name, client_phone: form.client_phone || null,
       service: form.service, amount: Number(form.amount), date: form.date, due_date: form.due_date || null,
       payment_status: form.payment_status, notes: form.notes || null, created_by: user!.id,
     });
@@ -137,7 +157,18 @@ export default function ErpInvoices() {
                           <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><FileText className="h-4 w-4 text-muted-foreground" /></TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownloadPdf(inv)} title="Download PDF">
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                          {inv.client_phone && (
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(142,70%,45%)]" onClick={() => handleShareWhatsApp(inv)} title="Share WhatsApp">
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
               </TableBody>

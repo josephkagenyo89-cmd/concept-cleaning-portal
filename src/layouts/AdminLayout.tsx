@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
-  Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList,
+  Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -17,6 +17,7 @@ const navItems = [
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
+  { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
   { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },

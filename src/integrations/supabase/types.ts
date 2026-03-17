@@ -177,6 +177,93 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          client_location: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          created_by: string
+          created_by_name: string
+          created_by_role: string
+          department: string | null
+          description: string | null
+          document_number: string
+          document_type: string
+          id: string
+          invoice_id: string | null
+          payment_reason: string | null
+          payment_status: string | null
+          quantity: string | null
+          service_name: string | null
+          staff_name: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          amount?: number
+          booking_id?: string | null
+          client_location?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by: string
+          created_by_name: string
+          created_by_role?: string
+          department?: string | null
+          description?: string | null
+          document_number: string
+          document_type?: string
+          id?: string
+          invoice_id?: string | null
+          payment_reason?: string | null
+          payment_status?: string | null
+          quantity?: string | null
+          service_name?: string | null
+          staff_name?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          client_location?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_name?: string
+          created_by_role?: string
+          department?: string | null
+          description?: string | null
+          document_number?: string
+          document_type?: string
+          id?: string
+          invoice_id?: string | null
+          payment_reason?: string | null
+          payment_status?: string | null
+          quantity?: string | null
+          service_name?: string | null
+          staff_name?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -835,7 +922,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
+      next_expense_voucher_number: { Args: never; Returns: string }
+      next_fuel_voucher_number: { Args: never; Returns: string }
+      next_invoice_number: { Args: never; Returns: string }
       next_quotation_number: { Args: never; Returns: string }
+      next_receipt_number: { Args: never; Returns: string }
+      next_salary_voucher_number: { Args: never; Returns: string }
     }
     Enums: {
       agent_status: "pending" | "approved" | "suspended"
