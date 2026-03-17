@@ -49,10 +49,27 @@ export default function ErpInvoices() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const generateInvoiceNumber = () => {
-    const d = new Date();
-    return `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const generateInvoiceNumber = async () => {
+    const { data } = await supabase.rpc('next_invoice_number' as any);
+    return (data as string) || `INV-${Date.now()}`;
   };
+
+  const buildInvoiceDocData = (inv: Invoice): DocumentData => ({
+    documentType: 'invoice',
+    documentNumber: inv.invoice_number,
+    dateCreated: fmtDate(new Date(inv.created_at), 'PPP'),
+    createdBy: 'Admin',
+    createdByRole: 'Admin',
+    clientName: inv.client_name,
+    clientPhone: inv.client_phone || undefined,
+    lineItems: [{ name: inv.service, total: Number(inv.amount) }],
+    totalAmount: Number(inv.amount),
+    paymentStatus: inv.payment_status,
+    notes: inv.notes || undefined,
+  });
+
+  const handleDownloadPdf = (inv: Invoice) => downloadDocumentPdf(buildInvoiceDocData(inv));
+  const handleShareWhatsApp = (inv: Invoice) => shareDocumentWhatsApp(buildInvoiceDocData(inv));
 
   const handleSubmit = async () => {
     if (!form.client_name || !form.service || !form.amount) { toast({ title: 'Fill required fields', variant: 'destructive' }); return; }
