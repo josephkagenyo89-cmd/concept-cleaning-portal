@@ -303,6 +303,7 @@ export type Database = {
           date: string
           description: string | null
           id: string
+          invoice_id: string | null
           payment_method: string
           service: string | null
           source: string
@@ -315,6 +316,7 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          invoice_id?: string | null
           payment_method?: string
           service?: string | null
           source?: string
@@ -327,6 +329,7 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          invoice_id?: string | null
           payment_method?: string
           service?: string | null
           source?: string
@@ -337,6 +340,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_records_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
