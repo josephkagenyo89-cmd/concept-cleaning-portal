@@ -73,8 +73,9 @@ export default function ErpInvoices() {
 
   const handleSubmit = async () => {
     if (!form.client_name || !form.service || !form.amount) { toast({ title: 'Fill required fields', variant: 'destructive' }); return; }
+    const invNum = await generateInvoiceNumber();
     const { error } = await supabase.from('invoices').insert({
-      invoice_number: generateInvoiceNumber(), client_name: form.client_name, client_phone: form.client_phone || null,
+      invoice_number: invNum, client_name: form.client_name, client_phone: form.client_phone || null,
       service: form.service, amount: Number(form.amount), date: form.date, due_date: form.due_date || null,
       payment_status: form.payment_status, notes: form.notes || null, created_by: user!.id,
     });
