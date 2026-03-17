@@ -157,7 +157,18 @@ export default function ErpInvoices() {
                           <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><FileText className="h-4 w-4 text-muted-foreground" /></TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownloadPdf(inv)} title="Download PDF">
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                          {inv.client_phone && (
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(142,70%,45%)]" onClick={() => handleShareWhatsApp(inv)} title="Share WhatsApp">
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
               </TableBody>
