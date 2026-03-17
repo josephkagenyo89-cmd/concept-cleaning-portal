@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, FileText, Filter } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface IncomeRecord {
@@ -20,6 +21,7 @@ interface IncomeRecord {
   service: string | null;
   payment_method: string;
   source: string;
+  invoice_id: string | null;
   created_at: string;
 }
 
@@ -27,19 +29,28 @@ const SOURCES = ['client_payment', 'service_booking', 'other'];
 const PAYMENT_METHODS = ['cash', 'mpesa', 'bank_transfer', 'cheque', 'other'];
 
 export default function ErpIncome() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user } = useAuth();
   const [records, setRecords] = useState<IncomeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', description: '', service: '', payment_method: 'mpesa', source: 'client_payment' });
 
-  const fetch = async () => {
-    const { data } = await supabase.from('income_records').select('*').order('date', { ascending: false });
+  // Filters
+  const [filterSource, setFilterSource] = useState('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
+  const fetchRecords = async () => {
+    let query = supabase.from('income_records').select('*').order('date', { ascending: false });
+    if (filterSource !== 'all') query = query.eq('source', filterSource);
+    if (filterDateFrom) query = query.gte('date', filterDateFrom);
+    if (filterDateTo) query = query.lte('date', filterDateTo);
+    const { data } = await query;
     setRecords((data || []) as IncomeRecord[]);
     setLoading(false);
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchRecords(); }, [filterSource, filterDateFrom, filterDateTo]);
 
   const handleSubmit = async () => {
     if (!form.amount || Number(form.amount) <= 0) { toast({ title: 'Enter a valid amount', variant: 'destructive' }); return; }
@@ -51,13 +62,13 @@ export default function ErpIncome() {
     toast({ title: 'Income recorded' });
     setOpen(false);
     setForm({ date: new Date().toISOString().split('T')[0], amount: '', description: '', service: '', payment_method: 'mpesa', source: 'client_payment' });
-    fetch();
+    fetchRecords();
   };
 
   const handleDelete = async (id: string) => {
     await supabase.from('income_records').delete().eq('id', id);
     toast({ title: 'Record deleted' });
-    fetch();
+    fetchRecords();
   };
 
   return (
@@ -92,6 +103,37 @@ export default function ErpIncome() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground"><Filter className="h-4 w-4" /> Filters</div>
+            <div className="min-w-[140px]">
+              <Label className="text-xs">Source</Label>
+              <Select value={filterSource} onValueChange={setFilterSource}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  {SOURCES.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">From</Label>
+              <Input type="date" className="h-8 text-xs w-[130px]" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">To</Label>
+              <Input type="date" className="h-8 text-xs w-[130px]" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
+            </div>
+            {(filterSource !== 'all' || filterDateFrom || filterDateTo) && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setFilterSource('all'); setFilterDateFrom(''); setFilterDateTo(''); }}>Clear</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-0">
           {loading ? <div className="flex justify-center p-8"><div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" /></div> : (
@@ -105,7 +147,10 @@ export default function ErpIncome() {
                     <TableRow key={r.id}>
                       <TableCell>{r.date}</TableCell>
                       <TableCell className="font-medium text-green-600">KES {Number(r.amount).toLocaleString()}</TableCell>
-                      <TableCell className="capitalize">{r.source.replace(/_/g, ' ')}</TableCell>
+                      <TableCell>
+                        <span className="capitalize">{r.source.replace(/_/g, ' ')}</span>
+                        {r.invoice_id && <Badge variant="outline" className="ml-1 text-[10px]"><FileText className="h-3 w-3 mr-0.5" />Invoice</Badge>}
+                      </TableCell>
                       <TableCell className="capitalize">{r.payment_method.replace(/_/g, ' ')}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{r.description || '—'}</TableCell>
                       <TableCell><Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
