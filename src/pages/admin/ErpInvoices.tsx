@@ -93,10 +93,10 @@ export default function ErpInvoices() {
     // Auto-create income record when marked as paid
     if (status === 'paid' && invoice) {
       // Check for existing income record to prevent duplicates
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase
         .from('income_records')
-        .select('id')
-        .eq('invoice_id' as any, id)
+        .select('id') as any)
+        .eq('invoice_id', id)
         .maybeSingle();
 
       if (!existing) {
