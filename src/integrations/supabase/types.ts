@@ -297,6 +297,8 @@ export type Database = {
       income_records: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           booking_id: string | null
           created_at: string
           created_by: string
@@ -304,12 +306,16 @@ export type Database = {
           description: string | null
           id: string
           invoice_id: string | null
+          mpesa_code: string | null
           payment_method: string
           service: string | null
           source: string
+          status: string
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
           booking_id?: string | null
           created_at?: string
           created_by: string
@@ -317,12 +323,16 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_id?: string | null
+          mpesa_code?: string | null
           payment_method?: string
           service?: string | null
           source?: string
+          status?: string
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
           booking_id?: string | null
           created_at?: string
           created_by?: string
@@ -330,9 +340,11 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_id?: string | null
+          mpesa_code?: string | null
           payment_method?: string
           service?: string | null
           source?: string
+          status?: string
         }
         Relationships: [
           {
