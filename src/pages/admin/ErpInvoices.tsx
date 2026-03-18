@@ -92,7 +92,6 @@ export default function ErpInvoices() {
 
     // Auto-create income record when marked as paid
     if (status === 'paid' && invoice) {
-      // Check for existing income record to prevent duplicates
       const { data: existing } = await (supabase
         .from('income_records')
         .select('id') as any)
@@ -109,8 +108,9 @@ export default function ErpInvoices() {
           source: 'client_payment',
           created_by: user!.id,
           invoice_id: id,
+          status: 'pending_approval',
         } as any);
-        toast({ title: 'Income record created automatically' });
+        toast({ title: 'Income record created — pending Super Admin approval' });
       }
     }
 
