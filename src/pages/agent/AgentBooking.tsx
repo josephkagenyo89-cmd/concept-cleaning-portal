@@ -17,6 +17,7 @@ import { savePending } from '@/lib/offlineDb';
 import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
+import { upsertClientForBooking } from '@/lib/clientManager';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
