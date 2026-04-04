@@ -36,20 +36,14 @@ export default function AdminClientProfile() {
     const [clientRes, bookingsRes, invoicesRes] = await Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
       supabase.from('bookings').select('*, services(name)').eq('client_id', id).order('created_at', { ascending: false }),
-      supabase.from('invoices').select('*').order('created_at', { ascending: false }),
+      supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
     ]);
 
     if (clientRes.data) {
       setClient(clientRes.data);
       setNotes((clientRes.data as any).notes || '');
     }
-    setBookings((bookingsRes.data as any[]) || []);
-
-    // Filter invoices by client phone
-    if (clientRes.data) {
-      const clientPhone = (clientRes.data as any).phone;
-      setInvoices((invoicesRes.data || []).filter((inv: any) => inv.client_phone === clientPhone));
-    }
+    setInvoices((invoicesRes.data as any[]) || []);
     setLoading(false);
   };
 

@@ -74,11 +74,18 @@ export default function ErpInvoices() {
   const handleSubmit = async () => {
     if (!form.client_name || !form.service || !form.amount) { toast({ title: 'Fill required fields', variant: 'destructive' }); return; }
     const invNum = await generateInvoiceNumber();
+    // Find matching client by phone
+    let clientId: string | null = null;
+    if (form.client_phone) {
+      const { data: client } = await supabase.from('clients').select('id').eq('phone', form.client_phone.trim()).maybeSingle();
+      clientId = client?.id || null;
+    }
     const { error } = await supabase.from('invoices').insert({
       invoice_number: invNum, client_name: form.client_name, client_phone: form.client_phone || null,
       service: form.service, amount: Number(form.amount), date: form.date, due_date: form.due_date || null,
       payment_status: form.payment_status, notes: form.notes || null, created_by: user!.id,
-    });
+      client_id: clientId,
+    } as any);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Invoice created' });
     setOpen(false);
