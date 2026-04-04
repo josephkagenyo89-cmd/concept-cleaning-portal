@@ -63,6 +63,15 @@ export default function AdminBookService() {
     if (!user || !selectedService || !date || priceError || currentAgentPrice < systemPrice) return;
     setLoading(true);
 
+    const clientId = await upsertClientForBooking({
+      clientName: form.client_name,
+      clientPhone: form.client_phone,
+      location: form.location,
+      bookingPrice: finalPrice,
+      createdBy: user.id,
+      createdByRole: 'admin',
+    });
+
     const { error } = await supabase.from('bookings').insert({
       agent_id: user.id,
       client_name: form.client_name,
@@ -77,6 +86,7 @@ export default function AdminBookService() {
       quantity: String(quantity),
       created_by_name: profile?.full_name || 'Admin',
       created_by_role: 'admin',
+      ...(clientId ? { client_id: clientId } : {}),
     } as any);
     setLoading(false);
     if (error) {
