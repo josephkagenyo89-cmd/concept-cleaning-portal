@@ -16,6 +16,7 @@ import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import { getTier, calculateCommission } from '@/lib/commission';
+import { upsertClientForBooking } from '@/lib/clientManager';
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
