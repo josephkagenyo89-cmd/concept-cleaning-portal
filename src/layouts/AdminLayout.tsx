@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
-  Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen,
+  Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
