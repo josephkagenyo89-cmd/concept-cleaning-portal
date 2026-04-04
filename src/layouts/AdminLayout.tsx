@@ -23,6 +23,7 @@ const navItems = [
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
 ];
