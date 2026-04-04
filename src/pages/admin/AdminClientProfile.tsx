@@ -43,13 +43,7 @@ export default function AdminClientProfile() {
       setClient(clientRes.data);
       setNotes((clientRes.data as any).notes || '');
     }
-    setBookings((bookingsRes.data as any[]) || []);
-
-    // Filter invoices by client phone
-    if (clientRes.data) {
-      const clientPhone = (clientRes.data as any).phone;
-      setInvoices((invoicesRes.data || []).filter((inv: any) => inv.client_phone === clientPhone));
-    }
+    setInvoices((invoicesRes.data as any[]) || []);
     setLoading(false);
   };
 
