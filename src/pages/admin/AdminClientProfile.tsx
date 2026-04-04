@@ -36,7 +36,7 @@ export default function AdminClientProfile() {
     const [clientRes, bookingsRes, invoicesRes] = await Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
       supabase.from('bookings').select('*, services(name)').eq('client_id', id).order('created_at', { ascending: false }),
-      supabase.from('invoices').select('*').order('created_at', { ascending: false }),
+      supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
     ]);
 
     if (clientRes.data) {
