@@ -17,6 +17,7 @@ import { savePending } from '@/lib/offlineDb';
 import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
+import { upsertClientForBooking } from '@/lib/clientManager';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
@@ -83,6 +84,16 @@ export default function AgentBooking() {
     if (!user || !selectedService || !date || priceError || currentAgentPrice < systemPrice) return;
     setLoading(true);
 
+    // Auto-create/link client
+    const clientId = await upsertClientForBooking({
+      clientName: form.client_name,
+      clientPhone: form.client_phone,
+      location: form.location,
+      bookingPrice: finalPrice,
+      createdBy: user.id,
+      createdByRole: 'agent',
+    });
+
     const bookingData = {
       agent_id: user.id,
       client_name: form.client_name,
@@ -97,6 +108,7 @@ export default function AgentBooking() {
       quantity: String(quantity),
       created_by_name: profile?.full_name || 'Agent',
       created_by_role: 'agent',
+      ...(clientId ? { client_id: clientId } : {}),
     };
 
     if (!navigator.onLine) {

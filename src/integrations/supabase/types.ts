@@ -49,6 +49,7 @@ export type Database = {
           agent_id: string
           agent_margin: number | null
           agent_price: number | null
+          client_id: string | null
           client_name: string
           client_phone: string
           commission_created: boolean
@@ -70,6 +71,7 @@ export type Database = {
           agent_id: string
           agent_margin?: number | null
           agent_price?: number | null
+          client_id?: string | null
           client_name: string
           client_phone: string
           commission_created?: boolean
@@ -91,6 +93,7 @@ export type Database = {
           agent_id?: string
           agent_margin?: number | null
           agent_price?: number | null
+          client_id?: string | null
           client_name?: string
           client_phone?: string
           commission_created?: boolean
@@ -110,6 +113,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -117,6 +127,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      clients: {
+        Row: {
+          booking_count: number
+          created_at: string
+          created_by: string
+          created_by_role: string
+          full_name: string
+          id: string
+          last_booking_date: string | null
+          location: string | null
+          notes: string | null
+          phone: string
+          status: string
+          total_spend: number
+          updated_at: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          booking_count?: number
+          created_at?: string
+          created_by: string
+          created_by_role?: string
+          full_name: string
+          id?: string
+          last_booking_date?: string | null
+          location?: string | null
+          notes?: string | null
+          phone: string
+          status?: string
+          total_spend?: number
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          booking_count?: number
+          created_at?: string
+          created_by?: string
+          created_by_role?: string
+          full_name?: string
+          id?: string
+          last_booking_date?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string
+          status?: string
+          total_spend?: number
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: []
       }
       commissions: {
         Row: {
