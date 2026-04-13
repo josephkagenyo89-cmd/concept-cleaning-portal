@@ -119,6 +119,13 @@ export default function AdminBookService() {
           </CardContent>
         </Card>
 
+        {/* Salesperson */}
+        <Card>
+          <CardContent className="pt-4">
+            <SalespersonSelector value={salesperson} onChange={setSalesperson} />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Client Details</CardTitle></CardHeader>
           <CardContent className="space-y-3">
