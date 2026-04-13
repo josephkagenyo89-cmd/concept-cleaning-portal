@@ -60,6 +60,9 @@ export type Database = {
           location: string
           price: number
           quantity: string | null
+          salesperson_id: string | null
+          salesperson_name: string | null
+          salesperson_role: string | null
           service_date: string
           service_id: string
           size_sqm: number | null
@@ -82,6 +85,9 @@ export type Database = {
           location: string
           price: number
           quantity?: string | null
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service_date: string
           service_id: string
           size_sqm?: number | null
@@ -104,6 +110,9 @@ export type Database = {
           location?: string
           price?: number
           quantity?: string | null
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service_date?: string
           service_id?: string
           size_sqm?: number | null
@@ -437,8 +446,12 @@ export type Database = {
           due_date: string | null
           id: string
           invoice_number: string
+          line_items: Json | null
           notes: string | null
           payment_status: string
+          salesperson_id: string | null
+          salesperson_name: string | null
+          salesperson_role: string | null
           service: string
           updated_at: string
         }
@@ -454,8 +467,12 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_number: string
+          line_items?: Json | null
           notes?: string | null
           payment_status?: string
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service: string
           updated_at?: string
         }
@@ -471,8 +488,12 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_number?: string
+          line_items?: Json | null
           notes?: string | null
           payment_status?: string
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service?: string
           updated_at?: string
         }
@@ -820,8 +841,12 @@ export type Database = {
           created_by_name: string
           created_by_role: string
           id: string
+          line_items: Json | null
           price: number
           quotation_number: string
+          salesperson_id: string | null
+          salesperson_name: string | null
+          salesperson_role: string | null
           service_date: string | null
           service_name: string
         }
@@ -833,8 +858,12 @@ export type Database = {
           created_by_name: string
           created_by_role?: string
           id?: string
+          line_items?: Json | null
           price: number
           quotation_number: string
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service_date?: string | null
           service_name: string
         }
@@ -846,8 +875,12 @@ export type Database = {
           created_by_name?: string
           created_by_role?: string
           id?: string
+          line_items?: Json | null
           price?: number
           quotation_number?: string
+          salesperson_id?: string | null
+          salesperson_name?: string | null
+          salesperson_role?: string | null
           service_date?: string | null
           service_name?: string
         }
