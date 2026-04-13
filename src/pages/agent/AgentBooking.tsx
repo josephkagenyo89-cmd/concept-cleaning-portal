@@ -17,6 +17,7 @@ import { savePending } from '@/lib/offlineDb';
 import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
+import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 
 export default function AgentBooking() {
@@ -32,6 +33,14 @@ export default function AgentBooking() {
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'agent' });
+
+  // Init salesperson when profile loads
+  useEffect(() => {
+    if (user && profile) {
+      setSalesperson({ id: user.id, name: profile.full_name || 'Agent', role: 'agent' });
+    }
+  }, [user, profile]);
 
   useEffect(() => {
     const load = async () => {
@@ -108,6 +117,9 @@ export default function AgentBooking() {
       quantity: String(quantity),
       created_by_name: profile?.full_name || 'Agent',
       created_by_role: 'agent',
+      salesperson_id: salesperson.id || user.id,
+      salesperson_name: salesperson.name || profile?.full_name || 'Agent',
+      salesperson_role: salesperson.role || 'agent',
       ...(clientId ? { client_id: clientId } : {}),
     };
 
@@ -150,6 +162,13 @@ export default function AgentBooking() {
               selectedService={selectedService}
               onSelect={handleServiceSelect}
             />
+          </CardContent>
+        </Card>
+
+        {/* Salesperson */}
+        <Card>
+          <CardContent className="pt-4">
+            <SalespersonSelector value={salesperson} onChange={setSalesperson} />
           </CardContent>
         </Card>
 
@@ -284,6 +303,9 @@ export default function AgentBooking() {
                 userId={user?.id || ''}
                 userName={profile?.full_name || 'Agent'}
                 userRole="agent"
+                salespersonId={salesperson.id}
+                salespersonName={salesperson.name}
+                salespersonRole={salesperson.role}
               />
             </CardContent>
           </Card>

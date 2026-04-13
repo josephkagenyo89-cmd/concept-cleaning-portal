@@ -1,5 +1,12 @@
-import { generateDocumentPdf, downloadDocumentPdf as downloadDoc, DocumentData } from './documentPdf';
+import { generateDocumentPdf, DocumentData } from './documentPdf';
 import jsPDF from 'jspdf';
+
+interface LineItemInput {
+  name: string;
+  quantity?: number;
+  unitPrice?: number;
+  total: number;
+}
 
 interface QuotationData {
   quotationNumber: string;
@@ -9,19 +16,25 @@ interface QuotationData {
   serviceName: string;
   serviceDate: string;
   price: number;
+  lineItems?: LineItemInput[];
+  salespersonName?: string;
 }
 
 function toDocData(data: QuotationData): DocumentData {
+  const items = data.lineItems && data.lineItems.length > 0
+    ? data.lineItems.map(i => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
+    : [{ name: data.serviceName, quantity: 1, unitPrice: data.price, total: data.price }];
+
   return {
     documentType: 'quotation',
     documentNumber: data.quotationNumber,
     dateCreated: data.quotationDate,
-    createdBy: '-',
+    createdBy: data.salespersonName || '-',
     createdByRole: '-',
     clientName: data.clientName,
     clientPhone: data.clientPhone,
-    lineItems: [{ name: data.serviceName, quantity: 1, unitPrice: data.price, total: data.price }],
-    totalAmount: data.price,
+    lineItems: items,
+    totalAmount: items.reduce((s, i) => s + i.total, 0),
     serviceDate: data.serviceDate,
   };
 }
@@ -43,12 +56,15 @@ export function shareQuotationWhatsApp(data: QuotationData) {
   let phone = data.clientPhone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
   if (!phone.startsWith('254')) phone = '254' + phone;
 
+  const items = data.lineItems && data.lineItems.length > 0 ? data.lineItems : [{ name: data.serviceName, total: data.price }];
+  const serviceList = items.map(i => `  • ${i.name}: Ksh ${i.total.toLocaleString()}`).join('\n');
+
   const message = encodeURIComponent(
     `Hello ${data.clientName},\n\nPlease find your quotation from Concept Cleaning Services:\n\n` +
     `📋 Quotation: ${data.quotationNumber}\n` +
-    `🧹 Service: ${data.serviceName}\n` +
+    `🧹 Services:\n${serviceList}\n` +
     `📅 Date: ${data.serviceDate}\n` +
-    `💰 Price: Ksh ${data.price.toLocaleString()}\n\n` +
+    `💰 Total: Ksh ${data.price.toLocaleString()}\n\n` +
     `Thank you for choosing Concept Cleaning Services.\nCustomer Support: +254758060692`
   );
 
