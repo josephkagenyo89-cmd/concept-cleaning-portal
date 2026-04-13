@@ -223,6 +223,9 @@ export default function AdminBookService() {
                 userName={profile?.full_name || 'Admin'}
                 userRole="admin"
                 disabled={!canQuote}
+                salespersonId={salesperson.id}
+                salespersonName={salesperson.name}
+                salespersonRole={salesperson.role}
               />
             </CardContent>
           </Card>

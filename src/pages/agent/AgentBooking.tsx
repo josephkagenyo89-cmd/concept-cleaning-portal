@@ -303,6 +303,9 @@ export default function AgentBooking() {
                 userId={user?.id || ''}
                 userName={profile?.full_name || 'Agent'}
                 userRole="agent"
+                salespersonId={salesperson.id}
+                salespersonName={salesperson.name}
+                salespersonRole={salesperson.role}
               />
             </CardContent>
           </Card>
