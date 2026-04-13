@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import ServiceSearch from '@/components/booking/ServiceSearch';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
+import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { getTier, calculateCommission } from '@/lib/commission';
 import { upsertClientForBooking } from '@/lib/clientManager';
 
@@ -28,6 +29,13 @@ export default function AdminBookService() {
   const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState<Date>();
   const [loading, setLoading] = useState(false);
+  const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'admin' });
+
+  useEffect(() => {
+    if (user && profile) {
+      setSalesperson({ id: user.id, name: profile.full_name || 'Admin', role: 'admin' });
+    }
+  }, [user, profile]);
 
   useEffect(() => {
     supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
@@ -86,6 +94,9 @@ export default function AdminBookService() {
       quantity: String(quantity),
       created_by_name: profile?.full_name || 'Admin',
       created_by_role: 'admin',
+      salesperson_id: salesperson.id || user.id,
+      salesperson_name: salesperson.name || profile?.full_name || 'Admin',
+      salesperson_role: salesperson.role || 'admin',
       ...(clientId ? { client_id: clientId } : {}),
     } as any);
     setLoading(false);
