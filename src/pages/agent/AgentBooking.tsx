@@ -14,7 +14,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { savePending } from '@/lib/offlineDb';
-import ServiceSearch from '@/components/booking/ServiceSearch';
+import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
@@ -24,18 +24,16 @@ export default function AgentBooking() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
-  const [selectedService, setSelectedService] = useState<any>(null);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [form, setForm] = useState({
     client_name: '', client_phone: '', location: '',
   });
   const [agentPrice, setAgentPrice] = useState('');
-  const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'agent' });
 
-  // Init salesperson when profile loads
   useEffect(() => {
     if (user && profile) {
       setSalesperson({ id: user.id, name: profile.full_name || 'Agent', role: 'agent' });
@@ -62,8 +60,8 @@ export default function AgentBooking() {
 
   const tier = getTier(cumulativeRevenue);
 
-  const unitPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
-  const systemPrice = unitPrice * quantity;
+  // Computed prices from line items
+  const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
@@ -72,28 +70,24 @@ export default function AgentBooking() {
     : null;
   const commission = finalPrice > 0 && !priceError ? calculateCommission(finalPrice, tier) : null;
 
-  const handleServiceSelect = (service: any) => {
-    setSelectedService(service);
-    setQuantity(1);
-    setAgentPrice(service ? String(Number(service.base_price) || 0) : '');
-  };
+  const hasServices = lineItems.length > 0;
+  const primaryService = lineItems[0]?.service || null;
 
-  const handleQuantityChange = (newQty: number) => {
-    const q = Math.max(1, newQty);
-    setQuantity(q);
-    const newSystemPrice = unitPrice * q;
-    // Auto-update agent price if it was at the old system price (i.e. not manually adjusted upward)
-    if (currentAgentPrice <= unitPrice * quantity) {
-      setAgentPrice(String(newSystemPrice));
+  // Auto-update agent price when line items change
+  const handleLineItemsChange = (items: LineItem[]) => {
+    setLineItems(items);
+    const newSystemPrice = items.reduce((sum, item) => sum + item.total, 0);
+    // Auto-set if agent hasn't manually adjusted price upward
+    if (!agentPrice || currentAgentPrice <= systemPrice) {
+      setAgentPrice(newSystemPrice > 0 ? String(newSystemPrice) : '');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedService || !date || priceError || currentAgentPrice < systemPrice) return;
+    if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
     setLoading(true);
 
-    // Auto-create/link client
     const clientId = await upsertClientForBooking({
       clientName: form.client_name,
       clientPhone: form.client_phone,
@@ -103,23 +97,32 @@ export default function AgentBooking() {
       createdByRole: 'agent',
     });
 
+    const lineItemsData = lineItems.map(i => ({
+      serviceName: i.service.name,
+      serviceId: i.service.id,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      total: i.total,
+    }));
+
     const bookingData = {
       agent_id: user.id,
       client_name: form.client_name,
       client_phone: form.client_phone,
       location: form.location,
-      service_id: selectedService.id,
+      service_id: primaryService.id,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
       system_price: systemPrice,
       agent_price: finalPrice,
       agent_margin: agentMargin,
-      quantity: String(quantity),
+      quantity: String(lineItems.length),
       created_by_name: profile?.full_name || 'Agent',
       created_by_role: 'agent',
       salesperson_id: salesperson.id || user.id,
       salesperson_name: salesperson.name || profile?.full_name || 'Agent',
       salesperson_role: salesperson.role || 'agent',
+      line_items: lineItemsData,
       ...(clientId ? { client_id: clientId } : {}),
     };
 
@@ -142,25 +145,36 @@ export default function AgentBooking() {
     if (error) {
       toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Booking created!', description: 'Your booking is pending confirmation.' });
+      toast({ title: 'Booking created!', description: `${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked successfully.` });
       navigate('/agent');
     }
   };
+
+  // Quotation line items format
+  const quotationLineItems = lineItems.map(i => ({
+    name: i.service.name,
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    total: i.total,
+  }));
+
+  const canQuote = hasServices && form.client_name && form.client_phone && systemPrice > 0
+    && currentAgentPrice >= systemPrice && !priceError;
 
   return (
     <div className="max-w-lg mx-auto pb-20 md:pb-6">
       <h1 className="text-2xl font-bold mb-4">New Booking</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Service Search */}
+        {/* Services */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Select Service</CardTitle>
+            <CardTitle className="text-base">Services</CardTitle>
           </CardHeader>
           <CardContent>
-            <ServiceSearch
+            <MultiServiceSelector
               services={services}
-              selectedService={selectedService}
-              onSelect={handleServiceSelect}
+              lineItems={lineItems}
+              onChange={handleLineItemsChange}
             />
           </CardContent>
         </Card>
@@ -194,10 +208,10 @@ export default function AgentBooking() {
         </Card>
 
         {/* Service Date & Pricing */}
-        {selectedService && (
+        {hasServices && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Service Details & Pricing</CardTitle>
+              <CardTitle className="text-base">Date & Pricing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Service Date */}
@@ -216,41 +230,6 @@ export default function AgentBooking() {
                 </Popover>
               </div>
 
-              {/* Quantity */}
-              {unitPrice > 0 && (
-                <div className="space-y-1.5">
-                  <Label>Quantity</Label>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1}>
-                      <span className="text-lg">−</span>
-                    </Button>
-                    <Input
-                      type="number"
-                      value={quantity}
-                      onChange={e => handleQuantityChange(Number(e.target.value) || 1)}
-                      min={1}
-                      className="text-center w-20"
-                    />
-                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)}>
-                      <span className="text-lg">+</span>
-                    </Button>
-                  </div>
-                  {quantity > 1 && (
-                    <p className="text-xs text-muted-foreground">
-                      {quantity}× {selectedService?.name} @ Ksh {unitPrice.toLocaleString()} each
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* System Price (read-only) */}
-              {systemPrice > 0 && (
-                <div className="space-y-1.5">
-                  <Label>System Price (Ksh)</Label>
-                  <Input type="number" value={systemPrice} disabled className="bg-muted" />
-                </div>
-              )}
-
               {/* Agent Price (editable) */}
               {systemPrice > 0 && (
                 <div className="space-y-1.5">
@@ -264,12 +243,10 @@ export default function AgentBooking() {
                     placeholder={`Min: ${systemPrice.toLocaleString()}`}
                   />
                   {priceError && <p className="text-xs text-destructive">{priceError}</p>}
-                  <p className="text-xs text-muted-foreground">You can increase the price but not below Ksh {systemPrice.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">
+                    You can increase the price but not below Ksh {systemPrice.toLocaleString()}
+                  </p>
                 </div>
-              )}
-
-              {systemPrice === 0 && (
-                <p className="text-sm text-muted-foreground">Price not yet configured for this service. Contact admin.</p>
               )}
             </CardContent>
           </Card>
@@ -278,31 +255,31 @@ export default function AgentBooking() {
         {/* Price Breakdown & Commission Preview */}
         {systemPrice > 0 && currentAgentPrice >= systemPrice && !priceError && (
           <PriceBreakdown
-            serviceName={selectedService?.name || ''}
+            serviceName={lineItems.length === 1 ? lineItems[0].service.name : `${lineItems.length} Services`}
             systemPrice={systemPrice}
             agentPrice={finalPrice}
             agentMargin={agentMargin}
             tier={tier}
             commission={commission}
-            quantity={quantity}
-            unitPrice={unitPrice}
+            lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
           />
         )}
 
         {/* Quotation actions */}
-        {selectedService && form.client_name && form.client_phone && currentAgentPrice >= systemPrice && systemPrice > 0 && !priceError && (
+        {canQuote && (
           <Card>
             <CardContent className="p-4">
               <p className="text-sm font-medium mb-2">Generate Quotation</p>
               <QuotationActions
                 clientName={form.client_name}
                 clientPhone={form.client_phone}
-                serviceName={selectedService?.name || ''}
+                serviceName={lineItems.map(i => i.service.name).join(', ')}
                 serviceDate={date}
                 price={finalPrice}
                 userId={user?.id || ''}
                 userName={profile?.full_name || 'Agent'}
                 userRole="agent"
+                lineItems={quotationLineItems}
                 salespersonId={salesperson.id}
                 salespersonName={salesperson.name}
                 salespersonRole={salesperson.role}
@@ -314,9 +291,9 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !selectedService || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
         >
-          {loading ? 'Creating...' : 'Create Booking'}
+          {loading ? 'Creating...' : `Create Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>
       </form>
     </div>

@@ -2,6 +2,11 @@ import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import TierBadge from '@/components/agent/TierBadge';
 import { Tier } from '@/lib/commission';
 
+interface LineItemDisplay {
+  name: string;
+  unitPrice: number;
+}
+
 interface PriceBreakdownProps {
   serviceName: string;
   systemPrice: number;
@@ -11,32 +16,58 @@ interface PriceBreakdownProps {
   commission: { commission: number; bonus: number; total: number } | null;
   quantity?: number;
   unitPrice?: number;
+  /** Multi-service line items — if provided, overrides single service display */
+  lineItems?: LineItemDisplay[];
 }
 
-export default function PriceBreakdown({ serviceName, systemPrice, agentPrice, agentMargin, tier, commission, quantity = 1, unitPrice }: PriceBreakdownProps) {
+export default function PriceBreakdown({
+  serviceName, systemPrice, agentPrice, agentMargin, tier, commission,
+  quantity = 1, unitPrice, lineItems,
+}: PriceBreakdownProps) {
   if (systemPrice <= 0) return null;
+
+  const isMulti = lineItems && lineItems.length > 1;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardContent className="p-4 space-y-3">
         <CardDescription className="font-medium text-foreground text-sm">Price Breakdown</CardDescription>
+
+        {/* Multi-service line items */}
+        {isMulti ? (
+          <div className="space-y-1.5">
+            {lineItems.map((item, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-muted-foreground truncate mr-2">{item.name}</span>
+                <span className="font-medium shrink-0">Ksh {item.unitPrice.toLocaleString()}</span>
+              </div>
+            ))}
+            <div className="border-t pt-1.5 flex justify-between text-sm">
+              <span className="text-muted-foreground font-medium">System Price:</span>
+              <span className="font-medium">Ksh {systemPrice.toLocaleString()}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <span className="text-muted-foreground">Service:</span>
+            <span className="font-medium">{serviceName}</span>
+
+            {quantity > 1 && unitPrice != null && (
+              <>
+                <span className="text-muted-foreground">Unit Price:</span>
+                <span className="font-medium">Ksh {unitPrice.toLocaleString()}</span>
+                <span className="text-muted-foreground">Quantity:</span>
+                <span className="font-medium">{quantity}</span>
+              </>
+            )}
+
+            <span className="text-muted-foreground">System Price:</span>
+            <span className="font-medium">Ksh {systemPrice.toLocaleString()}</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <span className="text-muted-foreground">Service:</span>
-          <span className="font-medium">{serviceName}</span>
-
-          {quantity > 1 && unitPrice != null && (
-            <>
-              <span className="text-muted-foreground">Unit Price:</span>
-              <span className="font-medium">Ksh {unitPrice.toLocaleString()}</span>
-              <span className="text-muted-foreground">Quantity:</span>
-              <span className="font-medium">{quantity}</span>
-            </>
-          )}
-
-          <span className="text-muted-foreground">System Price:</span>
-          <span className="font-medium">Ksh {systemPrice.toLocaleString()}</span>
-
-          <span className="text-muted-foreground">Agent Price:</span>
+          <span className="text-muted-foreground">Your Price:</span>
           <span className="font-bold text-foreground">Ksh {agentPrice.toLocaleString()}</span>
 
           {agentMargin > 0 && (

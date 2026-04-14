@@ -57,6 +57,7 @@ export type Database = {
           created_by_name: string | null
           created_by_role: string | null
           id: string
+          line_items: Json | null
           location: string
           price: number
           quantity: string | null
@@ -82,6 +83,7 @@ export type Database = {
           created_by_name?: string | null
           created_by_role?: string | null
           id?: string
+          line_items?: Json | null
           location: string
           price: number
           quantity?: string | null
@@ -107,6 +109,7 @@ export type Database = {
           created_by_name?: string | null
           created_by_role?: string | null
           id?: string
+          line_items?: Json | null
           location?: string
           price?: number
           quantity?: string | null
