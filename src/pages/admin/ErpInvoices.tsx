@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, Share2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
+import { saveDocumentRecord } from '@/lib/documentSaver';
 import { format as fmtDate } from 'date-fns';
 import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
