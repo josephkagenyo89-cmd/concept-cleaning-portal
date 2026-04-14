@@ -127,7 +127,26 @@ export default function ErpInvoices() {
       salesperson_role: salesperson.role,
     } as any);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Invoice created' });
+
+    // Auto-save to documents module
+    await saveDocumentRecord({
+      documentType: 'invoice',
+      documentNumber: invNum,
+      dateCreated: fmtDate(new Date(), 'PPP'),
+      createdBy: salesperson.name || profile?.full_name || 'Admin',
+      createdByRole: 'admin',
+      clientName: form.client_name,
+      clientPhone: form.client_phone || undefined,
+      lineItems: lineItemsData.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+      totalAmount,
+      paymentStatus: form.payment_status,
+      notes: form.notes || undefined,
+      createdById: user!.id,
+      clientId: clientId || undefined,
+      status: form.payment_status === 'paid' ? 'paid' : 'draft',
+    });
+
+    toast({ title: 'Invoice created & saved to documents' });
     setOpen(false);
     setForm({ client_name: '', client_phone: '', date: new Date().toISOString().split('T')[0], due_date: '', payment_status: 'unpaid', notes: '' });
     setLineItems([]);
