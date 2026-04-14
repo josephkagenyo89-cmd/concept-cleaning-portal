@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
 import ServiceSearch from './ServiceSearch';
 
@@ -20,96 +20,97 @@ interface MultiServiceSelectorProps {
 }
 
 export default function MultiServiceSelector({ services, lineItems, onChange }: MultiServiceSelectorProps) {
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(lineItems.length === 0);
 
   const addItem = (service: any) => {
     if (!service) return;
     const price = Number(service.base_price) || 0;
+    // Quantity is always 1 since variants already encode dimensions (e.g. "3 Seater", "2 Bedroom")
     onChange([...lineItems, { service, quantity: 1, unitPrice: price, total: price }]);
     setAdding(false);
   };
 
-  const updateItem = (index: number, field: 'quantity' | 'unitPrice', value: number) => {
-    const updated = [...lineItems];
-    const item = { ...updated[index], [field]: value };
-    item.total = item.quantity * item.unitPrice;
-    updated[index] = item;
-    onChange(updated);
-  };
-
   const removeItem = (index: number) => {
-    onChange(lineItems.filter((_, i) => i !== index));
+    const updated = lineItems.filter((_, i) => i !== index);
+    onChange(updated);
+    if (updated.length === 0) setAdding(true);
   };
 
   const grandTotal = lineItems.reduce((sum, item) => sum + item.total, 0);
 
+  // Services already selected (exclude from search)
+  const availableServices = services.filter(s => !lineItems.some(li => li.service.id === s.id));
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">Services / Line Items</Label>
-        <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)} disabled={adding}>
-          <Plus className="h-3.5 w-3.5 mr-1" />Add Service
-        </Button>
-      </div>
-
-      {adding && (
-        <Card>
-          <CardContent className="p-3">
-            <ServiceSearch
-              services={services.filter(s => !lineItems.some(li => li.service.id === s.id))}
-              selectedService={null}
-              onSelect={(s) => { if (s) addItem(s); else setAdding(false); }}
-            />
-            <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setAdding(false)}>Cancel</Button>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Selected services list */}
       {lineItems.length > 0 && (
         <div className="space-y-2">
           {lineItems.map((item, i) => (
-            <Card key={item.service.id}>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{item.service.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.service.category}</p>
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(i)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+            <div key={item.service.id} className="flex items-center justify-between rounded-md border bg-background px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{item.service.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground">{item.service.category}</span>
+                  {item.unitPrice > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      Ksh {item.unitPrice.toLocaleString()}
+                    </Badge>
+                  )}
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Qty</Label>
-                    <Input type="number" min={1} value={item.quantity}
-                      onChange={e => updateItem(i, 'quantity', Math.max(1, Number(e.target.value) || 1))}
-                      className="h-8 text-sm" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Unit Price</Label>
-                    <Input type="number" min={Number(item.service.base_price) || 0} value={item.unitPrice}
-                      onChange={e => updateItem(i, 'unitPrice', Number(e.target.value) || 0)}
-                      className="h-8 text-sm" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Total</Label>
-                    <Input value={`Ksh ${item.total.toLocaleString()}`} disabled className="h-8 text-sm bg-muted" />
-                  </div>
-                </div>
-                {item.unitPrice < (Number(item.service.base_price) || 0) && (
-                  <p className="text-xs text-destructive">Min price: Ksh {Number(item.service.base_price).toLocaleString()}</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-          <div className="flex justify-end">
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Grand Total</p>
-              <p className="text-lg font-bold">Ksh {grandTotal.toLocaleString()}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive shrink-0 ml-2"
+                onClick={() => removeItem(i)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
+          ))}
+
+          {/* Grand total */}
+          {lineItems.length > 0 && grandTotal > 0 && (
+            <div className="flex justify-between items-center px-3 py-2 rounded-md bg-muted/50">
+              <span className="text-sm font-medium text-muted-foreground">
+                System Price ({lineItems.length} service{lineItems.length > 1 ? 's' : ''})
+              </span>
+              <span className="text-base font-bold">Ksh {grandTotal.toLocaleString()}</span>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Service selector */}
+      {adding ? (
+        <Card>
+          <CardContent className="p-3">
+            <ServiceSearch
+              services={availableServices}
+              selectedService={null}
+              onSelect={(s) => { if (s) addItem(s); else setAdding(false); }}
+            />
+            {lineItems.length > 0 && (
+              <Button type="button" variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setAdding(false)}>
+                Cancel
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setAdding(true)}
+          disabled={availableServices.length === 0}
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
+          Add Another Service
+        </Button>
       )}
     </div>
   );
