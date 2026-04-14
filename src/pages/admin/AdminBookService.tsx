@@ -12,21 +12,20 @@ import { toast } from '@/hooks/use-toast';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import ServiceSearch from '@/components/booking/ServiceSearch';
+import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
-import { getTier, calculateCommission } from '@/lib/commission';
+import { getTier } from '@/lib/commission';
 import { upsertClientForBooking } from '@/lib/clientManager';
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
-  const [selectedService, setSelectedService] = useState<any>(null);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [form, setForm] = useState({ client_name: '', client_phone: '', location: '' });
   const [agentPrice, setAgentPrice] = useState('');
-  const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState<Date>();
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'admin' });
@@ -41,34 +40,32 @@ export default function AdminBookService() {
     supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
   }, []);
 
-  const unitPrice = selectedService ? Number(selectedService.base_price) || 0 : 0;
-  const systemPrice = unitPrice * quantity;
+  const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
   const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
     ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}` : null;
-  const tier = getTier(0); // Admin bookings don't use agent tier
+  const tier = getTier(0);
   const commission = null; // No commission for admin bookings
 
-  const handleServiceSelect = (service: any) => {
-    setSelectedService(service);
-    setQuantity(1);
-    setAgentPrice(service ? String(Number(service.base_price) || 0) : '');
+  const hasServices = lineItems.length > 0;
+  const primaryService = lineItems[0]?.service || null;
+
+  const handleLineItemsChange = (items: LineItem[]) => {
+    setLineItems(items);
+    const newSystemPrice = items.reduce((sum, item) => sum + item.total, 0);
+    if (!agentPrice || currentAgentPrice <= systemPrice) {
+      setAgentPrice(newSystemPrice > 0 ? String(newSystemPrice) : '');
+    }
   };
 
-  const handleQuantityChange = (newQty: number) => {
-    const q = Math.max(1, newQty);
-    setQuantity(q);
-    const newSystemPrice = unitPrice * q;
-    if (currentAgentPrice <= unitPrice * quantity) setAgentPrice(String(newSystemPrice));
-  };
-
-  const canQuote = selectedService && form.client_name && form.client_phone && currentAgentPrice >= systemPrice && systemPrice > 0 && !priceError;
+  const canQuote = hasServices && form.client_name && form.client_phone
+    && currentAgentPrice >= systemPrice && systemPrice > 0 && !priceError;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedService || !date || priceError || currentAgentPrice < systemPrice) return;
+    if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
     setLoading(true);
 
     const clientId = await upsertClientForBooking({
@@ -80,42 +77,61 @@ export default function AdminBookService() {
       createdByRole: 'admin',
     });
 
+    const lineItemsData = lineItems.map(i => ({
+      serviceName: i.service.name,
+      serviceId: i.service.id,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      total: i.total,
+    }));
+
     const { error } = await supabase.from('bookings').insert({
       agent_id: user.id,
       client_name: form.client_name,
       client_phone: form.client_phone,
       location: form.location,
-      service_id: selectedService.id,
+      service_id: primaryService.id,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
       system_price: systemPrice,
       agent_price: finalPrice,
       agent_margin: agentMargin,
-      quantity: String(quantity),
+      quantity: String(lineItems.length),
       created_by_name: profile?.full_name || 'Admin',
       created_by_role: 'admin',
       salesperson_id: salesperson.id || user.id,
       salesperson_name: salesperson.name || profile?.full_name || 'Admin',
       salesperson_role: salesperson.role || 'admin',
+      line_items: lineItemsData,
       ...(clientId ? { client_id: clientId } : {}),
     } as any);
     setLoading(false);
     if (error) {
       toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Booking created!', description: 'Admin booking — no commission generated.' });
+      toast({ title: 'Booking created!', description: `Admin booking — ${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked.` });
       navigate('/admin/bookings');
     }
   };
+
+  const quotationLineItems = lineItems.map(i => ({
+    name: i.service.name,
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    total: i.total,
+  }));
 
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-4">Book Service (Admin)</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Services */}
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Select Service</CardTitle></CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Services</CardTitle>
+          </CardHeader>
           <CardContent>
-            <ServiceSearch services={services} selectedService={selectedService} onSelect={handleServiceSelect} />
+            <MultiServiceSelector services={services} lineItems={lineItems} onChange={handleLineItemsChange} />
           </CardContent>
         </Card>
 
@@ -126,6 +142,7 @@ export default function AdminBookService() {
           </CardContent>
         </Card>
 
+        {/* Client Details */}
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Client Details</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -144,9 +161,10 @@ export default function AdminBookService() {
           </CardContent>
         </Card>
 
-        {selectedService && (
+        {/* Date & Pricing */}
+        {hasServices && (
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Service Details & Pricing</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Date & Pricing</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Service Date</Label>
@@ -163,33 +181,13 @@ export default function AdminBookService() {
                 </Popover>
               </div>
 
-              {unitPrice > 0 && (
-                <div className="space-y-1.5">
-                  <Label>Quantity</Label>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1}>
-                      <span className="text-lg">−</span>
-                    </Button>
-                    <Input type="number" value={quantity} onChange={e => handleQuantityChange(Number(e.target.value) || 1)} min={1} className="text-center w-20" />
-                    <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)}>
-                      <span className="text-lg">+</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {systemPrice > 0 && (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>System Price (Ksh)</Label>
-                    <Input type="number" value={systemPrice} disabled className="bg-muted" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Your Price (Ksh)</Label>
-                    <Input type="number" value={agentPrice} onChange={e => setAgentPrice(e.target.value)} min={systemPrice} required placeholder={`Min: ${systemPrice.toLocaleString()}`} />
-                    {priceError && <p className="text-xs text-destructive">{priceError}</p>}
-                  </div>
-                </>
+                <div className="space-y-1.5">
+                  <Label>Your Price (Ksh)</Label>
+                  <Input type="number" value={agentPrice} onChange={e => setAgentPrice(e.target.value)} min={systemPrice} required placeholder={`Min: ${systemPrice.toLocaleString()}`} />
+                  {priceError && <p className="text-xs text-destructive">{priceError}</p>}
+                  <p className="text-xs text-muted-foreground">Cannot be below Ksh {systemPrice.toLocaleString()}</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -197,14 +195,13 @@ export default function AdminBookService() {
 
         {systemPrice > 0 && currentAgentPrice >= systemPrice && !priceError && (
           <PriceBreakdown
-            serviceName={selectedService?.name || ''}
+            serviceName={lineItems.length === 1 ? lineItems[0].service.name : `${lineItems.length} Services`}
             systemPrice={systemPrice}
             agentPrice={finalPrice}
             agentMargin={agentMargin}
             tier={tier}
             commission={commission}
-            quantity={quantity}
-            unitPrice={unitPrice}
+            lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
           />
         )}
 
@@ -216,13 +213,14 @@ export default function AdminBookService() {
               <QuotationActions
                 clientName={form.client_name}
                 clientPhone={form.client_phone}
-                serviceName={selectedService?.name || ''}
+                serviceName={lineItems.map(i => i.service.name).join(', ')}
                 serviceDate={date}
                 price={finalPrice}
                 userId={user?.id || ''}
                 userName={profile?.full_name || 'Admin'}
                 userRole="admin"
                 disabled={!canQuote}
+                lineItems={quotationLineItems}
                 salespersonId={salesperson.id}
                 salespersonName={salesperson.name}
                 salespersonRole={salesperson.role}
@@ -234,9 +232,9 @@ export default function AdminBookService() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !selectedService || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
         >
-          {loading ? 'Creating...' : 'Create Booking'}
+          {loading ? 'Creating...' : `Create Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>
       </form>
     </div>
