@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData, DocumentType } from '@/lib/documentPdf';
+import { saveDocumentRecord } from '@/lib/documentSaver';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -25,6 +26,7 @@ interface DocumentActionsProps {
   paymentStatus?: string;
   bookingId?: string;
   invoiceId?: string;
+  clientId?: string;
   disabled?: boolean;
   showShare?: boolean;
   numberRpcName?: string;
@@ -71,27 +73,14 @@ export default function DocumentActions(props: DocumentActionsProps) {
       notes: props.notes,
     };
 
-    // Save to documents table
-    await supabase.from('documents' as any).insert({
-      document_number: docData.documentNumber,
-      document_type: props.documentType,
-      client_name: props.clientName || null,
-      staff_name: props.staffName || null,
-      client_phone: props.clientPhone || null,
-      client_location: props.clientLocation || null,
-      department: props.department || null,
-      payment_reason: props.paymentReason || null,
-      service_name: props.serviceName,
-      quantity: props.lineItems[0]?.quantity?.toString() || null,
-      unit_price: props.lineItems[0]?.unitPrice || null,
-      amount: props.totalAmount,
-      description: props.notes || null,
-      payment_status: props.paymentStatus || null,
-      created_by: props.userId,
-      created_by_name: props.userName,
-      created_by_role: props.userRole,
-      booking_id: props.bookingId || null,
-      invoice_id: props.invoiceId || null,
+    // Auto-save to documents table using centralized saver
+    await saveDocumentRecord({
+      ...docData,
+      createdById: props.userId,
+      bookingId: props.bookingId,
+      invoiceId: props.invoiceId,
+      clientId: props.clientId,
+      status: props.paymentStatus === 'paid' ? 'paid' : 'draft',
     });
 
     return docData;
@@ -102,7 +91,7 @@ export default function DocumentActions(props: DocumentActionsProps) {
     const data = await buildDocData();
     if (data) {
       downloadDocumentPdf(data);
-      toast({ title: `${data.documentNumber} generated` });
+      toast({ title: `${data.documentNumber} generated & saved` });
     }
     setGenerating(false);
   };

@@ -254,6 +254,7 @@ export type Database = {
         Row: {
           amount: number
           booking_id: string | null
+          client_id: string | null
           client_location: string | null
           client_name: string | null
           client_phone: string | null
@@ -267,16 +268,21 @@ export type Database = {
           document_type: string
           id: string
           invoice_id: string | null
+          line_items: Json | null
           payment_reason: string | null
           payment_status: string | null
           quantity: string | null
+          quotation_id: string | null
+          salesperson_name: string | null
           service_name: string | null
           staff_name: string | null
+          status: string
           unit_price: number | null
         }
         Insert: {
           amount?: number
           booking_id?: string | null
+          client_id?: string | null
           client_location?: string | null
           client_name?: string | null
           client_phone?: string | null
@@ -290,16 +296,21 @@ export type Database = {
           document_type?: string
           id?: string
           invoice_id?: string | null
+          line_items?: Json | null
           payment_reason?: string | null
           payment_status?: string | null
           quantity?: string | null
+          quotation_id?: string | null
+          salesperson_name?: string | null
           service_name?: string | null
           staff_name?: string | null
+          status?: string
           unit_price?: number | null
         }
         Update: {
           amount?: number
           booking_id?: string | null
+          client_id?: string | null
           client_location?: string | null
           client_name?: string | null
           client_phone?: string | null
@@ -313,11 +324,15 @@ export type Database = {
           document_type?: string
           id?: string
           invoice_id?: string | null
+          line_items?: Json | null
           payment_reason?: string | null
           payment_status?: string | null
           quantity?: string | null
+          quotation_id?: string | null
+          salesperson_name?: string | null
           service_name?: string | null
           staff_name?: string | null
+          status?: string
           unit_price?: number | null
         }
         Relationships: [
@@ -329,10 +344,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
             referencedColumns: ["id"]
           },
         ]

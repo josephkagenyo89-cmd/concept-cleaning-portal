@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { downloadQuotationPdf, shareQuotationWhatsApp } from '@/lib/quotationPdf';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { saveDocumentRecord } from '@/lib/documentSaver';
 
 interface LineItemInput {
   name: string;
@@ -23,7 +24,6 @@ interface QuotationActionsProps {
   userName: string;
   userRole: string;
   disabled?: boolean;
-  /** Optional multi-service line items. If omitted, single service is used. */
   lineItems?: LineItemInput[];
   salespersonName?: string;
   salespersonId?: string;
@@ -49,8 +49,8 @@ export default function QuotationActions({
       ? lineItems
       : [{ name: serviceName, quantity: 1, unitPrice: price, total: price }];
 
-    // Save to database with line_items
-    const { error: saveError } = await supabase.from('quotations' as any).insert({
+    // Save to quotations table
+    const { data: savedQuotation, error: saveError } = await supabase.from('quotations').insert({
       quotation_number: quotationNumber,
       client_name: clientName,
       client_phone: clientPhone,
@@ -60,15 +60,38 @@ export default function QuotationActions({
       created_by: userId,
       created_by_name: userName,
       created_by_role: userRole,
-      line_items: resolvedItems,
+      line_items: resolvedItems as any,
       salesperson_id: salespersonId || userId,
       salesperson_name: salespersonName || userName,
       salesperson_role: salespersonRole || userRole,
-    });
+    } as any).select('id').single();
+
     if (saveError) {
       toast({ title: 'Failed to save quotation', description: saveError.message, variant: 'destructive' });
       return null;
     }
+
+    // Auto-save to documents module
+    await saveDocumentRecord({
+      documentType: 'quotation',
+      documentNumber: quotationNumber,
+      dateCreated: format(new Date(), 'PPP'),
+      createdBy: salespersonName || userName,
+      createdByRole: userRole,
+      clientName,
+      clientPhone,
+      lineItems: resolvedItems.map(i => ({
+        name: i.name,
+        quantity: i.quantity || 1,
+        unitPrice: i.unitPrice || i.total,
+        total: i.total,
+      })),
+      totalAmount: price,
+      serviceDate: dateStr,
+      createdById: userId,
+      quotationId: (savedQuotation as any)?.id || undefined,
+      status: 'draft',
+    });
 
     return {
       quotationNumber,
@@ -88,7 +111,7 @@ export default function QuotationActions({
     const data = await getQuotationData();
     if (data) {
       downloadQuotationPdf(data);
-      toast({ title: 'Quotation generated', description: data.quotationNumber });
+      toast({ title: 'Quotation generated & saved', description: data.quotationNumber });
     }
     setGenerating(false);
   };
