@@ -243,13 +243,55 @@ export default function AdminBookings() {
                         <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    {b.status === 'completed' && (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => sendSignatureWhatsApp(b)}>
+                          <MessageCircle className="h-3 w-3 mr-1" />Send Signature via WhatsApp
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setStaffSignBooking(b.id); setStaffSignHasClient(!!b.client_signature); }}>
+                          <PenLine className="h-3 w-3 mr-1" />Staff Sign
+                        </Button>
+                      </>
+                    )}
+                    {b.status === 'fully_confirmed' && (
+                      <div className="flex items-center gap-2 text-sm text-emerald-600">
+                        <Lock className="h-3 w-3" />
+                        <span>Locked — Fully Confirmed</span>
+                      </div>
+                    )}
+                    {/* Signature status indicators */}
+                    {(b.status === 'completed' || b.status === 'fully_confirmed') && (
+                      <div className="flex gap-3 text-xs mt-1 w-full">
+                        <span className={b.client_signature ? 'text-emerald-600' : 'text-muted-foreground'}>
+                          {b.client_signature ? '✓ Client signed' : '○ Client pending'}
+                        </span>
+                        <span className={b.staff_signature ? 'text-emerald-600' : 'text-muted-foreground'}>
+                          {b.staff_signature ? '✓ Staff signed' : '○ Staff pending'}
+                        </span>
+                      </div>
+                    )}
+                    {b.status !== 'fully_confirmed' && (
+                      <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    )}
+                    {b.status === 'fully_confirmed' && (
+                      <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      )}
+
+      {staffSignBooking && (
+        <StaffSignatureDialog
+          bookingId={staffSignBooking}
+          open={!!staffSignBooking}
+          onOpenChange={(open) => { if (!open) setStaffSignBooking(null); }}
+          onSigned={load}
+          hasClientSignature={staffSignHasClient}
+        />
       )}
     </div>
   );
