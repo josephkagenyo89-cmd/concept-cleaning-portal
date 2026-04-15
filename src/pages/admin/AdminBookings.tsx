@@ -147,6 +147,35 @@ export default function AdminBookings() {
 
   const handlePrint = () => { window.print(); };
 
+  const sendSignatureWhatsApp = async (b: any) => {
+    // Generate a secure token
+    const token = crypto.randomUUID() + '-' + Date.now().toString(36);
+    const { error } = await supabase.from('signature_tokens').insert({
+      booking_id: b.id,
+      token,
+      created_by: user!.id,
+    } as any);
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to generate signature link', variant: 'destructive' });
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const signUrl = `${baseUrl}/sign?token=${encodeURIComponent(token)}`;
+    let phone = (b.client_phone || '').replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
+    if (!phone.startsWith('254')) phone = '254' + phone;
+
+    const message = encodeURIComponent(
+      `Hello ${b.client_name},\n\n` +
+      `Thank you for choosing Concept Cleaning Services.\n\n` +
+      `Your cleaning service has been completed. Kindly confirm and sign using the link below:\n\n` +
+      `${signUrl}\n\n` +
+      `This will only take a few seconds.\n\n` +
+      `Thank you.`
+    );
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    toast({ title: 'WhatsApp opened', description: 'Signature link sent to client.' });
+  };
+
   return (
     <div ref={printRef}>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
