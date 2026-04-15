@@ -26,6 +26,8 @@ export default function AdminBookings() {
   const [agents, setAgents] = useState<{ user_id: string; full_name: string }[]>([]);
   const [commissions, setCommissions] = useState<Record<string, { amount: number; bonus: number }>>({});
   const printRef = useRef<HTMLDivElement>(null);
+  const [staffSignBooking, setStaffSignBooking] = useState<string | null>(null);
+  const [staffSignHasClient, setStaffSignHasClient] = useState(false);
 
   const load = async () => {
     let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
