@@ -14,6 +14,7 @@ import PendingApproval from "@/pages/PendingApproval";
 import AgentLayout from "@/layouts/AgentLayout";
 import AdminLayout from "@/layouts/AdminLayout";
 import NotFound from "@/pages/NotFound";
+import ClientSignature from "@/pages/ClientSignature";
 import InstallPrompt from "@/components/InstallPrompt";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -75,6 +76,7 @@ function AppRoutes() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/sign" element={<ClientSignature />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -149,6 +151,9 @@ function AppRoutes() {
             <Route path="profile" element={<AgentProfile />} />
           </Route>
         )}
+
+        {/* Public routes */}
+        <Route path="/sign" element={<ClientSignature />} />
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />

@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import StatusBadge from '@/components/agent/StatusBadge';
+import StaffSignatureDialog from '@/components/booking/StaffSignatureDialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { CalendarIcon, Download, FileText, Printer, Search } from 'lucide-react';
+import { CalendarIcon, Download, FileText, Printer, Search, MessageCircle, PenLine, Lock, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -25,6 +26,8 @@ export default function AdminBookings() {
   const [agents, setAgents] = useState<{ user_id: string; full_name: string }[]>([]);
   const [commissions, setCommissions] = useState<Record<string, { amount: number; bonus: number }>>({});
   const printRef = useRef<HTMLDivElement>(null);
+  const [staffSignBooking, setStaffSignBooking] = useState<string | null>(null);
+  const [staffSignHasClient, setStaffSignHasClient] = useState(false);
 
   const load = async () => {
     let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
@@ -144,6 +147,35 @@ export default function AdminBookings() {
 
   const handlePrint = () => { window.print(); };
 
+  const sendSignatureWhatsApp = async (b: any) => {
+    // Generate a secure token
+    const token = crypto.randomUUID() + '-' + Date.now().toString(36);
+    const { error } = await supabase.from('signature_tokens').insert({
+      booking_id: b.id,
+      token,
+      created_by: user!.id,
+    } as any);
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to generate signature link', variant: 'destructive' });
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const signUrl = `${baseUrl}/sign?token=${encodeURIComponent(token)}`;
+    let phone = (b.client_phone || '').replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
+    if (!phone.startsWith('254')) phone = '254' + phone;
+
+    const message = encodeURIComponent(
+      `Hello ${b.client_name},\n\n` +
+      `Thank you for choosing Concept Cleaning Services.\n\n` +
+      `Your cleaning service has been completed. Kindly confirm and sign using the link below:\n\n` +
+      `${signUrl}\n\n` +
+      `This will only take a few seconds.\n\n` +
+      `Thank you.`
+    );
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    toast({ title: 'WhatsApp opened', description: 'Signature link sent to client.' });
+  };
+
   return (
     <div ref={printRef}>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -168,6 +200,7 @@ export default function AdminBookings() {
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="fully_confirmed">Fully Confirmed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
@@ -239,13 +272,55 @@ export default function AdminBookings() {
                         <Button size="sm" variant="destructive" onClick={() => updateStatus(b.id, 'cancelled', b.agent_id, Number(b.price), b.commission_created)}>Cancel</Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    {b.status === 'completed' && (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => sendSignatureWhatsApp(b)}>
+                          <MessageCircle className="h-3 w-3 mr-1" />Send Signature via WhatsApp
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setStaffSignBooking(b.id); setStaffSignHasClient(!!b.client_signature); }}>
+                          <PenLine className="h-3 w-3 mr-1" />Staff Sign
+                        </Button>
+                      </>
+                    )}
+                    {b.status === 'fully_confirmed' && (
+                      <div className="flex items-center gap-2 text-sm text-emerald-600">
+                        <Lock className="h-3 w-3" />
+                        <span>Locked — Fully Confirmed</span>
+                      </div>
+                    )}
+                    {/* Signature status indicators */}
+                    {(b.status === 'completed' || b.status === 'fully_confirmed') && (
+                      <div className="flex gap-3 text-xs mt-1 w-full">
+                        <span className={b.client_signature ? 'text-emerald-600' : 'text-muted-foreground'}>
+                          {b.client_signature ? '✓ Client signed' : '○ Client pending'}
+                        </span>
+                        <span className={b.staff_signature ? 'text-emerald-600' : 'text-muted-foreground'}>
+                          {b.staff_signature ? '✓ Staff signed' : '○ Staff pending'}
+                        </span>
+                      </div>
+                    )}
+                    {b.status !== 'fully_confirmed' && (
+                      <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    )}
+                    {b.status === 'fully_confirmed' && (
+                      <Button size="sm" variant="outline" onClick={() => downloadPDF(b)}><FileText className="h-3 w-3 mr-1" />PDF</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      )}
+
+      {staffSignBooking && (
+        <StaffSignatureDialog
+          bookingId={staffSignBooking}
+          open={!!staffSignBooking}
+          onOpenChange={(open) => { if (!open) setStaffSignBooking(null); }}
+          onSigned={load}
+          hasClientSignature={staffSignHasClient}
+        />
       )}
     </div>
   );

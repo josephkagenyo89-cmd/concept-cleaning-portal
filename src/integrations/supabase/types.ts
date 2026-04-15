@@ -49,9 +49,12 @@ export type Database = {
           agent_id: string
           agent_margin: number | null
           agent_price: number | null
+          client_consent: boolean | null
           client_id: string | null
           client_name: string
           client_phone: string
+          client_signature: string | null
+          client_signed_at: string | null
           commission_created: boolean
           created_at: string
           created_by_name: string | null
@@ -67,6 +70,9 @@ export type Database = {
           service_date: string
           service_id: string
           size_sqm: number | null
+          staff_signature: string | null
+          staff_signed_at: string | null
+          staff_signed_name: string | null
           status: Database["public"]["Enums"]["booking_status"]
           system_price: number | null
           updated_at: string
@@ -75,9 +81,12 @@ export type Database = {
           agent_id: string
           agent_margin?: number | null
           agent_price?: number | null
+          client_consent?: boolean | null
           client_id?: string | null
           client_name: string
           client_phone: string
+          client_signature?: string | null
+          client_signed_at?: string | null
           commission_created?: boolean
           created_at?: string
           created_by_name?: string | null
@@ -93,6 +102,9 @@ export type Database = {
           service_date: string
           service_id: string
           size_sqm?: number | null
+          staff_signature?: string | null
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           system_price?: number | null
           updated_at?: string
@@ -101,9 +113,12 @@ export type Database = {
           agent_id?: string
           agent_margin?: number | null
           agent_price?: number | null
+          client_consent?: boolean | null
           client_id?: string | null
           client_name?: string
           client_phone?: string
+          client_signature?: string | null
+          client_signed_at?: string | null
           commission_created?: boolean
           created_at?: string
           created_by_name?: string | null
@@ -119,6 +134,9 @@ export type Database = {
           service_date?: string
           service_id?: string
           size_sqm?: number | null
+          staff_signature?: string | null
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           system_price?: number | null
           updated_at?: string
@@ -972,6 +990,36 @@ export type Database = {
         }
         Relationships: []
       }
+      signature_tokens: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          token: string
+          used: boolean
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          token: string
+          used?: boolean
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean
+        }
+        Relationships: []
+      }
       smtp_settings: {
         Row: {
           from_email: string
@@ -1090,7 +1138,12 @@ export type Database = {
     Enums: {
       agent_status: "pending" | "approved" | "suspended"
       app_role: "agent" | "admin" | "super_admin"
-      booking_status: "pending" | "confirmed" | "completed" | "cancelled"
+      booking_status:
+        | "pending"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "fully_confirmed"
       commission_tier: "bronze" | "silver" | "gold"
       ledger_type: "credit" | "debit"
       notice_priority: "normal" | "important" | "urgent"
@@ -1225,7 +1278,13 @@ export const Constants = {
     Enums: {
       agent_status: ["pending", "approved", "suspended"],
       app_role: ["agent", "admin", "super_admin"],
-      booking_status: ["pending", "confirmed", "completed", "cancelled"],
+      booking_status: [
+        "pending",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "fully_confirmed",
+      ],
       commission_tier: ["bronze", "silver", "gold"],
       ledger_type: ["credit", "debit"],
       notice_priority: ["normal", "important", "urgent"],

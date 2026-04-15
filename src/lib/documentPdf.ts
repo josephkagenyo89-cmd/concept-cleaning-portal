@@ -40,6 +40,15 @@ export interface DocumentLineItem {
   total: number;
 }
 
+export interface SignatureData {
+  clientSignature?: string;
+  clientName?: string;
+  clientSignedAt?: string;
+  staffSignature?: string;
+  staffName?: string;
+  staffSignedAt?: string;
+}
+
 export interface DocumentData {
   documentType: DocumentType;
   documentNumber: string;
@@ -57,6 +66,7 @@ export interface DocumentData {
   paymentStatus?: string;
   notes?: string;
   serviceDate?: string;
+  signatures?: SignatureData;
 }
 
 // Brand colors
@@ -359,6 +369,88 @@ function drawFooter(doc: jsPDF, w: number, h: number, pageNum: number, totalPage
   doc.text(`Page ${pageNum} / ${totalPages}`, w / 2, footerY + 11, { align: 'center' });
 }
 
+function drawSignatures(doc: jsPDF, w: number, y: number, sigs?: SignatureData): number {
+  if (!sigs || (!sigs.clientSignature && !sigs.staffSignature)) return y;
+
+  // Check if we need a new page
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...TEAL);
+  doc.text('Client & Staff Acknowledgement', 18, y);
+  y += 8;
+
+  const colW = (w - 36) / 2;
+  const sigH = 30;
+
+  // Client signature
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...DARK);
+  doc.text('Client', 18, y);
+  y += 4;
+
+  if (sigs.clientSignature) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY_TEXT);
+    doc.text('I confirm that the cleaning services were completed satisfactorily.', 18, y);
+    y += 5;
+    try {
+      doc.addImage(sigs.clientSignature, 'PNG', 18, y, 60, sigH);
+    } catch { /* signature image failed */ }
+    doc.setDrawColor(...BORDER_GRAY);
+    doc.line(18, y + sigH + 2, 18 + 60, y + sigH + 2);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+    doc.text(sigs.clientName || 'Client', 18, y + sigH + 7);
+    if (sigs.clientSignedAt) {
+      doc.setTextColor(...GRAY_TEXT);
+      doc.text(`Signed: ${new Date(sigs.clientSignedAt).toLocaleDateString()}`, 18, y + sigH + 11);
+    }
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...GRAY_TEXT);
+    doc.text('Pending', 18, y);
+  }
+
+  // Staff signature
+  const staffX = 18 + colW + 10;
+  let staffY = y - 9;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...DARK);
+  doc.text('Staff', staffX, staffY);
+  staffY += 9;
+
+  if (sigs.staffSignature) {
+    try {
+      doc.addImage(sigs.staffSignature, 'PNG', staffX, staffY, 60, sigH);
+    } catch { /* signature image failed */ }
+    doc.setDrawColor(...BORDER_GRAY);
+    doc.line(staffX, staffY + sigH + 2, staffX + 60, staffY + sigH + 2);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+    doc.text(sigs.staffName || 'Staff', staffX, staffY + sigH + 7);
+    if (sigs.staffSignedAt) {
+      doc.setTextColor(...GRAY_TEXT);
+      doc.text(`Signed: ${new Date(sigs.staffSignedAt).toLocaleDateString()}`, staffX, staffY + sigH + 11);
+    }
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...GRAY_TEXT);
+    doc.text('Pending', staffX, staffY);
+  }
+
+  return y + sigH + 16;
+}
+
 export function generateDocumentPdf(data: DocumentData): jsPDF {
   const doc = new jsPDF();
   const w = doc.internal.pageSize.getWidth();
@@ -372,6 +464,7 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   y = drawTable(doc, data, y, w);
   y = drawSummary(doc, w, y, data);
   y = drawTermsAndNotes(doc, y, data);
+  y = drawSignatures(doc, w, y, data.signatures);
 
   drawFooter(doc, w, h, 1, 1);
 
