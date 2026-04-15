@@ -40,6 +40,15 @@ export interface DocumentLineItem {
   total: number;
 }
 
+export interface SignatureData {
+  clientSignature?: string;
+  clientName?: string;
+  clientSignedAt?: string;
+  staffSignature?: string;
+  staffName?: string;
+  staffSignedAt?: string;
+}
+
 export interface DocumentData {
   documentType: DocumentType;
   documentNumber: string;
@@ -57,6 +66,7 @@ export interface DocumentData {
   paymentStatus?: string;
   notes?: string;
   serviceDate?: string;
+  signatures?: SignatureData;
 }
 
 // Brand colors
