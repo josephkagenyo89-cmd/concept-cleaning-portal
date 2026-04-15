@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import StatusBadge from '@/components/agent/StatusBadge';
+import StaffSignatureDialog from '@/components/booking/StaffSignatureDialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { CalendarIcon, Download, FileText, Printer, Search } from 'lucide-react';
+import { CalendarIcon, Download, FileText, Printer, Search, MessageCircle, PenLine, Lock, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
