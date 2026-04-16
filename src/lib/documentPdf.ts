@@ -1,4 +1,16 @@
 import jsPDF from 'jspdf';
+import { DEFAULT_SETTINGS, type AllSettings } from '@/lib/settings';
+
+// Settings snapshot used during PDF rendering. Updated by setPdfSettings().
+let pdfSettings: AllSettings = DEFAULT_SETTINGS;
+export function setPdfSettings(s: AllSettings) { pdfSettings = s; }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
 
 export type DocumentType =
   | 'quotation'
@@ -82,37 +94,41 @@ function fmt(n: number): string {
 }
 
 function drawHeader(doc: jsPDF, w: number): number {
-  // Soft curved background shape (top-left arc)
-  doc.setFillColor(220, 240, 237); // light teal
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
+  const g = pdfSettings.general;
+
+  // Soft curved background shape (top-left arc) - lightened brand color
+  doc.setFillColor(220, 240, 237);
   doc.ellipse(-20, -10, 100, 60, 'F');
 
   // Company name left
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...TEAL);
-  doc.text('CONCEPT CLEANING AND FUMIGATION', 18, 28);
+  doc.setTextColor(...brand);
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), 18, 28);
 
   // Right side company details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
-  doc.text('CONCEPT CLEANING SERVICES', w - 18, 14, { align: 'right' });
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), w - 18, 14, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_TEXT);
-  doc.text('NAIROBI', w - 18, 20, { align: 'right' });
-  doc.text('Nairobi Kenya', w - 18, 25, { align: 'right' });
+  if (g.address) doc.text(g.address, w - 18, 20, { align: 'right' });
+  if (g.phone) doc.text(g.phone, w - 18, 25, { align: 'right' });
 
   return 38;
 }
 
 function drawDocTitle(doc: jsPDF, w: number, y: number, data: DocumentData): number {
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
   const title = DOC_TITLES[data.documentType];
   const numLabel = `${title} # ${data.documentNumber}`;
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...TEAL);
+  doc.setTextColor(...brand);
   doc.text(numLabel, w - 18, y, { align: 'right' });
   doc.setTextColor(...DARK);
 
@@ -224,8 +240,9 @@ function drawTable(doc: jsPDF, data: DocumentData, y: number, w: number): number
   const rowH = 10;
   const headerH = 8;
 
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
   // Header row
-  doc.setFillColor(...TEAL);
+  doc.setFillColor(...brand);
   doc.rect(marginX, y, tableW, headerH, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
@@ -280,6 +297,10 @@ function drawTable(doc: jsPDF, data: DocumentData, y: number, w: number): number
 }
 
 function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): number {
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
+  const tax = pdfSettings.tax;
+  const sys = pdfSettings.system;
+  const cur = sys.currency || 'Ksh';
   const marginX = 18;
   const tableW = w - 36;
   const summaryX = marginX + tableW * 0.55;
@@ -288,34 +309,74 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   const valueX = summaryX + summaryW - 3;
   const rowH = 9;
 
+  const subtotal = data.totalAmount;
+  const vatRate = tax.vat_enabled ? Number(tax.vat_percentage) || 0 : 0;
+  const vatAmount = +(subtotal * vatRate / 100).toFixed(2);
+  const grandTotal = subtotal + vatAmount;
+
   doc.setDrawColor(...BORDER_GRAY);
   doc.setLineWidth(0.3);
 
-  // Untaxed Amount
   doc.rect(summaryX, y, summaryW, rowH, 'S');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
-  doc.text('Untaxed Amount', labelX, y + 6);
-  doc.text(fmt(data.totalAmount), valueX, y + 6, { align: 'right' });
+  doc.text('Subtotal', labelX, y + 6);
+  doc.text(fmt(subtotal), valueX, y + 6, { align: 'right' });
   y += rowH;
 
-  // VAT
   doc.rect(summaryX, y, summaryW, rowH, 'S');
-  doc.text('VAT 0%', labelX, y + 6);
-  doc.text('0.00 KSh', valueX, y + 6, { align: 'right' });
+  doc.text(`VAT ${vatRate}%`, labelX, y + 6);
+  doc.text(`${fmt(vatAmount)} ${cur}`, valueX, y + 6, { align: 'right' });
   y += rowH;
 
-  // Total
-  doc.setFillColor(...TEAL);
+  doc.setFillColor(...brand);
   doc.rect(summaryX, y, summaryW, rowH, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...WHITE);
   doc.text('Total', labelX, y + 6);
-  doc.text(`${fmt(data.totalAmount)} Ksh`, valueX, y + 6, { align: 'right' });
+  doc.text(`${fmt(grandTotal)} ${cur}`, valueX, y + 6, { align: 'right' });
   doc.setTextColor(...DARK);
 
   return y + rowH + 8;
+}
+
+function drawPaymentInfo(doc: jsPDF, y: number, data: DocumentData): number {
+  if (!['invoice', 'receipt', 'quotation'].includes(data.documentType)) return y;
+  const p = pdfSettings.payment;
+  const hasMpesa = p.mpesa_paybill || p.mpesa_till;
+  const hasBank = p.bank_name && p.bank_account_number;
+  if (!hasMpesa && !hasBank) return y;
+
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...brand);
+  doc.text('Payment Details', 18, y);
+  y += 5;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...DARK);
+
+  if (p.mpesa_paybill) {
+    doc.text(`M-Pesa Paybill: ${p.mpesa_paybill}${p.mpesa_account ? `  Account: ${p.mpesa_account}` : ''}`, 18, y);
+    y += 4.5;
+  }
+  if (p.mpesa_till) {
+    doc.text(`M-Pesa Till: ${p.mpesa_till}`, 18, y);
+    y += 4.5;
+  }
+  if (hasBank) {
+    doc.text(
+      `Bank: ${p.bank_name}${p.bank_branch ? ` (${p.bank_branch})` : ''}  A/C: ${p.bank_account_number}` +
+      (p.bank_account_name ? `  Name: ${p.bank_account_name}` : ''),
+      18,
+      y,
+    );
+    y += 4.5;
+  }
+  return y + 3;
 }
 
 function drawTermsAndNotes(doc: jsPDF, y: number, data: DocumentData): number {
@@ -323,9 +384,12 @@ function drawTermsAndNotes(doc: jsPDF, y: number, data: DocumentData): number {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY_TEXT);
 
-  if (data.documentType === 'quotation') {
-    doc.text('Terms & Conditions: Quotation valid 30 days.', 18, y);
-    y += 6;
+  const isVoucher = data.documentType.includes('voucher');
+  const terms = pdfSettings.document.terms_conditions;
+  if (!isVoucher && terms) {
+    const tLines = doc.splitTextToSize(`Terms & Conditions:\n${terms}`, 170);
+    doc.text(tLines, 18, y);
+    y += tLines.length * 4 + 4;
   }
 
   if (data.paymentStatus) {
@@ -347,26 +411,23 @@ function drawTermsAndNotes(doc: jsPDF, y: number, data: DocumentData): number {
 }
 
 function drawFooter(doc: jsPDF, w: number, h: number, pageNum: number, totalPages: number) {
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
+  const g = pdfSettings.general;
+  const docFooter = pdfSettings.document.footer_text;
   const footerY = h - 18;
 
-  // Separator line
-  doc.setDrawColor(...TEAL);
+  doc.setDrawColor(...brand);
   doc.setLineWidth(0.5);
   doc.line(18, footerY, w - 18, footerY);
 
-  // Contact info
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY_TEXT);
-  doc.text(
-    '+254758060692  info.conceptcleaningkenya@gmail.com  https://concept-cleaning-services.lovable.app/',
-    w / 2,
-    footerY + 6,
-    { align: 'center' }
-  );
 
-  // Page number
-  doc.text(`Page ${pageNum} / ${totalPages}`, w / 2, footerY + 11, { align: 'center' });
+  const contactBits = [g.phone, g.email, g.website].filter(Boolean).join('  •  ');
+  if (contactBits) doc.text(contactBits, w / 2, footerY + 6, { align: 'center' });
+  if (docFooter) doc.text(docFooter, w / 2, footerY + 10, { align: 'center' });
+  doc.text(`Page ${pageNum} / ${totalPages}`, w / 2, footerY + 14, { align: 'center' });
 }
 
 function drawSignatures(doc: jsPDF, w: number, y: number, sigs?: SignatureData): number {
@@ -463,6 +524,7 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   y = drawInfoBox(doc, w, y, data);
   y = drawTable(doc, data, y, w);
   y = drawSummary(doc, w, y, data);
+  y = drawPaymentInfo(doc, y, data);
   y = drawTermsAndNotes(doc, y, data);
   y = drawSignatures(doc, w, y, data.signatures);
 

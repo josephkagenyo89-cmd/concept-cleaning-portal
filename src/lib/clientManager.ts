@@ -24,10 +24,13 @@ export async function upsertClientForBooking(params: {
     .maybeSingle();
 
   if (existing) {
+    const { loadAllSettings } = await import('@/lib/settings');
+    const settings = await loadAllSettings();
+    const vipThreshold = settings.crm.vip_threshold || 50000;
     const newCount = (existing as any).booking_count + 1;
     const newSpend = Number((existing as any).total_spend) + bookingPrice;
     let status = 'returning';
-    if (newSpend >= 50000) status = 'vip';
+    if (newSpend >= vipThreshold) status = 'vip';
 
     await supabase.from('clients').update({
       full_name: clientName,
