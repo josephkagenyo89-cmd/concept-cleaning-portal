@@ -17,6 +17,7 @@ import { saveDocumentRecord } from '@/lib/documentSaver';
 import { format as fmtDate } from 'date-fns';
 import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
+import { upsertClientForBooking } from '@/lib/clientManager';
 
 interface Invoice {
   id: string;
@@ -95,16 +96,24 @@ export default function ErpInvoices() {
   const handleShareWhatsApp = (inv: Invoice) => shareDocumentWhatsApp(buildInvoiceDocData(inv));
 
   const handleSubmit = async () => {
-    if (!form.client_name || lineItems.length === 0) {
-      toast({ title: 'Add client name and at least one service', variant: 'destructive' });
+    if (!form.client_name || !form.client_phone || lineItems.length === 0) {
+      toast({ title: 'Client name, phone and at least one service are required', variant: 'destructive' });
       return;
     }
     const totalAmount = lineItems.reduce((s, i) => s + i.total, 0);
     const invNum = await generateInvoiceNumber();
-    let clientId: string | null = null;
-    if (form.client_phone) {
-      const { data: client } = await supabase.from('clients').select('id').eq('phone', form.client_phone.trim()).maybeSingle();
-      clientId = client?.id || null;
+    // Auto-upsert client to guarantee clientId linkage
+    const clientId = await upsertClientForBooking({
+      clientName: form.client_name,
+      clientPhone: form.client_phone,
+      location: '',
+      bookingPrice: totalAmount,
+      createdBy: user!.id,
+      createdByRole: 'admin',
+    });
+    if (!clientId) {
+      toast({ title: 'Could not link to client record', variant: 'destructive' });
+      return;
     }
     const lineItemsData = lineItems.map(i => ({
       name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total,
