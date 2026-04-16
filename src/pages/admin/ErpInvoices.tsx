@@ -169,6 +169,8 @@ export default function ErpInvoices() {
     if (status === 'paid' && invoice) {
       const { data: existing } = await (supabase.from('income_records').select('id') as any).eq('invoice_id', id).maybeSingle();
       if (!existing) {
+        // Fetch full invoice to inherit client_id and booking_id
+        const { data: fullInv } = await supabase.from('invoices').select('client_id, booking_id').eq('id', id).maybeSingle();
         await supabase.from('income_records').insert({
           amount: Number(invoice.amount),
           date: new Date().toISOString().split('T')[0],
@@ -178,6 +180,8 @@ export default function ErpInvoices() {
           source: 'client_payment',
           created_by: user!.id,
           invoice_id: id,
+          client_id: (fullInv as any)?.client_id || null,
+          booking_id: (fullInv as any)?.booking_id || null,
           status: 'pending_approval',
         } as any);
         toast({ title: 'Income record created — pending Super Admin approval' });
