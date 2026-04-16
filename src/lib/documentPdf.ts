@@ -94,37 +94,41 @@ function fmt(n: number): string {
 }
 
 function drawHeader(doc: jsPDF, w: number): number {
-  // Soft curved background shape (top-left arc)
-  doc.setFillColor(220, 240, 237); // light teal
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
+  const g = pdfSettings.general;
+
+  // Soft curved background shape (top-left arc) - lightened brand color
+  doc.setFillColor(220, 240, 237);
   doc.ellipse(-20, -10, 100, 60, 'F');
 
   // Company name left
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...TEAL);
-  doc.text('CONCEPT CLEANING AND FUMIGATION', 18, 28);
+  doc.setTextColor(...brand);
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), 18, 28);
 
   // Right side company details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
-  doc.text('CONCEPT CLEANING SERVICES', w - 18, 14, { align: 'right' });
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), w - 18, 14, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_TEXT);
-  doc.text('NAIROBI', w - 18, 20, { align: 'right' });
-  doc.text('Nairobi Kenya', w - 18, 25, { align: 'right' });
+  if (g.address) doc.text(g.address, w - 18, 20, { align: 'right' });
+  if (g.phone) doc.text(g.phone, w - 18, 25, { align: 'right' });
 
   return 38;
 }
 
 function drawDocTitle(doc: jsPDF, w: number, y: number, data: DocumentData): number {
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
   const title = DOC_TITLES[data.documentType];
   const numLabel = `${title} # ${data.documentNumber}`;
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...TEAL);
+  doc.setTextColor(...brand);
   doc.text(numLabel, w - 18, y, { align: 'right' });
   doc.setTextColor(...DARK);
 
