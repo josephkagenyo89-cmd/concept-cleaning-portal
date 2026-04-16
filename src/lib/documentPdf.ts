@@ -240,8 +240,9 @@ function drawTable(doc: jsPDF, data: DocumentData, y: number, w: number): number
   const rowH = 10;
   const headerH = 8;
 
+  const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
   // Header row
-  doc.setFillColor(...TEAL);
+  doc.setFillColor(...brand);
   doc.rect(marginX, y, tableW, headerH, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
@@ -523,6 +524,7 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   y = drawInfoBox(doc, w, y, data);
   y = drawTable(doc, data, y, w);
   y = drawSummary(doc, w, y, data);
+  y = drawPaymentInfo(doc, y, data);
   y = drawTermsAndNotes(doc, y, data);
   y = drawSignatures(doc, w, y, data.signatures);
 
