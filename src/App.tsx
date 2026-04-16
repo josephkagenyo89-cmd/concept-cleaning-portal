@@ -44,6 +44,7 @@ const AdminQuotations = lazy(() => import("@/pages/admin/AdminQuotations"));
 const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
 const AdminClients = lazy(() => import("@/pages/admin/AdminClients"));
 const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile"));
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 
 const queryClient = new QueryClient();
 
@@ -133,6 +134,7 @@ function AppRoutes() {
             <Route path="clients/:id" element={<AdminClientProfile />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="settings" element={<AdminSettings />} />
             <Route path="erp" element={<ErpDashboard />} />
             <Route path="erp/income" element={<ErpIncome />} />
             <Route path="erp/expenses" element={<ErpExpenses />} />

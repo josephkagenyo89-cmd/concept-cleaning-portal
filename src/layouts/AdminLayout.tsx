@@ -7,10 +7,13 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
+  Settings2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
 import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
+import { loadAllSettings } from '@/lib/settings';
+import { setPdfSettings } from '@/lib/documentPdf';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
