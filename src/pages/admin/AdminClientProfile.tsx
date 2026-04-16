@@ -22,6 +22,7 @@ export default function AdminClientProfile() {
   const [client, setClient] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [income, setIncome] = useState<any[]>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,17 +34,20 @@ export default function AdminClientProfile() {
 
   const loadData = async () => {
     setLoading(true);
-    const [clientRes, bookingsRes, invoicesRes] = await Promise.all([
+    const [clientRes, bookingsRes, invoicesRes, incomeRes] = await Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
-      supabase.from('bookings').select('*, services(name)').eq('client_id', id).order('created_at', { ascending: false }),
+      supabase.from('bookings').select('*, services(name)').eq('client_id', id as string).order('created_at', { ascending: false }),
       supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
+      (supabase.from('income_records').select('*') as any).eq('client_id', id as string).order('date', { ascending: false }),
     ]);
 
     if (clientRes.data) {
       setClient(clientRes.data);
       setNotes((clientRes.data as any).notes || '');
     }
+    setBookings((bookingsRes.data as any[]) || []);
     setInvoices((invoicesRes.data as any[]) || []);
+    setIncome((incomeRes.data as any[]) || []);
     setLoading(false);
   };
 
