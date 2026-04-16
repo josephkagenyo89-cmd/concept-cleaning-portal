@@ -22,6 +22,7 @@ export default function AdminClientProfile() {
   const [client, setClient] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [income, setIncome] = useState<any[]>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,17 +34,20 @@ export default function AdminClientProfile() {
 
   const loadData = async () => {
     setLoading(true);
-    const [clientRes, bookingsRes, invoicesRes] = await Promise.all([
+    const [clientRes, bookingsRes, invoicesRes, incomeRes] = await Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
-      supabase.from('bookings').select('*, services(name)').eq('client_id', id).order('created_at', { ascending: false }),
+      supabase.from('bookings').select('*, services(name)').eq('client_id', id as string).order('created_at', { ascending: false }),
       supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
+      (supabase.from('income_records').select('*') as any).eq('client_id', id as string).order('date', { ascending: false }),
     ]);
 
     if (clientRes.data) {
       setClient(clientRes.data);
       setNotes((clientRes.data as any).notes || '');
     }
+    setBookings((bookingsRes.data as any[]) || []);
     setInvoices((invoicesRes.data as any[]) || []);
+    setIncome((incomeRes.data as any[]) || []);
     setLoading(false);
   };
 
@@ -198,6 +202,39 @@ export default function AdminClientProfile() {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Payment History (Income) */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Payment History ({income.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {income.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No payments recorded yet</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {income.map((rec: any) => (
+                  <div key={rec.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 text-sm">
+                    <div>
+                      <p className="font-medium capitalize">{(rec.payment_method || '').replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(rec.date), 'dd MMM yyyy')}{rec.mpesa_code ? ` · ${rec.mpesa_code}` : ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">Ksh {Number(rec.amount).toLocaleString()}</p>
+                      <Badge variant="outline" className="text-[10px] capitalize">{(rec.status || '').replace(/_/g, ' ')}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t flex justify-between text-sm font-semibold">
+                <span>Total Income</span>
+                <span className="text-green-600">Ksh {income.reduce((s, r) => s + Number(r.amount || 0), 0).toLocaleString()}</span>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

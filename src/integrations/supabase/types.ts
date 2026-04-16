@@ -420,6 +420,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           booking_id: string | null
+          client_id: string | null
           created_at: string
           created_by: string
           date: string
@@ -437,6 +438,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           booking_id?: string | null
+          client_id?: string | null
           created_at?: string
           created_by: string
           date?: string
@@ -454,6 +456,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           booking_id?: string | null
+          client_id?: string | null
           created_at?: string
           created_by?: string
           date?: string
@@ -993,6 +996,7 @@ export type Database = {
       signature_tokens: {
         Row: {
           booking_id: string
+          client_id: string | null
           created_at: string
           created_by: string
           expires_at: string
@@ -1002,6 +1006,7 @@ export type Database = {
         }
         Insert: {
           booking_id: string
+          client_id?: string | null
           created_at?: string
           created_by: string
           expires_at?: string
@@ -1011,6 +1016,7 @@ export type Database = {
         }
         Update: {
           booking_id?: string
+          client_id?: string | null
           created_at?: string
           created_by?: string
           expires_at?: string
