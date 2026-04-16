@@ -205,6 +205,39 @@ export default function AdminClientProfile() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment History (Income) */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Payment History ({income.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {income.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No payments recorded yet</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {income.map((rec: any) => (
+                  <div key={rec.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 text-sm">
+                    <div>
+                      <p className="font-medium capitalize">{(rec.payment_method || '').replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(rec.date), 'dd MMM yyyy')}{rec.mpesa_code ? ` · ${rec.mpesa_code}` : ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">Ksh {Number(rec.amount).toLocaleString()}</p>
+                      <Badge variant="outline" className="text-[10px] capitalize">{(rec.status || '').replace(/_/g, ' ')}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t flex justify-between text-sm font-semibold">
+                <span>Total Income</span>
+                <span className="text-green-600">Ksh {income.reduce((s, r) => s + Number(r.amount || 0), 0).toLocaleString()}</span>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
