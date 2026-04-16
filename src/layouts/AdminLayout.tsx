@@ -29,6 +29,7 @@ const navItems = [
   { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/admin/settings', icon: Settings2, label: 'Settings' },
 ];
 
 const erpNavItems = [
@@ -43,6 +44,11 @@ export default function AdminLayout() {
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { blockingNotices, refresh } = useBlockingNotices();
+
+  // Preload system settings into PDF generator + cache on admin entry
+  useEffect(() => {
+    loadAllSettings(true).then(setPdfSettings).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-background">
