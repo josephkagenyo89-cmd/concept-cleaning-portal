@@ -1,4 +1,16 @@
 import jsPDF from 'jspdf';
+import { DEFAULT_SETTINGS, type AllSettings } from '@/lib/settings';
+
+// Settings snapshot used during PDF rendering. Updated by setPdfSettings().
+let pdfSettings: AllSettings = DEFAULT_SETTINGS;
+export function setPdfSettings(s: AllSettings) { pdfSettings = s; }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
 
 export type DocumentType =
   | 'quotation'
