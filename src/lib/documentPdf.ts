@@ -350,22 +350,32 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
 }
 
 function drawPaymentInfo(doc: jsPDF, y: number, data: DocumentData): number {
-  if (!['invoice', 'receipt', 'quotation'].includes(data.documentType)) return y;
+  if (!['invoice', 'receipt', 'quotation', 'service_certificate'].includes(data.documentType)) return y;
   const p = pdfSettings.payment;
   const hasMpesa = p.mpesa_paybill || p.mpesa_till;
   const hasBank = p.bank_name && p.bank_account_number;
-  if (!hasMpesa && !hasBank) return y;
+  const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate';
+  const showProof = isReceiptOrCert && (data.mpesaCode || data.paymentDate);
+
+  if (!hasMpesa && !hasBank && !showProof) return y;
 
   const brand = hexToRgb(pdfSettings.document.primary_color || '#2A9D8F');
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...brand);
-  doc.text('Payment Details', 18, y);
+  doc.text(showProof ? 'Payment Confirmation' : 'Payment Details', 18, y);
   y += 5;
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...DARK);
+
+  if (showProof) {
+    if (data.mpesaCode) { doc.text(`M-Pesa Code: ${data.mpesaCode}`, 18, y); y += 4.5; }
+    if (data.paymentDate) { doc.text(`Payment Date: ${data.paymentDate}`, 18, y); y += 4.5; }
+    if (data.invoiceNumber) { doc.text(`Invoice #: ${data.invoiceNumber}`, 18, y); y += 4.5; }
+    return y + 3;
+  }
 
   if (p.mpesa_paybill) {
     doc.text(`M-Pesa Paybill: ${p.mpesa_paybill}${p.mpesa_account ? `  Account: ${p.mpesa_account}` : ''}`, 18, y);
