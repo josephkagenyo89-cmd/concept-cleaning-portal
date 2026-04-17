@@ -140,12 +140,30 @@ export default function AgentBooking() {
       return;
     }
 
-    const { error } = await supabase.from('bookings').insert(bookingData);
+    const { data: inserted, error } = await supabase.from('bookings').insert(bookingData).select('id').single();
     setLoading(false);
     if (error) {
       toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Booking created!', description: `${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked successfully.` });
+      // Auto-generate quotation document in background
+      try {
+        const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
+        await autoCreateQuotationForBooking({
+          clientName: form.client_name,
+          clientPhone: form.client_phone,
+          clientLocation: form.location,
+          lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+          totalAmount: finalPrice,
+          serviceDate: date,
+          createdById: user.id,
+          createdBy: profile?.full_name || 'Agent',
+          createdByRole: 'agent',
+          bookingId: (inserted as any)?.id,
+          clientId: clientId || undefined,
+          salespersonName: salesperson.name || profile?.full_name || 'Agent',
+        });
+      } catch (e) { console.warn('Auto-quotation failed', e); }
+      toast({ title: 'Booking created!', description: `Quotation auto-saved. ${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked.` });
       navigate('/agent');
     }
   };

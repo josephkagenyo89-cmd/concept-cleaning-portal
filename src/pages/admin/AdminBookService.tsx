@@ -85,7 +85,7 @@ export default function AdminBookService() {
       total: i.total,
     }));
 
-    const { error } = await supabase.from('bookings').insert({
+    const { data: inserted, error } = await supabase.from('bookings').insert({
       agent_id: user.id,
       client_name: form.client_name,
       client_phone: form.client_phone,
@@ -104,12 +104,29 @@ export default function AdminBookService() {
       salesperson_role: salesperson.role || 'admin',
       line_items: lineItemsData,
       ...(clientId ? { client_id: clientId } : {}),
-    } as any);
+    } as any).select('id').single();
     setLoading(false);
     if (error) {
       toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Booking created!', description: `Admin booking — ${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked.` });
+      try {
+        const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
+        await autoCreateQuotationForBooking({
+          clientName: form.client_name,
+          clientPhone: form.client_phone,
+          clientLocation: form.location,
+          lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+          totalAmount: finalPrice,
+          serviceDate: date,
+          createdById: user.id,
+          createdBy: profile?.full_name || 'Admin',
+          createdByRole: 'admin',
+          bookingId: (inserted as any)?.id,
+          clientId: clientId || undefined,
+          salespersonName: salesperson.name || profile?.full_name || 'Admin',
+        });
+      } catch (e) { console.warn('Auto-quotation failed', e); }
+      toast({ title: 'Booking created!', description: `Quotation auto-saved. ${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked.` });
       navigate('/admin/bookings');
     }
   };

@@ -500,7 +500,9 @@ export type Database = {
           id: string
           invoice_number: string
           line_items: Json | null
+          mpesa_code: string | null
           notes: string | null
+          payment_date: string | null
           payment_status: string
           salesperson_id: string | null
           salesperson_name: string | null
@@ -521,7 +523,9 @@ export type Database = {
           id?: string
           invoice_number: string
           line_items?: Json | null
+          mpesa_code?: string | null
           notes?: string | null
+          payment_date?: string | null
           payment_status?: string
           salesperson_id?: string | null
           salesperson_name?: string | null
@@ -542,7 +546,9 @@ export type Database = {
           id?: string
           invoice_number?: string
           line_items?: Json | null
+          mpesa_code?: string | null
           notes?: string | null
+          payment_date?: string | null
           payment_status?: string
           salesperson_id?: string | null
           salesperson_name?: string | null
@@ -1158,6 +1164,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
+      next_certificate_number: { Args: never; Returns: string }
       next_expense_voucher_number: { Args: never; Returns: string }
       next_fuel_voucher_number: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }

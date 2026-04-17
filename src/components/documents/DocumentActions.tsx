@@ -41,6 +41,7 @@ const DEFAULT_RPC: Record<DocumentType, string> = {
   expense_voucher: 'next_expense_voucher_number',
   booking_confirmation: 'next_quotation_number',
   job_card: 'next_quotation_number',
+  service_certificate: 'next_certificate_number',
 };
 
 export default function DocumentActions(props: DocumentActionsProps) {
