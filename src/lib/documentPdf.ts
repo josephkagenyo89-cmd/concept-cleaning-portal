@@ -20,7 +20,8 @@ export type DocumentType =
   | 'salary_voucher'
   | 'expense_voucher'
   | 'booking_confirmation'
-  | 'job_card';
+  | 'job_card'
+  | 'service_certificate';
 
 const DOC_TITLES: Record<DocumentType, string> = {
   quotation: 'Quotation',
@@ -31,6 +32,7 @@ const DOC_TITLES: Record<DocumentType, string> = {
   expense_voucher: 'Expense Voucher',
   booking_confirmation: 'Booking Confirmation',
   job_card: 'Job Card',
+  service_certificate: 'Service Completion Certificate',
 };
 
 const FILE_PREFIXES: Record<DocumentType, string> = {
@@ -42,6 +44,7 @@ const FILE_PREFIXES: Record<DocumentType, string> = {
   expense_voucher: 'ExpenseVoucher',
   booking_confirmation: 'BookingConfirmation',
   job_card: 'JobCard',
+  service_certificate: 'ServiceCertificate',
 };
 
 export interface DocumentLineItem {
@@ -79,6 +82,11 @@ export interface DocumentData {
   notes?: string;
   serviceDate?: string;
   signatures?: SignatureData;
+  // Payment / linkage fields used by receipts and certificates
+  mpesaCode?: string;
+  paymentDate?: string;
+  invoiceNumber?: string;
+  amountPaid?: number;
 }
 
 // Brand colors
