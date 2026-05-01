@@ -209,24 +209,13 @@ export default function AgentBooking() {
           </CardContent>
         </Card>
 
-        {/* Client Details */}
+        {/* Client (CRM) */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Client Details</CardTitle>
+            <CardTitle className="text-base">Client</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Client Name</Label>
-              <Input value={form.client_name} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} required placeholder="Jane Wanjiku" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Client Phone</Label>
-              <Input value={form.client_phone} onChange={e => setForm(f => ({ ...f, client_phone: e.target.value }))} required placeholder="0712345678" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Location</Label>
-              <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} required placeholder="Kilimani, Nairobi" />
-            </div>
+          <CardContent>
+            <ClientSearchSelector value={selectedClient} onChange={setSelectedClient} />
           </CardContent>
         </Card>
 
@@ -294,8 +283,8 @@ export default function AgentBooking() {
             <CardContent className="p-4">
               <p className="text-sm font-medium mb-2">Generate Quotation</p>
               <QuotationActions
-                clientName={form.client_name}
-                clientPhone={form.client_phone}
+                clientName={selectedClient?.full_name || ''}
+                clientPhone={selectedClient?.phone || ''}
                 serviceName={lineItems.map(i => i.service.name).join(', ')}
                 serviceDate={date}
                 price={finalPrice}
