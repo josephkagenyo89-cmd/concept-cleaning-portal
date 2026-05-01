@@ -19,15 +19,14 @@ import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
+import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [form, setForm] = useState({
-    client_name: '', client_phone: '', location: '',
-  });
+  const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
   const [agentPrice, setAgentPrice] = useState('');
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
@@ -86,16 +85,22 @@ export default function AgentBooking() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
+    if (!selectedClient) {
+      toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
-    const clientId = await upsertClientForBooking({
-      clientName: form.client_name,
-      clientPhone: form.client_phone,
-      location: form.location,
+    // Update CRM stats (booking_count, total_spend, status) for the existing client
+    await upsertClientForBooking({
+      clientName: selectedClient.full_name,
+      clientPhone: selectedClient.phone,
+      location: selectedClient.location || '',
       bookingPrice: finalPrice,
       createdBy: user.id,
       createdByRole: 'agent',
     });
+    const clientId = selectedClient.id;
 
     const lineItemsData = lineItems.map(i => ({
       serviceName: i.service.name,
@@ -107,9 +112,9 @@ export default function AgentBooking() {
 
     const bookingData = {
       agent_id: user.id,
-      client_name: form.client_name,
-      client_phone: form.client_phone,
-      location: form.location,
+      client_name: selectedClient.full_name,
+      client_phone: selectedClient.phone,
+      location: selectedClient.location || '',
       service_id: primaryService.id,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
@@ -123,7 +128,7 @@ export default function AgentBooking() {
       salesperson_name: salesperson.name || profile?.full_name || 'Agent',
       salesperson_role: salesperson.role || 'agent',
       line_items: lineItemsData,
-      ...(clientId ? { client_id: clientId } : {}),
+      client_id: clientId,
     };
 
     if (!navigator.onLine) {
@@ -149,9 +154,9 @@ export default function AgentBooking() {
       try {
         const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
         await autoCreateQuotationForBooking({
-          clientName: form.client_name,
-          clientPhone: form.client_phone,
-          clientLocation: form.location,
+          clientName: selectedClient.full_name,
+          clientPhone: selectedClient.phone,
+          clientLocation: selectedClient.location || '',
           lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
           totalAmount: finalPrice,
           serviceDate: date,
@@ -159,7 +164,7 @@ export default function AgentBooking() {
           createdBy: profile?.full_name || 'Agent',
           createdByRole: 'agent',
           bookingId: (inserted as any)?.id,
-          clientId: clientId || undefined,
+          clientId,
           salespersonName: salesperson.name || profile?.full_name || 'Agent',
         });
       } catch (e) { console.warn('Auto-quotation failed', e); }
@@ -176,7 +181,7 @@ export default function AgentBooking() {
     total: i.total,
   }));
 
-  const canQuote = hasServices && form.client_name && form.client_phone && systemPrice > 0
+  const canQuote = hasServices && !!selectedClient && systemPrice > 0
     && currentAgentPrice >= systemPrice && !priceError;
 
   return (
@@ -204,24 +209,13 @@ export default function AgentBooking() {
           </CardContent>
         </Card>
 
-        {/* Client Details */}
+        {/* Client (CRM) */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Client Details</CardTitle>
+            <CardTitle className="text-base">Client</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Client Name</Label>
-              <Input value={form.client_name} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} required placeholder="Jane Wanjiku" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Client Phone</Label>
-              <Input value={form.client_phone} onChange={e => setForm(f => ({ ...f, client_phone: e.target.value }))} required placeholder="0712345678" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Location</Label>
-              <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} required placeholder="Kilimani, Nairobi" />
-            </div>
+          <CardContent>
+            <ClientSearchSelector value={selectedClient} onChange={setSelectedClient} />
           </CardContent>
         </Card>
 
@@ -289,8 +283,8 @@ export default function AgentBooking() {
             <CardContent className="p-4">
               <p className="text-sm font-medium mb-2">Generate Quotation</p>
               <QuotationActions
-                clientName={form.client_name}
-                clientPhone={form.client_phone}
+                clientName={selectedClient?.full_name || ''}
+                clientPhone={selectedClient?.phone || ''}
                 serviceName={lineItems.map(i => i.service.name).join(', ')}
                 serviceDate={date}
                 price={finalPrice}
@@ -309,7 +303,7 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !hasServices || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
         >
           {loading ? 'Creating...' : `Create Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>

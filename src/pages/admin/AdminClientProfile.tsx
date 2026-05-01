@@ -94,7 +94,14 @@ export default function AdminClientProfile() {
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h1 className="text-xl font-bold">{client.full_name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold">{client.full_name}</h1>
+                {client.client_code && (
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">
+                    {client.client_code}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{client.phone}</p>
               {client.location && <p className="text-sm text-muted-foreground">{client.location}</p>}
             </div>
