@@ -161,6 +161,7 @@ export type Database = {
       clients: {
         Row: {
           booking_count: number
+          client_code: string | null
           created_at: string
           created_by: string
           created_by_role: string
@@ -177,6 +178,7 @@ export type Database = {
         }
         Insert: {
           booking_count?: number
+          client_code?: string | null
           created_at?: string
           created_by: string
           created_by_role?: string
@@ -193,6 +195,7 @@ export type Database = {
         }
         Update: {
           booking_count?: number
+          client_code?: string | null
           created_at?: string
           created_by?: string
           created_by_role?: string
@@ -1165,6 +1168,7 @@ export type Database = {
       }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
       next_certificate_number: { Args: never; Returns: string }
+      next_client_code: { Args: never; Returns: string }
       next_expense_voucher_number: { Args: never; Returns: string }
       next_fuel_voucher_number: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
