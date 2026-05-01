@@ -19,15 +19,14 @@ import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
+import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [form, setForm] = useState({
-    client_name: '', client_phone: '', location: '',
-  });
+  const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
   const [agentPrice, setAgentPrice] = useState('');
   const [date, setDate] = useState<Date>();
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
