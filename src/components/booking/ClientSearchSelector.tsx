@@ -18,28 +18,14 @@ export type SelectedClient = {
 type Props = {
   value: SelectedClient | null;
   onChange: (client: SelectedClient | null) => void;
-  /** Path to return to after creating a client in CRM (e.g. '/agent/book') */
-  returnPath: string;
 };
 
-export default function ClientSearchSelector({ value, onChange, returnPath }: Props) {
-  const navigate = useNavigate();
+export default function ClientSearchSelector({ value, onChange }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SelectedClient[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
-
-  // Auto-load freshly created client from sessionStorage
-  useEffect(() => {
-    const stored = sessionStorage.getItem('crm_selected_client');
-    if (stored && !value) {
-      try {
-        const parsed = JSON.parse(stored) as SelectedClient;
-        onChange(parsed);
-        sessionStorage.removeItem('crm_selected_client');
-      } catch {}
-    }
-  }, [value, onChange]);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     if (!query || query.trim().length < 2 || value) {
@@ -61,12 +47,6 @@ export default function ClientSearchSelector({ value, onChange, returnPath }: Pr
     }, 300);
     return () => clearTimeout(t);
   }, [query, value]);
-
-  const handleCreateNew = () => {
-    sessionStorage.setItem('crm_return_path', returnPath);
-    sessionStorage.setItem('crm_prefill_phone', query.trim());
-    navigate('/admin/clients?create=1');
-  };
 
   if (value) {
     return (
@@ -91,7 +71,7 @@ export default function ClientSearchSelector({ value, onChange, returnPath }: Pr
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-2">Client locked from CRM. Edit details in the CRM if needed.</p>
+        <p className="text-[10px] text-muted-foreground mt-2">Client linked from CRM. Edit details in the CRM if needed.</p>
       </Card>
     );
   }
@@ -138,7 +118,7 @@ export default function ClientSearchSelector({ value, onChange, returnPath }: Pr
       {searched && !searching && results.length === 0 && query.trim().length >= 2 && (
         <Card className="p-3 bg-muted/30">
           <p className="text-sm mb-2">Client not found. Create new client?</p>
-          <Button type="button" size="sm" onClick={handleCreateNew}>
+          <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
             <UserPlus className="h-3.5 w-3.5 mr-1" /> Create Client
           </Button>
         </Card>
@@ -149,6 +129,13 @@ export default function ClientSearchSelector({ value, onChange, returnPath }: Pr
           Search the CRM to link this booking to a client.
         </p>
       )}
+
+      <CreateClientDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        prefillPhone={/^\d/.test(query.trim()) ? query.trim() : ''}
+        onCreated={(c) => { onChange(c); setQuery(''); setResults([]); }}
+      />
     </div>
   );
 }
