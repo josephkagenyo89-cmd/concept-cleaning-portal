@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Search, UserPlus, CheckCircle2, X, Loader2 } from 'lucide-react';
+import CreateClientDialog from './CreateClientDialog';
 
 export type SelectedClient = {
   id: string;
