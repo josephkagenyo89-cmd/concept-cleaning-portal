@@ -303,7 +303,7 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !hasServices || !date || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
         >
           {loading ? 'Creating...' : `Create Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>
