@@ -85,16 +85,22 @@ export default function AgentBooking() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
+    if (!selectedClient) {
+      toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
-    const clientId = await upsertClientForBooking({
-      clientName: form.client_name,
-      clientPhone: form.client_phone,
-      location: form.location,
+    // Update CRM stats (booking_count, total_spend, status) for the existing client
+    await upsertClientForBooking({
+      clientName: selectedClient.full_name,
+      clientPhone: selectedClient.phone,
+      location: selectedClient.location || '',
       bookingPrice: finalPrice,
       createdBy: user.id,
       createdByRole: 'agent',
     });
+    const clientId = selectedClient.id;
 
     const lineItemsData = lineItems.map(i => ({
       serviceName: i.service.name,
@@ -106,9 +112,9 @@ export default function AgentBooking() {
 
     const bookingData = {
       agent_id: user.id,
-      client_name: form.client_name,
-      client_phone: form.client_phone,
-      location: form.location,
+      client_name: selectedClient.full_name,
+      client_phone: selectedClient.phone,
+      location: selectedClient.location || '',
       service_id: primaryService.id,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
@@ -122,7 +128,7 @@ export default function AgentBooking() {
       salesperson_name: salesperson.name || profile?.full_name || 'Agent',
       salesperson_role: salesperson.role || 'agent',
       line_items: lineItemsData,
-      ...(clientId ? { client_id: clientId } : {}),
+      client_id: clientId,
     };
 
     if (!navigator.onLine) {
@@ -148,9 +154,9 @@ export default function AgentBooking() {
       try {
         const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
         await autoCreateQuotationForBooking({
-          clientName: form.client_name,
-          clientPhone: form.client_phone,
-          clientLocation: form.location,
+          clientName: selectedClient.full_name,
+          clientPhone: selectedClient.phone,
+          clientLocation: selectedClient.location || '',
           lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
           totalAmount: finalPrice,
           serviceDate: date,
@@ -158,7 +164,7 @@ export default function AgentBooking() {
           createdBy: profile?.full_name || 'Agent',
           createdByRole: 'agent',
           bookingId: (inserted as any)?.id,
-          clientId: clientId || undefined,
+          clientId,
           salespersonName: salesperson.name || profile?.full_name || 'Agent',
         });
       } catch (e) { console.warn('Auto-quotation failed', e); }
@@ -175,7 +181,7 @@ export default function AgentBooking() {
     total: i.total,
   }));
 
-  const canQuote = hasServices && form.client_name && form.client_phone && systemPrice > 0
+  const canQuote = hasServices && !!selectedClient && systemPrice > 0
     && currentAgentPrice >= systemPrice && !priceError;
 
   return (
