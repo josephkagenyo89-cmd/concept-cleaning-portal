@@ -200,7 +200,7 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     status: 'completed',
   });
 
-  return { ok: true, certificate: cert as CertificateRecord };
+  return { ok: true, certificate: certRecord };
 }
 
 /** Quick helper: download a certificate PDF from its record. */
