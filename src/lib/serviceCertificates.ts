@@ -181,16 +181,18 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     generated_by_role: opts.generatedByRole,
   };
 
-  const { data: cert, error: insertErr } = await supabase
-    .from('service_certificates' as any)
-    .insert(insertPayload as any)
+  const { data: cert, error: insertErr } = await (supabase as any)
+    .from('service_certificates')
+    .insert(insertPayload)
     .select('*')
     .single();
   if (insertErr) return { ok: false, reason: insertErr.message };
 
+  const certRecord = cert as unknown as CertificateRecord;
+
   // 5. Mirror into the documents registry so it appears in Documents module too.
   await saveDocumentRecord({
-    ...certificateToDocData(cert as CertificateRecord),
+    ...certificateToDocData(certRecord),
     createdById: opts.generatedById,
     bookingId: opts.bookingId,
     invoiceId: invoiceId || undefined,
