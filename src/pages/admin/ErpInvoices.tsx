@@ -14,6 +14,7 @@ import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
 import { saveDocumentRecord } from '@/lib/documentSaver';
+import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
 import { format as fmtDate } from 'date-fns';
 import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
@@ -479,6 +480,9 @@ export default function ErpInvoices() {
                             <Badge variant="outline" className="text-emerald-600 border-emerald-600">
                               <Award className="h-3 w-3 mr-1" />Paid
                             </Badge>
+                          )}
+                          {inv.payment_status === 'paid' && inv.booking_id && (
+                            <GenerateCertificateButton bookingId={inv.booking_id} onGenerated={fetchData} />
                           )}
                           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownloadPdf(inv)} title="Download PDF">
                             <FileText className="h-3.5 w-3.5" />
