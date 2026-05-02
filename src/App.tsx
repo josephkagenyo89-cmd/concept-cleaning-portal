@@ -45,6 +45,7 @@ const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
 const AdminClients = lazy(() => import("@/pages/admin/AdminClients"));
 const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
+const AdminCertificates = lazy(() => import("@/pages/admin/AdminCertificates"));
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,7 @@ function AppRoutes() {
             <Route path="book-service" element={<AdminBookService />} />
             <Route path="quotations" element={<AdminQuotations />} />
             <Route path="documents" element={<AdminDocuments />} />
+            <Route path="certificates" element={<AdminCertificates />} />
             <Route path="agents" element={<AdminAgents />} />
             <Route path="commissions" element={<AdminCommissions />} />
             <Route path="payouts" element={<AdminPayouts />} />

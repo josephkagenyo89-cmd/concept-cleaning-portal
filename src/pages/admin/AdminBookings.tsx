@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import StatusBadge from '@/components/agent/StatusBadge';
 import StaffSignatureDialog from '@/components/booking/StaffSignatureDialog';
+import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { CalendarIcon, Download, FileText, Printer, Search, MessageCircle, PenLine, Lock, CheckCircle2 } from 'lucide-react';
@@ -287,6 +288,9 @@ export default function AdminBookings() {
                         <Lock className="h-3 w-3" />
                         <span>Locked — Fully Confirmed</span>
                       </div>
+                    )}
+                    {b.status === 'fully_confirmed' && b.client_signature && b.staff_signature && (
+                      <GenerateCertificateButton bookingId={b.id} onGenerated={load} />
                     )}
                     {/* Signature status indicators */}
                     {(b.status === 'completed' || b.status === 'fully_confirmed') && (

@@ -14,6 +14,7 @@ import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
 import { saveDocumentRecord } from '@/lib/documentSaver';
+import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
 import { format as fmtDate } from 'date-fns';
 import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
@@ -275,66 +276,19 @@ export default function ErpInvoices() {
         status: 'paid',
       });
 
-      // 4. Auto-generate certificate (only when booking has both signatures)
-      let certificateDoc: DocumentData | null = null;
-      if (inv.booking_id) {
-        const { data: booking } = await supabase
-          .from('bookings')
-          .select('client_signature, staff_signature, client_signed_at, staff_signed_at, staff_signed_name, location, service_date')
-          .eq('id', inv.booking_id)
-          .maybeSingle();
-
-        if (booking?.client_signature && booking?.staff_signature) {
-          const { data: cNum } = await supabase.rpc('next_certificate_number' as any);
-          const certificateNumber = (cNum as string) || `CCS-CERT-${Date.now()}`;
-          certificateDoc = {
-            documentType: 'service_certificate',
-            documentNumber: certificateNumber,
-            dateCreated: fmtDate(new Date(), 'PPP'),
-            createdBy: profile?.full_name || 'Admin',
-            createdByRole: 'admin',
-            clientName: inv.client_name,
-            clientPhone: inv.client_phone || undefined,
-            clientLocation: (booking as any).location,
-            lineItems: lineItemsData,
-            totalAmount: Number(inv.amount),
-            paymentStatus: 'PAID',
-            mpesaCode: code,
-            paymentDate: fmtDate(new Date(paymentDate), 'PPP'),
-            invoiceNumber: inv.invoice_number,
-            amountPaid: Number(inv.amount),
-            serviceDate: (booking as any).service_date ? fmtDate(new Date((booking as any).service_date), 'PPP') : undefined,
-            signatures: {
-              clientSignature: (booking as any).client_signature,
-              clientName: inv.client_name,
-              clientSignedAt: (booking as any).client_signed_at,
-              staffSignature: (booking as any).staff_signature,
-              staffName: (booking as any).staff_signed_name,
-              staffSignedAt: (booking as any).staff_signed_at,
-            },
-            notes: 'This certificate confirms that the cleaning service has been completed satisfactorily and payment has been received in full.',
-          };
-          await saveDocumentRecord({
-            ...certificateDoc,
-            createdById: user!.id,
-            invoiceId: inv.id,
-            bookingId: inv.booking_id,
-            clientId: inv.client_id || undefined,
-            status: 'completed',
-          });
-        }
-      }
+      // 4. NOTE: Service certificates are now MANUAL ONLY.
+      // Use the "Generate Certificate" button on the invoice/booking row.
+      // This guarantees signatures + payment data are persisted before issuing.
+      const certificateDoc: DocumentData | null = null;
 
       await supabase.from('audit_logs').insert({
         admin_id: user!.id, action: 'invoice.paid', target_type: 'invoice', target_id: inv.id,
-        details: { invoice_number: inv.invoice_number, amount: inv.amount, mpesa_code: code, certificate_generated: !!certificateDoc },
+        details: { invoice_number: inv.invoice_number, amount: inv.amount, mpesa_code: code },
       });
 
       toast({
         title: 'Payment recorded',
-        description: certificateDoc
-          ? 'Receipt + Service Certificate generated. Income pending approval.'
-          : 'Receipt generated. Income pending approval. (Certificate requires both signatures.)',
+        description: 'Receipt generated. Income pending Super Admin approval. Issue a certificate manually when ready.',
       });
 
       setPayInvoice(null);
@@ -479,6 +433,9 @@ export default function ErpInvoices() {
                             <Badge variant="outline" className="text-emerald-600 border-emerald-600">
                               <Award className="h-3 w-3 mr-1" />Paid
                             </Badge>
+                          )}
+                          {inv.payment_status === 'paid' && inv.booking_id && (
+                            <GenerateCertificateButton bookingId={inv.booking_id} onGenerated={fetchData} />
                           )}
                           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownloadPdf(inv)} title="Download PDF">
                             <FileText className="h-3.5 w-3.5" />

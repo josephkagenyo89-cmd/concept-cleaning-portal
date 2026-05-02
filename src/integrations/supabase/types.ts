@@ -49,6 +49,7 @@ export type Database = {
           agent_id: string
           agent_margin: number | null
           agent_price: number | null
+          amount_paid: number | null
           client_consent: boolean | null
           client_id: string | null
           client_name: string
@@ -62,6 +63,8 @@ export type Database = {
           id: string
           line_items: Json | null
           location: string
+          mpesa_code: string | null
+          payment_date: string | null
           price: number
           quantity: string | null
           salesperson_id: string | null
@@ -81,6 +84,7 @@ export type Database = {
           agent_id: string
           agent_margin?: number | null
           agent_price?: number | null
+          amount_paid?: number | null
           client_consent?: boolean | null
           client_id?: string | null
           client_name: string
@@ -94,6 +98,8 @@ export type Database = {
           id?: string
           line_items?: Json | null
           location: string
+          mpesa_code?: string | null
+          payment_date?: string | null
           price: number
           quantity?: string | null
           salesperson_id?: string | null
@@ -113,6 +119,7 @@ export type Database = {
           agent_id?: string
           agent_margin?: number | null
           agent_price?: number | null
+          amount_paid?: number | null
           client_consent?: boolean | null
           client_id?: string | null
           client_name?: string
@@ -126,6 +133,8 @@ export type Database = {
           id?: string
           line_items?: Json | null
           location?: string
+          mpesa_code?: string | null
+          payment_date?: string | null
           price?: number
           quantity?: string | null
           salesperson_id?: string | null
@@ -945,6 +954,90 @@ export type Database = {
           salesperson_role?: string | null
           service_date?: string | null
           service_name?: string
+        }
+        Relationships: []
+      }
+      service_certificates: {
+        Row: {
+          amount_paid: number
+          booking_id: string
+          certificate_number: string
+          client_id: string | null
+          client_location: string | null
+          client_name: string
+          client_phone: string | null
+          client_signature: string
+          client_signed_at: string | null
+          created_at: string
+          date_created: string
+          document_reference: string | null
+          generated_by: string
+          generated_by_name: string | null
+          generated_by_role: string | null
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          line_items: Json | null
+          mpesa_code: string
+          payment_date: string
+          services: string | null
+          staff_signature: string
+          staff_signed_at: string | null
+          staff_signed_name: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          booking_id: string
+          certificate_number: string
+          client_id?: string | null
+          client_location?: string | null
+          client_name: string
+          client_phone?: string | null
+          client_signature: string
+          client_signed_at?: string | null
+          created_at?: string
+          date_created?: string
+          document_reference?: string | null
+          generated_by: string
+          generated_by_name?: string | null
+          generated_by_role?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          line_items?: Json | null
+          mpesa_code: string
+          payment_date: string
+          services?: string | null
+          staff_signature: string
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          booking_id?: string
+          certificate_number?: string
+          client_id?: string | null
+          client_location?: string | null
+          client_name?: string
+          client_phone?: string | null
+          client_signature?: string
+          client_signed_at?: string | null
+          created_at?: string
+          date_created?: string
+          document_reference?: string | null
+          generated_by?: string
+          generated_by_name?: string | null
+          generated_by_role?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          line_items?: Json | null
+          mpesa_code?: string
+          payment_date?: string
+          services?: string | null
+          staff_signature?: string
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
         }
         Relationships: []
       }
