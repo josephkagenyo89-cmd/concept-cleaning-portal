@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2,
+  Settings2, Award,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -21,6 +21,7 @@ const navItems = [
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
+  { to: '/admin/certificates', icon: Award, label: 'Certificates' },
   { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
