@@ -280,6 +280,54 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_feedback: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          booking_id: string | null
+          client_id: string | null
+          client_name: string
+          comment: string | null
+          created_at: string
+          id: string
+          is_complaint: boolean
+          rating: number
+          service_name: string | null
+          submitted_by: string | null
+          submitted_by_role: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          booking_id?: string | null
+          client_id?: string | null
+          client_name: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_complaint?: boolean
+          rating: number
+          service_name?: string | null
+          submitted_by?: string | null
+          submitted_by_role?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          booking_id?: string | null
+          client_id?: string | null
+          client_name?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_complaint?: boolean
+          rating?: number
+          service_name?: string | null
+          submitted_by?: string | null
+          submitted_by_role?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           amount: number
