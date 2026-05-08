@@ -22,6 +22,7 @@ const navItems = [
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
   { to: '/admin/certificates', icon: Award, label: 'Certificates' },
+  { to: '/admin/feedback', icon: Star, label: 'Feedback' },
   { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
