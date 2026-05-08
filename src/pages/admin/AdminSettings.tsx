@@ -357,7 +357,42 @@ export default function AdminSettings() {
           </Card>
         </TabsContent>
 
-        {/* AUDIT */}
+        {/* INTEGRATIONS */}
+        <TabsContent value="integrations">
+          <Card>
+            <CardHeader><CardTitle>Business Integrations</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Google Business Review URL</Label>
+                <Input
+                  value={s.integrations.google_review_url}
+                  disabled={!canEdit}
+                  placeholder="https://g.page/r/your-business/review"
+                  onChange={e => setS({ ...s, integrations: { ...s.integrations, google_review_url: e.target.value } })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Used to redirect satisfied customers (4–5★ ratings) to leave a Google review. Get this link from your Google Business Profile.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" type="button" disabled={!s.integrations.google_review_url}
+                  onClick={() => {
+                    const url = s.integrations.google_review_url.trim();
+                    if (!url) return;
+                    if (!/^https?:\/\//i.test(url)) {
+                      toast({ title: 'Invalid URL', description: 'Must start with http(s)://', variant: 'destructive' });
+                      return;
+                    }
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}>
+                  Test Google Review Link
+                </Button>
+              </div>
+              <SaveBar disabled={!canEdit} saving={saving === 'integrations'}
+                onSave={() => persist('integrations', s.integrations)} onReset={() => resetCategory('integrations')} />
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="audit">
           <Card>
             <CardHeader><CardTitle>Recent Settings Changes</CardTitle></CardHeader>
