@@ -8,7 +8,8 @@ export type SettingsCategory =
   | 'commission'
   | 'crm'
   | 'system'
-  | 'notifications';
+  | 'notifications'
+  | 'integrations';
 
 export interface GeneralSettings {
   company_name: string;
@@ -46,6 +47,10 @@ export interface NotificationSettings {
   whatsapp_quotation_template: string;
 }
 
+export interface IntegrationsSettings {
+  google_review_url: string;
+}
+
 export interface AllSettings {
   general: GeneralSettings;
   document: DocumentSettings;
@@ -55,6 +60,7 @@ export interface AllSettings {
   crm: CrmSettings;
   system: SystemSettings;
   notifications: NotificationSettings;
+  integrations: IntegrationsSettings;
 }
 
 export const DEFAULT_SETTINGS: AllSettings = {
@@ -81,6 +87,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     whatsapp_invoice_template: 'Hello {client_name}, please find your invoice {invoice_number} for Ksh {amount}.',
     whatsapp_quotation_template: 'Hello {client_name}, here is your quotation {quotation_number} for Ksh {amount}.',
   },
+  integrations: { google_review_url: '' },
 };
 
 let cache: AllSettings | null = null;
