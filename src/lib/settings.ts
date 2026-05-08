@@ -47,6 +47,10 @@ export interface NotificationSettings {
   whatsapp_quotation_template: string;
 }
 
+export interface IntegrationsSettings {
+  google_review_url: string;
+}
+
 export interface AllSettings {
   general: GeneralSettings;
   document: DocumentSettings;
@@ -56,6 +60,7 @@ export interface AllSettings {
   crm: CrmSettings;
   system: SystemSettings;
   notifications: NotificationSettings;
+  integrations: IntegrationsSettings;
 }
 
 export const DEFAULT_SETTINGS: AllSettings = {
