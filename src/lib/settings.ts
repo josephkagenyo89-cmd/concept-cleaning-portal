@@ -8,7 +8,8 @@ export type SettingsCategory =
   | 'commission'
   | 'crm'
   | 'system'
-  | 'notifications';
+  | 'notifications'
+  | 'integrations';
 
 export interface GeneralSettings {
   company_name: string;
