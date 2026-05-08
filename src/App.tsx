@@ -46,6 +46,7 @@ const AdminClients = lazy(() => import("@/pages/admin/AdminClients"));
 const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminCertificates = lazy(() => import("@/pages/admin/AdminCertificates"));
+const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
 
 const queryClient = new QueryClient();
 
