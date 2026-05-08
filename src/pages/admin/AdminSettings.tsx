@@ -115,6 +115,7 @@ export default function AdminSettings() {
           <TabsTrigger value="crm">CRM</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="audit"><History className="h-3.5 w-3.5 mr-1" /> Audit</TabsTrigger>
         </TabsList>
 
