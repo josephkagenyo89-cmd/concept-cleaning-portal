@@ -87,6 +87,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     whatsapp_invoice_template: 'Hello {client_name}, please find your invoice {invoice_number} for Ksh {amount}.',
     whatsapp_quotation_template: 'Hello {client_name}, here is your quotation {quotation_number} for Ksh {amount}.',
   },
+  integrations: { google_review_url: '' },
 };
 
 let cache: AllSettings | null = null;
