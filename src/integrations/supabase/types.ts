@@ -873,6 +873,456 @@ export type Database = {
         }
         Relationships: []
       }
+      pest_areas_treated: {
+        Row: {
+          area_name: string
+          created_at: string
+          id: string
+          notes: string | null
+          pest_job_id: string
+        }
+        Insert: {
+          area_name: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pest_job_id: string
+        }
+        Update: {
+          area_name?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pest_job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_areas_treated_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_certificates: {
+        Row: {
+          amount_paid: number
+          certificate_number: string
+          chemicals_summary: string | null
+          client_id: string | null
+          client_location: string | null
+          client_name: string
+          client_phone: string | null
+          client_signature: string | null
+          client_signed_at: string | null
+          created_at: string
+          free_revisit_eligible: boolean
+          generated_by: string
+          generated_by_name: string | null
+          generated_by_role: string | null
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          mpesa_code: string | null
+          payment_date: string | null
+          pest_job_id: string
+          safety_recommendations: string | null
+          staff_signature: string | null
+          staff_signed_at: string | null
+          staff_signed_name: string | null
+          treatment_summary: string | null
+          warranty_days: number
+          warranty_expiry: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          certificate_number: string
+          chemicals_summary?: string | null
+          client_id?: string | null
+          client_location?: string | null
+          client_name: string
+          client_phone?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          free_revisit_eligible?: boolean
+          generated_by: string
+          generated_by_name?: string | null
+          generated_by_role?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          mpesa_code?: string | null
+          payment_date?: string | null
+          pest_job_id: string
+          safety_recommendations?: string | null
+          staff_signature?: string | null
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
+          treatment_summary?: string | null
+          warranty_days?: number
+          warranty_expiry?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          certificate_number?: string
+          chemicals_summary?: string | null
+          client_id?: string | null
+          client_location?: string | null
+          client_name?: string
+          client_phone?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          free_revisit_eligible?: boolean
+          generated_by?: string
+          generated_by_name?: string | null
+          generated_by_role?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          mpesa_code?: string | null
+          payment_date?: string | null
+          pest_job_id?: string
+          safety_recommendations?: string | null
+          staff_signature?: string | null
+          staff_signed_at?: string | null
+          staff_signed_name?: string | null
+          treatment_summary?: string | null
+          warranty_days?: number
+          warranty_expiry?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_certificates_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_chemical_usage: {
+        Row: {
+          chemical_name: string
+          created_at: string
+          dosage: string | null
+          id: string
+          pest_job_id: string
+          quantity: number
+          technician_id: string | null
+          technician_name: string | null
+          treatment_id: string | null
+          unit: string | null
+          used_on: string
+        }
+        Insert: {
+          chemical_name: string
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          pest_job_id: string
+          quantity?: number
+          technician_id?: string | null
+          technician_name?: string | null
+          treatment_id?: string | null
+          unit?: string | null
+          used_on?: string
+        }
+        Update: {
+          chemical_name?: string
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          pest_job_id?: string
+          quantity?: number
+          technician_id?: string | null
+          technician_name?: string | null
+          treatment_id?: string | null
+          unit?: string | null
+          used_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_chemical_usage_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pest_chemical_usage_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "pest_treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_followups: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          followup_type: string
+          id: string
+          notes: string | null
+          pest_job_id: string
+          scheduled_date: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_type?: string
+          id?: string
+          notes?: string | null
+          pest_job_id: string
+          scheduled_date: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_type?: string
+          id?: string
+          notes?: string | null
+          pest_job_id?: string
+          scheduled_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_followups_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_inspections: {
+        Row: {
+          affected_areas: string | null
+          client_observations: string | null
+          created_at: string
+          id: string
+          infestation_level: string | null
+          inspected_at: string
+          inspected_by: string | null
+          pest_job_id: string
+          pest_type: string | null
+          technician_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          affected_areas?: string | null
+          client_observations?: string | null
+          created_at?: string
+          id?: string
+          infestation_level?: string | null
+          inspected_at?: string
+          inspected_by?: string | null
+          pest_job_id: string
+          pest_type?: string | null
+          technician_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          affected_areas?: string | null
+          client_observations?: string | null
+          created_at?: string
+          id?: string
+          infestation_level?: string | null
+          inspected_at?: string
+          inspected_by?: string | null
+          pest_job_id?: string
+          pest_type?: string | null
+          technician_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_inspections_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_jobs: {
+        Row: {
+          booking_id: string | null
+          client_id: string | null
+          client_location: string | null
+          client_name: string
+          client_phone: string | null
+          client_signature: string | null
+          client_signed_at: string | null
+          created_at: string
+          created_by: string
+          created_by_name: string | null
+          created_by_role: string | null
+          id: string
+          infestation_level: string | null
+          invoice_id: string | null
+          job_number: string | null
+          notes: string | null
+          pest_type: string | null
+          price: number
+          service_date: string
+          status: string
+          technician_id: string | null
+          technician_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          booking_id?: string | null
+          client_id?: string | null
+          client_location?: string | null
+          client_name: string
+          client_phone?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          created_by: string
+          created_by_name?: string | null
+          created_by_role?: string | null
+          id?: string
+          infestation_level?: string | null
+          invoice_id?: string | null
+          job_number?: string | null
+          notes?: string | null
+          pest_type?: string | null
+          price?: number
+          service_date?: string
+          status?: string
+          technician_id?: string | null
+          technician_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string | null
+          client_id?: string | null
+          client_location?: string | null
+          client_name?: string
+          client_phone?: string | null
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_name?: string | null
+          created_by_role?: string | null
+          id?: string
+          infestation_level?: string | null
+          invoice_id?: string | null
+          job_number?: string | null
+          notes?: string | null
+          pest_type?: string | null
+          price?: number
+          service_date?: string
+          status?: string
+          technician_id?: string | null
+          technician_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pest_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          kind: string
+          pest_job_id: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          pest_job_id: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          pest_job_id?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_photos_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pest_treatments: {
+        Row: {
+          client_acknowledged: boolean
+          created_at: string
+          equipment_used: string | null
+          id: string
+          notes: string | null
+          performed_at: string
+          performed_by: string | null
+          performed_by_name: string | null
+          pest_job_id: string
+          ppe_used: string | null
+          safety_instructions: string | null
+          treatment_method: string | null
+        }
+        Insert: {
+          client_acknowledged?: boolean
+          created_at?: string
+          equipment_used?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+          pest_job_id: string
+          ppe_used?: string | null
+          safety_instructions?: string | null
+          treatment_method?: string | null
+        }
+        Update: {
+          client_acknowledged?: boolean
+          created_at?: string
+          equipment_used?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+          pest_job_id?: string
+          ppe_used?: string | null
+          safety_instructions?: string | null
+          treatment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pest_treatments_pest_job_id_fkey"
+            columns: ["pest_job_id"]
+            isOneToOne: false
+            referencedRelation: "pest_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_edit_requests: {
         Row: {
           created_at: string
@@ -1313,6 +1763,7 @@ export type Database = {
       next_expense_voucher_number: { Args: never; Returns: string }
       next_fuel_voucher_number: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
+      next_pest_certificate_number: { Args: never; Returns: string }
       next_quotation_number: { Args: never; Returns: string }
       next_receipt_number: { Args: never; Returns: string }
       next_salary_voucher_number: { Args: never; Returns: string }
