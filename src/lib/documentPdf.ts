@@ -21,7 +21,8 @@ export type DocumentType =
   | 'expense_voucher'
   | 'booking_confirmation'
   | 'job_card'
-  | 'service_certificate';
+  | 'service_certificate'
+  | 'pest_certificate';
 
 const DOC_TITLES: Record<DocumentType, string> = {
   quotation: 'Quotation',
