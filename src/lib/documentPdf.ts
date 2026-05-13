@@ -47,6 +47,7 @@ const FILE_PREFIXES: Record<DocumentType, string> = {
   booking_confirmation: 'BookingConfirmation',
   job_card: 'JobCard',
   service_certificate: 'ServiceCertificate',
+  pest_certificate: 'PestCertificate',
 };
 
 export interface DocumentLineItem {
