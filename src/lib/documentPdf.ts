@@ -34,6 +34,7 @@ const DOC_TITLES: Record<DocumentType, string> = {
   booking_confirmation: 'Booking Confirmation',
   job_card: 'Job Card',
   service_certificate: 'Service Completion Certificate',
+  pest_certificate: 'Pest Control Certificate',
 };
 
 const FILE_PREFIXES: Record<DocumentType, string> = {
