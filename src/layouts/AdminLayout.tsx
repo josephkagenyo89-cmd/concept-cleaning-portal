@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star,
+  Settings2, Award, Star, Bug,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -22,6 +22,7 @@ const navItems = [
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
   { to: '/admin/certificates', icon: Award, label: 'Certificates' },
+  { to: '/admin/pest', icon: Bug, label: 'Pest Control' },
   { to: '/admin/feedback', icon: Star, label: 'Feedback' },
   { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },

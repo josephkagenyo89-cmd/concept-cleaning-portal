@@ -42,6 +42,7 @@ const DEFAULT_RPC: Record<DocumentType, string> = {
   booking_confirmation: 'next_quotation_number',
   job_card: 'next_quotation_number',
   service_certificate: 'next_certificate_number',
+  pest_certificate: 'next_pest_certificate_number',
 };
 
 export default function DocumentActions(props: DocumentActionsProps) {

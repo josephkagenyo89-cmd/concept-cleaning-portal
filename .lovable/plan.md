@@ -1,93 +1,90 @@
+## Pest Management Module
 
-# CleanBook Nairobi — Referral & Booking App
+A dedicated workflow for pest control jobs that lives alongside the existing cleaning system without altering it. Pest jobs are linked to existing CRM clients and (optionally) bookings, and produce their own certificate type with chemicals, safety, and warranty info.
 
-## Overview
-A mobile-first professional cleaning business app for Nairobi with three roles: **Agent**, **Admin/Super Admin**, and (future) Client. Agents sign up, get approved, book cleaning services for clients, earn tiered commissions, and request weekly payouts. Admins manage everything from a powerful dashboard. Payments are tracked manually by admin for now. Backend powered by Lovable Cloud (Supabase).
+### Scope (what this adds)
 
----
+- New admin section **Pest Control** in the sidebar with three pages:
+  - **Pest Jobs** — list, search, create, open job
+  - **Chemical Log** — aggregated chemical usage across all jobs
+  - **Revisits** — upcoming follow-ups / warranty expiries
+- A **Pest Job detail page** with tabs:
+  1. Inspection (pest type, infestation level, affected areas, client observations, technician notes)
+  2. Treatment (chemicals used + dosage + equipment + method, PPE, safety instructions)
+  3. Areas Treated (list of rooms/zones)
+  4. Photos (before / after / evidence — uploaded to Lovable Cloud storage)
+  5. Follow-ups (scheduled revisits, re-inspections, retreatments)
+  6. Warranty (period in days, expiry date, free-revisit eligibility flag)
+  7. Certificate (generate Pest Control Certificate PDF after client signature + payment)
+  8. Feedback (reuses existing FeedbackDialog)
 
-## 1. Authentication & Onboarding
+### Database (new tables only — nothing existing is touched)
 
-- **Login page** with email + password (shared for agents and admins)
-- **Agent signup form**: Full Name, Email, Phone (M-Pesa Number), Town/Estate, Password, optional Referral Code
-- After signup, agent sees a "Pending Approval" screen until admin approves
-- Admins are seeded / created by Super Admin — no public admin signup
-- **PWA install prompt** shown when users visit via referral/booking link
+```text
+pest_jobs                — header per pest job, links to client_id + optional booking_id/invoice_id
+pest_inspections         — 1:1 with job (inspection form fields)
+pest_treatments          — 1:N (each treatment session: chemicals/dosage/equipment/method/PPE)
+pest_chemical_usage      — 1:N (per-chemical line items: name, quantity, unit, technician)
+pest_areas_treated       — 1:N (area/zone label per job/treatment)
+pest_followups           — 1:N (type=followup|reinspection|retreatment, scheduled_date, status, notes)
+pest_photos              — 1:N (storage path, kind=before|after|evidence)
+pest_certificates        — 1:N (issued certificates with warranty_days + warranty_expiry)
+```
 
-## 2. Agent Dashboard
+Plus a storage bucket `pest-photos` (private, RLS-scoped to admins/super admins). Sequence + function `next_pest_certificate_number()` returning `CCS-PEST-####`. RLS: admins/super-admins manage; agents read jobs they created.
 
-- **Overview cards**: Available balance, current tier (Bronze/Silver/Gold), total earnings, next payout eligibility date
-- **Visual tier progress bar** showing cumulative sales toward next tier threshold
-- **Recent bookings list** with status indicators (Pending, Confirmed, Completed, Cancelled)
-- **Create Booking button** prominently placed
-- **Payout request button** (enabled only if 7+ days since last request), showing countdown timer if not yet eligible
+### Integration points (read-only into existing modules)
 
-## 3. Agent Booking Form
+- **CRM**: pest job creation uses the existing `ClientSearchSelector`; saving a pest job updates `clients.last_booking_date` and `total_spend` only when an invoice is paid (via existing flow — we just create an invoice with `service='Pest Control'` linked to `pest_job_id` stored in `notes`).
+- **Quotations / Invoices / Receipts / Income**: reuse existing `quotations`, `invoices`, `income_records` by setting service text to "Pest Control – {pest_type}" and linking via `client_id`. No changes to those tables.
+- **Documents**: certificates are generated through a new `pestCertificate.ts` PDF generator (mirrors `serviceCertificates.ts`) and recorded in the existing `documents` table with `document_type='pest_certificate'`.
+- **Feedback**: after issuing a pest certificate the existing `FeedbackDialog` opens.
 
-- Fields: Client Name, Client Phone, Location, Service Type (dropdown from admin-managed list), Service Date (date picker)
-- **Price field** pre-filled with base price from selected service; agent can increase but not decrease
-- Live preview of: final price, commission amount (based on current tier %), and high-value bonus (+1,000 Ksh if booking ≥ 20,000 Ksh)
-- Submit creates booking with "Pending" status
+### UI / Routes
 
-## 4. Commission System (Automated)
+- `/admin/pest` → `AdminPestJobs.tsx`
+- `/admin/pest/:id` → `AdminPestJobDetail.tsx`
+- `/admin/pest/chemicals` → `AdminPestChemicals.tsx`
+- `/admin/pest/revisits` → `AdminPestRevisits.tsx`
 
-- **Tier thresholds** (cumulative completed booking revenue):
-  - Bronze: 0–49,999 Ksh → 5%
-  - Silver: 50,000–99,999 Ksh → 7.5%
-  - Gold: 100,000+ Ksh → 10%
-- **High-value bonus**: +1,000 Ksh automatically added for any single booking ≥ 20,000 Ksh
-- Tier automatically recalculated when a booking is marked "Completed" by admin
-- Commission credited to agent's wallet balance upon booking completion
+Sidebar gets a "Pest Control" group above "ERP & Accounting".
 
-## 5. Payout System
+Mobile-first layouts, semantic tokens only, lazy-loaded routes.
 
-- Agent requests payout of available balance (full or partial)
-- Enforced 7-day cooldown between requests
-- Admin sees payout requests queue → Approve or Reject
-- On approval, agent wallet balance deducted and ledger entry recorded
-- Agent dashboard shows: last payout date, next eligible date, payout history
+### Safety guardrails
 
-## 6. Admin Dashboard
+- No edits to cleaning booking flow, certificate flow, income approval, or document generator — we add new files/tables and one sidebar entry + one App.tsx route block.
+- Photos go to a new `pest-photos` bucket (existing buckets unchanged).
+- Pest certificate generation requires: client signature on job + linked invoice marked paid (same pattern as cleaning certificates).
 
-Seven modules accessible via sidebar navigation:
+### Files to create
 
-1. **Overview/Summary**: Total bookings, revenue, active agents, pending approvals, pending payouts — with summary charts
-2. **Bookings Management**: List/filter all bookings, update status (Pending → Confirmed → Completed / Cancelled), view booking details
-3. **Agents Management**: View all agents, approve/reject new signups, suspend/activate agents, view agent details (tier, earnings, location)
-4. **Commission & Wallet Ledger**: Full ledger of all commission credits and payout debits per agent, filterable by date/agent
-5. **Payout Management**: Queue of pending payout requests, approve/reject with notes, payout history
-6. **Services Management**: CRUD for service types (name, description, base price), enable/disable services
-7. **Analytics/Reports**: Revenue over time, bookings by service type, top agents, tier distribution charts
+- `supabase/migrations/<ts>_pest_management.sql` (tables, RLS, storage bucket, sequence, helper fn)
+- `src/lib/pestCertificate.ts`
+- `src/pages/admin/AdminPestJobs.tsx`
+- `src/pages/admin/AdminPestJobDetail.tsx`
+- `src/pages/admin/AdminPestChemicals.tsx`
+- `src/pages/admin/AdminPestRevisits.tsx`
+- `src/components/pest/PestInspectionForm.tsx`
+- `src/components/pest/PestTreatmentForm.tsx`
+- `src/components/pest/PestAreasManager.tsx`
+- `src/components/pest/PestFollowupsManager.tsx`
+- `src/components/pest/PestPhotosUploader.tsx`
+- `src/components/pest/PestWarrantyCard.tsx`
+- `src/components/pest/GeneratePestCertificateButton.tsx`
 
-## 7. Role-Based Access & Security
+### Files to edit (minimal)
 
-- **Super Admin** can create/manage other admins
-- **Admin** has full operational access
-- **Agent** sees only their own data
-- User roles stored in a separate `user_roles` table with RLS policies
-- Audit log table tracking key admin actions (approvals, status changes, payouts)
+- `src/App.tsx` — add 4 lazy routes
+- `src/layouts/AdminLayout.tsx` — add "Pest Control" sidebar group
 
-## 8. Database Structure (Lovable Cloud / Supabase)
+### Order of work
 
-Key tables:
-- `profiles` — user profile info (name, phone, town/estate, M-Pesa number)
-- `user_roles` — role assignments (agent, admin, super_admin)
-- `services` — cleaning service catalog with base prices
-- `bookings` — all booking records with agent, client info, service, price, status
-- `commissions` — commission entries per completed booking
-- `wallet_ledger` — credit/debit entries per agent
-- `payout_requests` — payout request records with status and dates
-- `audit_logs` — admin action tracking
+1. Create migration (tables + RLS + storage bucket + sequence) — wait for approval.
+2. Build pest job list + detail shell with tabs and CRM client picker.
+3. Inspection / Treatment / Chemical / Areas / Photos / Follow-up / Warranty sub-modules.
+4. Pest certificate PDF generator + button (gated on signature + paid invoice).
+5. Wire sidebar, routes, feedback dialog reuse.
+6. QA: create a pest job end-to-end on mobile viewport.
 
-## 9. Notifications
-
-- Admin dashboard shows badge counts for: pending agent approvals, pending payout requests
-- Toast notifications on key actions (booking created, payout approved, etc.)
-
-## 10. Design & UX
-
-- Mobile-first responsive design with clean, professional look
-- Green/teal accent color scheme (professional cleaning brand feel)
-- Bottom navigation on mobile for agents, sidebar navigation on desktop for admins
-- Card-based layouts with clear status badges and progress indicators
-- Optimized for the Nairobi market — simple, fast, intuitive
+Approve to proceed and I'll start with the database migration.

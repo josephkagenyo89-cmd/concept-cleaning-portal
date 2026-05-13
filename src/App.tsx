@@ -47,6 +47,10 @@ const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile")
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminCertificates = lazy(() => import("@/pages/admin/AdminCertificates"));
 const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
+const AdminPestJobs = lazy(() => import("@/pages/admin/AdminPestJobs"));
+const AdminPestJobDetail = lazy(() => import("@/pages/admin/AdminPestJobDetail"));
+const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals"));
+const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
 
 const queryClient = new QueryClient();
 
@@ -139,6 +143,10 @@ function AppRoutes() {
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="feedback" element={<AdminFeedback />} />
+            <Route path="pest" element={<AdminPestJobs />} />
+            <Route path="pest/chemicals" element={<AdminPestChemicals />} />
+            <Route path="pest/revisits" element={<AdminPestRevisits />} />
+            <Route path="pest/:id" element={<AdminPestJobDetail />} />
             <Route path="erp" element={<ErpDashboard />} />
             <Route path="erp/income" element={<ErpIncome />} />
             <Route path="erp/expenses" element={<ErpExpenses />} />

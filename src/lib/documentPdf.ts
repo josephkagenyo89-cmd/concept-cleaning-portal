@@ -21,7 +21,8 @@ export type DocumentType =
   | 'expense_voucher'
   | 'booking_confirmation'
   | 'job_card'
-  | 'service_certificate';
+  | 'service_certificate'
+  | 'pest_certificate';
 
 const DOC_TITLES: Record<DocumentType, string> = {
   quotation: 'Quotation',
@@ -33,6 +34,7 @@ const DOC_TITLES: Record<DocumentType, string> = {
   booking_confirmation: 'Booking Confirmation',
   job_card: 'Job Card',
   service_certificate: 'Service Completion Certificate',
+  pest_certificate: 'Pest Control Certificate',
 };
 
 const FILE_PREFIXES: Record<DocumentType, string> = {
@@ -45,6 +47,7 @@ const FILE_PREFIXES: Record<DocumentType, string> = {
   booking_confirmation: 'BookingConfirmation',
   job_card: 'JobCard',
   service_certificate: 'ServiceCertificate',
+  pest_certificate: 'PestCertificate',
 };
 
 export interface DocumentLineItem {
@@ -350,11 +353,11 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
 }
 
 function drawPaymentInfo(doc: jsPDF, y: number, data: DocumentData): number {
-  if (!['invoice', 'receipt', 'quotation', 'service_certificate'].includes(data.documentType)) return y;
+  if (!['invoice', 'receipt', 'quotation', 'service_certificate', 'pest_certificate'].includes(data.documentType)) return y;
   const p = pdfSettings.payment;
   const hasMpesa = p.mpesa_paybill || p.mpesa_till;
   const hasBank = p.bank_name && p.bank_account_number;
-  const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate';
+  const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate' || data.documentType === 'pest_certificate';
   const showProof = isReceiptOrCert && (data.mpesaCode || data.paymentDate);
 
   if (!hasMpesa && !hasBank && !showProof) return y;
