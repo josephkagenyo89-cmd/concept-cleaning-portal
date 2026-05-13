@@ -143,6 +143,10 @@ function AppRoutes() {
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="feedback" element={<AdminFeedback />} />
+            <Route path="pest" element={<AdminPestJobs />} />
+            <Route path="pest/chemicals" element={<AdminPestChemicals />} />
+            <Route path="pest/revisits" element={<AdminPestRevisits />} />
+            <Route path="pest/:id" element={<AdminPestJobDetail />} />
             <Route path="erp" element={<ErpDashboard />} />
             <Route path="erp/income" element={<ErpIncome />} />
             <Route path="erp/expenses" element={<ErpExpenses />} />
