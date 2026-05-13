@@ -353,11 +353,11 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
 }
 
 function drawPaymentInfo(doc: jsPDF, y: number, data: DocumentData): number {
-  if (!['invoice', 'receipt', 'quotation', 'service_certificate'].includes(data.documentType)) return y;
+  if (!['invoice', 'receipt', 'quotation', 'service_certificate', 'pest_certificate'].includes(data.documentType)) return y;
   const p = pdfSettings.payment;
   const hasMpesa = p.mpesa_paybill || p.mpesa_till;
   const hasBank = p.bank_name && p.bank_account_number;
-  const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate';
+  const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate' || data.documentType === 'pest_certificate';
   const showProof = isReceiptOrCert && (data.mpesaCode || data.paymentDate);
 
   if (!hasMpesa && !hasBank && !showProof) return y;
