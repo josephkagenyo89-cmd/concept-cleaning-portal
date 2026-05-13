@@ -47,6 +47,10 @@ const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile")
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminCertificates = lazy(() => import("@/pages/admin/AdminCertificates"));
 const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
+const AdminPestJobs = lazy(() => import("@/pages/admin/AdminPestJobs"));
+const AdminPestJobDetail = lazy(() => import("@/pages/admin/AdminPestJobDetail"));
+const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals"));
+const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
 
 const queryClient = new QueryClient();
 
