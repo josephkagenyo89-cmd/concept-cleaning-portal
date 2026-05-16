@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
+import ShareDocumentMenu from '@/components/documents/ShareDocumentMenu';
 import { saveDocumentRecord } from '@/lib/documentSaver';
 import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
 import { format as fmtDate } from 'date-fns';
