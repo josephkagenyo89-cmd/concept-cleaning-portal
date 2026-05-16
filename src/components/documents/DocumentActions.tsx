@@ -4,8 +4,10 @@ import { FileText, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData, DocumentType } from '@/lib/documentPdf';
 import { saveDocumentRecord } from '@/lib/documentSaver';
+import { loadAllSettings } from '@/lib/settings';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+
 
 interface DocumentActionsProps {
   documentType: DocumentType;
@@ -98,11 +100,25 @@ export default function DocumentActions(props: DocumentActionsProps) {
     setGenerating(false);
   };
 
-  const handleShare = async () => {
+  const handleShare = async (withReview = false) => {
     setGenerating(true);
     const data = await buildDocData();
     if (data) {
-      shareDocumentWhatsApp(data);
+      let reviewUrl = '';
+      if (withReview) {
+        const s = await loadAllSettings();
+        reviewUrl = s.integrations?.google_review_url || '';
+        if (!reviewUrl) {
+          toast({
+            title: 'Google review link not set',
+            description: 'Add it in Settings → Integrations. Sending without review link.',
+          });
+        }
+      }
+      shareDocumentWhatsApp(data, {
+        mode: withReview ? 'document_with_review' : 'document_only',
+        googleReviewUrl: reviewUrl,
+      });
       toast({ title: 'Document generated & WhatsApp opened' });
     }
     setGenerating(false);
@@ -117,11 +133,18 @@ export default function DocumentActions(props: DocumentActionsProps) {
         {generating ? 'Generating...' : 'Download PDF'}
       </Button>
       {showShare && (
-        <Button type="button" variant="outline" size="sm" onClick={handleShare} disabled={props.disabled || generating}
-          className="text-[hsl(142,70%,45%)]">
-          <Share2 className="h-4 w-4 mr-1" />
-          Share to Client
-        </Button>
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={() => handleShare(false)} disabled={props.disabled || generating}
+            className="text-[hsl(142,70%,45%)]">
+            <Share2 className="h-4 w-4 mr-1" />
+            Share to Client
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => handleShare(true)} disabled={props.disabled || generating}
+            className="text-amber-600">
+            <Share2 className="h-4 w-4 mr-1" />
+            Share + Review Request
+          </Button>
+        </>
       )}
     </div>
   );

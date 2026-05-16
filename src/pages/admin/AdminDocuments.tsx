@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Search, FileText, Download, Share2, Trash2, Filter } from 'lucide-react';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData, DocumentType } from '@/lib/documentPdf';
+import ShareDocumentMenu from '@/components/documents/ShareDocumentMenu';
 import { useAuth } from '@/contexts/AuthContext';
 
 const TYPE_OPTIONS = [
@@ -215,9 +216,7 @@ export default function AdminDocuments() {
                               <Download className="h-4 w-4" />
                             </Button>
                             {(d.client_phone) && (
-                              <Button size="icon" variant="ghost" title="Share via WhatsApp" onClick={() => handleWhatsApp(d)} className="text-green-600">
-                                <Share2 className="h-4 w-4" />
-                              </Button>
+                              <ShareDocumentMenu document={toDocData(d)} iconOnly variant="ghost" size="icon" />
                             )}
                             {isSuperAdmin && (
                               <Button size="icon" variant="ghost" title="Delete" onClick={() => handleDelete(d.id)} className="text-destructive">
@@ -259,9 +258,7 @@ export default function AdminDocuments() {
                       <Download className="h-3 w-3 mr-1" />PDF
                     </Button>
                     {d.client_phone && (
-                      <Button size="sm" variant="outline" onClick={() => handleWhatsApp(d)} className="text-green-600">
-                        <Share2 className="h-3 w-3 mr-1" />WhatsApp
-                      </Button>
+                      <ShareDocumentMenu document={toDocData(d)} variant="outline" size="sm" label="Share + Review" />
                     )}
                     {isSuperAdmin && (
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(d.id)}>

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
+import ShareDocumentMenu from '@/components/documents/ShareDocumentMenu';
 import { saveDocumentRecord } from '@/lib/documentSaver';
 import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
 import { format as fmtDate } from 'date-fns';
@@ -441,9 +442,7 @@ export default function ErpInvoices() {
                             <FileText className="h-3.5 w-3.5" />
                           </Button>
                           {inv.client_phone && (
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(142,70%,45%)]" onClick={() => handleShareWhatsApp(inv)} title="Share WhatsApp">
-                              <Share2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <ShareDocumentMenu document={buildInvoiceDocData(inv)} iconOnly variant="ghost" size="icon" />
                           )}
                           {inv.payment_status !== 'paid' && inv.payment_status !== 'pending_approval' && inv.payment_status !== 'approved' && (
                             <Select value={inv.payment_status} onValueChange={v => updateStatus(inv.id, v)}>

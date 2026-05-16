@@ -562,23 +562,45 @@ export function downloadDocumentPdf(data: DocumentData): jsPDF {
   return doc;
 }
 
-export function shareDocumentWhatsApp(data: DocumentData) {
+export type ShareMode = 'document_only' | 'document_with_review';
+
+export interface ShareOptions {
+  mode?: ShareMode;
+  googleReviewUrl?: string;
+}
+
+export function shareDocumentWhatsApp(data: DocumentData, options: ShareOptions = {}) {
   downloadDocumentPdf(data);
 
   let phone = (data.clientPhone || '').replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
   if (!phone.startsWith('254')) phone = '254' + phone;
 
   const typeLabel = DOC_TITLES[data.documentType].toLowerCase();
-  const message = encodeURIComponent(
+  const isCert = data.documentType === 'service_certificate' || data.documentType === 'pest_certificate';
+  const includeReview = options.mode === 'document_with_review';
+  const reviewUrl = (options.googleReviewUrl || '').trim();
+
+  let body =
     `Hello ${data.clientName || 'Valued Client'},\n\n` +
-    `Please find attached the ${typeLabel} for your cleaning service from Concept Cleaning Services.\n\n` +
+    `Please find attached the ${typeLabel} for your service from Concept Cleaning Services.\n\n` +
     `📋 ${DOC_TITLES[data.documentType]}: ${data.documentNumber}\n` +
     (data.lineItems[0] ? `🧹 Service: ${data.lineItems[0].name}\n` : '') +
     (data.serviceDate ? `📅 Date: ${data.serviceDate}\n` : '') +
-    `💰 Amount: Ksh ${data.totalAmount.toLocaleString()}\n\n` +
-    `Kindly confirm if you would like us to proceed.\n\n` +
-    `Customer Support: +254758060692`
-  );
+    `💰 Amount: Ksh ${data.totalAmount.toLocaleString()}\n\n`;
 
-  window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  if (includeReview) {
+    body +=
+      `🙏 Thank you for choosing Concept Cleaning Services. We truly appreciate your business.\n\n` +
+      `We'd love to hear your feedback! If you were happy with our service, kindly share a quick Google review — it really helps us grow.\n` +
+      (reviewUrl ? `⭐ Leave a review: ${reviewUrl}\n\n` : `\n`) +
+      `Customer Support: +254758060692`;
+  } else {
+    body +=
+      (isCert
+        ? `Thank you for choosing Concept Cleaning Services.\n\n`
+        : `Kindly confirm if you would like us to proceed.\n\n`) +
+      `Customer Support: +254758060692`;
+  }
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(body)}`, '_blank');
 }
