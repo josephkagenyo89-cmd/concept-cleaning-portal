@@ -258,9 +258,7 @@ export default function AdminDocuments() {
                       <Download className="h-3 w-3 mr-1" />PDF
                     </Button>
                     {d.client_phone && (
-                      <Button size="sm" variant="outline" onClick={() => handleWhatsApp(d)} className="text-green-600">
-                        <Share2 className="h-3 w-3 mr-1" />WhatsApp
-                      </Button>
+                      <ShareDocumentMenu document={toDocData(d)} variant="outline" size="sm" label="Share + Review" />
                     )}
                     {isSuperAdmin && (
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(d.id)}>
