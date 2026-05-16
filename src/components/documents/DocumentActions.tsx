@@ -4,8 +4,10 @@ import { FileText, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData, DocumentType } from '@/lib/documentPdf';
 import { saveDocumentRecord } from '@/lib/documentSaver';
+import { loadAllSettings } from '@/lib/settings';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import ShareDocumentMenu from './ShareDocumentMenu';
 
 interface DocumentActionsProps {
   documentType: DocumentType;
