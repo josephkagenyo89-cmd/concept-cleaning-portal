@@ -215,9 +215,7 @@ export default function AdminDocuments() {
                               <Download className="h-4 w-4" />
                             </Button>
                             {(d.client_phone) && (
-                              <Button size="icon" variant="ghost" title="Share via WhatsApp" onClick={() => handleWhatsApp(d)} className="text-green-600">
-                                <Share2 className="h-4 w-4" />
-                              </Button>
+                              <ShareDocumentMenu document={toDocData(d)} iconOnly variant="ghost" size="icon" />
                             )}
                             {isSuperAdmin && (
                               <Button size="icon" variant="ghost" title="Delete" onClick={() => handleDelete(d.id)} className="text-destructive">
