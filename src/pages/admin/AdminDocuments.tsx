@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Search, FileText, Download, Share2, Trash2, Filter } from 'lucide-react';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData, DocumentType } from '@/lib/documentPdf';
+import ShareDocumentMenu from '@/components/documents/ShareDocumentMenu';
 import { useAuth } from '@/contexts/AuthContext';
 
 const TYPE_OPTIONS = [
