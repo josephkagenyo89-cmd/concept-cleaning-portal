@@ -62,6 +62,7 @@ export type Database = {
           created_by_role: string | null
           id: string
           line_items: Json | null
+          local_id: string | null
           location: string
           mpesa_code: string | null
           payment_date: string | null
@@ -97,6 +98,7 @@ export type Database = {
           created_by_role?: string | null
           id?: string
           line_items?: Json | null
+          local_id?: string | null
           location: string
           mpesa_code?: string | null
           payment_date?: string | null
@@ -132,6 +134,7 @@ export type Database = {
           created_by_role?: string | null
           id?: string
           line_items?: Json | null
+          local_id?: string | null
           location?: string
           mpesa_code?: string | null
           payment_date?: string | null
@@ -177,6 +180,7 @@ export type Database = {
           full_name: string
           id: string
           last_booking_date: string | null
+          local_id: string | null
           location: string | null
           notes: string | null
           phone: string
@@ -194,6 +198,7 @@ export type Database = {
           full_name: string
           id?: string
           last_booking_date?: string | null
+          local_id?: string | null
           location?: string | null
           notes?: string | null
           phone: string
@@ -211,6 +216,7 @@ export type Database = {
           full_name?: string
           id?: string
           last_booking_date?: string | null
+          local_id?: string | null
           location?: string | null
           notes?: string | null
           phone?: string
@@ -291,6 +297,7 @@ export type Database = {
           created_at: string
           id: string
           is_complaint: boolean
+          local_id: string | null
           rating: number
           service_name: string | null
           submitted_by: string | null
@@ -306,6 +313,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_complaint?: boolean
+          local_id?: string | null
           rating: number
           service_name?: string | null
           submitted_by?: string | null
@@ -321,6 +329,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_complaint?: boolean
+          local_id?: string | null
           rating?: number
           service_name?: string | null
           submitted_by?: string | null
@@ -560,6 +569,7 @@ export type Database = {
           id: string
           invoice_number: string
           line_items: Json | null
+          local_id: string | null
           mpesa_code: string | null
           notes: string | null
           payment_date: string | null
@@ -583,6 +593,7 @@ export type Database = {
           id?: string
           invoice_number: string
           line_items?: Json | null
+          local_id?: string | null
           mpesa_code?: string | null
           notes?: string | null
           payment_date?: string | null
@@ -606,6 +617,7 @@ export type Database = {
           id?: string
           invoice_number?: string
           line_items?: Json | null
+          local_id?: string | null
           mpesa_code?: string | null
           notes?: string | null
           payment_date?: string | null
@@ -1009,6 +1021,7 @@ export type Database = {
           created_at: string
           dosage: string | null
           id: string
+          local_id: string | null
           pest_job_id: string
           quantity: number
           technician_id: string | null
@@ -1022,6 +1035,7 @@ export type Database = {
           created_at?: string
           dosage?: string | null
           id?: string
+          local_id?: string | null
           pest_job_id: string
           quantity?: number
           technician_id?: string | null
@@ -1035,6 +1049,7 @@ export type Database = {
           created_at?: string
           dosage?: string | null
           id?: string
+          local_id?: string | null
           pest_job_id?: string
           quantity?: number
           technician_id?: string | null
@@ -1067,6 +1082,7 @@ export type Database = {
           created_by: string | null
           followup_type: string
           id: string
+          local_id: string | null
           notes: string | null
           pest_job_id: string
           scheduled_date: string
@@ -1078,6 +1094,7 @@ export type Database = {
           created_by?: string | null
           followup_type?: string
           id?: string
+          local_id?: string | null
           notes?: string | null
           pest_job_id: string
           scheduled_date: string
@@ -1089,6 +1106,7 @@ export type Database = {
           created_by?: string | null
           followup_type?: string
           id?: string
+          local_id?: string | null
           notes?: string | null
           pest_job_id?: string
           scheduled_date?: string
@@ -1113,6 +1131,7 @@ export type Database = {
           infestation_level: string | null
           inspected_at: string
           inspected_by: string | null
+          local_id: string | null
           pest_job_id: string
           pest_type: string | null
           technician_notes: string | null
@@ -1126,6 +1145,7 @@ export type Database = {
           infestation_level?: string | null
           inspected_at?: string
           inspected_by?: string | null
+          local_id?: string | null
           pest_job_id: string
           pest_type?: string | null
           technician_notes?: string | null
@@ -1139,6 +1159,7 @@ export type Database = {
           infestation_level?: string | null
           inspected_at?: string
           inspected_by?: string | null
+          local_id?: string | null
           pest_job_id?: string
           pest_type?: string | null
           technician_notes?: string | null
@@ -1171,6 +1192,7 @@ export type Database = {
           infestation_level: string | null
           invoice_id: string | null
           job_number: string | null
+          local_id: string | null
           notes: string | null
           pest_type: string | null
           price: number
@@ -1196,6 +1218,7 @@ export type Database = {
           infestation_level?: string | null
           invoice_id?: string | null
           job_number?: string | null
+          local_id?: string | null
           notes?: string | null
           pest_type?: string | null
           price?: number
@@ -1221,6 +1244,7 @@ export type Database = {
           infestation_level?: string | null
           invoice_id?: string | null
           job_number?: string | null
+          local_id?: string | null
           notes?: string | null
           pest_type?: string | null
           price?: number
@@ -1238,6 +1262,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          local_id: string | null
           pest_job_id: string
           storage_path: string
           uploaded_by: string | null
@@ -1247,6 +1272,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          local_id?: string | null
           pest_job_id: string
           storage_path: string
           uploaded_by?: string | null
@@ -1256,6 +1282,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          local_id?: string | null
           pest_job_id?: string
           storage_path?: string
           uploaded_by?: string | null
@@ -1276,6 +1303,7 @@ export type Database = {
           created_at: string
           equipment_used: string | null
           id: string
+          local_id: string | null
           notes: string | null
           performed_at: string
           performed_by: string | null
@@ -1290,6 +1318,7 @@ export type Database = {
           created_at?: string
           equipment_used?: string | null
           id?: string
+          local_id?: string | null
           notes?: string | null
           performed_at?: string
           performed_by?: string | null
@@ -1304,6 +1333,7 @@ export type Database = {
           created_at?: string
           equipment_used?: string | null
           id?: string
+          local_id?: string | null
           notes?: string | null
           performed_at?: string
           performed_by?: string | null
@@ -1411,6 +1441,7 @@ export type Database = {
           created_by_role: string
           id: string
           line_items: Json | null
+          local_id: string | null
           price: number
           quotation_number: string
           salesperson_id: string | null
@@ -1428,6 +1459,7 @@ export type Database = {
           created_by_role?: string
           id?: string
           line_items?: Json | null
+          local_id?: string | null
           price: number
           quotation_number: string
           salesperson_id?: string | null
@@ -1445,6 +1477,7 @@ export type Database = {
           created_by_role?: string
           id?: string
           line_items?: Json | null
+          local_id?: string | null
           price?: number
           quotation_number?: string
           salesperson_id?: string | null
@@ -1476,6 +1509,7 @@ export type Database = {
           invoice_id: string | null
           invoice_number: string | null
           line_items: Json | null
+          local_id: string | null
           mpesa_code: string
           payment_date: string
           services: string | null
@@ -1503,6 +1537,7 @@ export type Database = {
           invoice_id?: string | null
           invoice_number?: string | null
           line_items?: Json | null
+          local_id?: string | null
           mpesa_code: string
           payment_date: string
           services?: string | null
@@ -1530,6 +1565,7 @@ export type Database = {
           invoice_id?: string | null
           invoice_number?: string | null
           line_items?: Json | null
+          local_id?: string | null
           mpesa_code?: string
           payment_date?: string
           services?: string | null
