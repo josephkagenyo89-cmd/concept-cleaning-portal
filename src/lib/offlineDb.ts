@@ -3,13 +3,15 @@
 // Backward-compatible with previous `pending_sync` API used by AgentBooking.
 
 const DB_NAME = 'concept-cleaning-offline';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const TABLE_STORES = [
   'bookings',
   'clients',
+  'documents',
   'invoices',
   'quotations',
+  'services',
   'service_certificates',
   'pest_jobs',
   'pest_inspections',
