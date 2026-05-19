@@ -18,7 +18,7 @@ const isPreviewHost =
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD && !isInIframe && !isPreviewHost) {
-    import("virtual:pwa-register").then(({ registerSW }) => registerSW({ immediate: true })).catch(() => {});
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
   } else {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       registrations.forEach((registration) => registration.unregister());
