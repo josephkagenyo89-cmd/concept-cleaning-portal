@@ -127,4 +127,54 @@ export async function readRecords(
   return cached.map((r) => r.data);
 }
 
+export async function readRecordById(
+  table: TableStore,
+  id: string,
+  column: 'id' | 'local_id' = 'id'
+): Promise<any | null> {
+  if (navigator.onLine) {
+    try {
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select('*')
+        .eq(column, id)
+        .maybeSingle();
+
+      if (!error && data) {
+        await cachePut(table, {
+          localId: data.local_id ?? data.id,
+          serverId: data.id,
+          data,
+          synced: true,
+          offlineCreated: false,
+          lastUpdated: new Date().toISOString(),
+        });
+        return data;
+      }
+    } catch {
+      // fall through to cache
+    }
+  }
+
+  const cached = await (await import('./offlineDb')).cacheAll(table);
+  const match = cached.find((row) => row.serverId === id || row.localId === id || row.data?.id === id || row.data?.local_id === id);
+  return match?.data ?? null;
+}
+
+export async function seedCache(table: TableStore, rows: Record<string, any>[]): Promise<void> {
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    const localId = row.local_id ?? row.id;
+    if (!localId) continue;
+    await cachePut(table, {
+      localId,
+      serverId: row.id ?? null,
+      data: row,
+      synced: !row.local_id || row.id === row.local_id || row.id != null,
+      offlineCreated: false,
+      lastUpdated: now,
+    });
+  }
+}
+
 export { cacheMarkSynced };

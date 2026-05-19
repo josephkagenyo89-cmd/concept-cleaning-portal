@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { cacheGet, cachePut } from '@/lib/offlineDb';
 
 export type SettingsCategory =
   | 'general'
@@ -98,12 +99,29 @@ export async function loadAllSettings(force = false): Promise<AllSettings> {
   if (cachePromise) return cachePromise;
 
   cachePromise = (async () => {
-    const { data, error } = await supabase.from('system_settings' as any).select('category, value');
     const result: AllSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-    if (!error && data) {
-      for (const row of data as any[]) {
-        if (row.category in result) {
-          (result as any)[row.category] = { ...(result as any)[row.category], ...(row.value || {}) };
+    try {
+      const { data, error } = await supabase.from('system_settings' as any).select('category, value');
+      if (!error && data) {
+        for (const row of data as any[]) {
+          if (row.category in result) {
+            (result as any)[row.category] = { ...(result as any)[row.category], ...(row.value || {}) };
+            await cachePut('customer_feedback', {
+              localId: `settings:${row.category}`,
+              serverId: `settings:${row.category}`,
+              data: row,
+              synced: true,
+              offlineCreated: false,
+              lastUpdated: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    } catch {
+      for (const category of Object.keys(result) as SettingsCategory[]) {
+        const row = await cacheGet('customer_feedback', `settings:${category}`).catch(() => undefined);
+        if (row?.data?.value && category in result) {
+          (result as any)[category] = { ...(result as any)[category], ...(row.data.value || {}) };
         }
       }
     }
