@@ -42,11 +42,13 @@ export default function AdminPestJobs() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('pest_jobs')
-      .select('id, client_name, client_phone, pest_type, status, service_date, price, created_at')
-      .order('created_at', { ascending: false });
-    setJobs((data as PestJob[]) || []);
+    const data = await fetchListWithCache<PestJob>('pest_jobs', async () =>
+      await (supabase as any)
+        .from('pest_jobs')
+        .select('id, client_name, client_phone, pest_type, status, service_date, price, created_at')
+        .order('created_at', { ascending: false })
+    );
+    setJobs(data);
     setLoading(false);
   };
 
