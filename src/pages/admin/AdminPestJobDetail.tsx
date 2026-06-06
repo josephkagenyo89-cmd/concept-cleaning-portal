@@ -33,7 +33,7 @@ export default function AdminPestJobDetail() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await (supabase as any).from('pest_jobs').select('*').eq('id', id).maybeSingle();
+    const data = await readRecordById('pest_jobs', id as string);
     setJob(data);
     setLoading(false);
   };
