@@ -83,14 +83,21 @@ export default function ErpInvoices() {
   }, [user, profile]);
 
   const fetchData = async () => {
-    const { data } = await supabase.from('invoices').select('*').order('created_at', { ascending: false });
-    setInvoices((data || []) as Invoice[]);
+    const data = await fetchListWithCache<Invoice>('invoices', async () =>
+      await supabase.from('invoices').select('*').order('created_at', { ascending: false })
+    );
+    setInvoices(data);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-    supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
+    (async () => {
+      const services = await fetchListWithCache<any>('services', async () =>
+        await supabase.from('services').select('*').eq('is_active', true)
+      );
+      setServices(services);
+    })();
   }, []);
 
   const generateInvoiceNumber = async () => {
