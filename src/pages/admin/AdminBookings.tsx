@@ -31,16 +31,18 @@ export default function AdminBookings() {
   const [staffSignHasClient, setStaffSignHasClient] = useState(false);
 
   const load = async () => {
-    let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
-    if (filter !== 'all') q = q.eq('status', filter as any);
-    if (agentFilter !== 'all') q = q.eq('agent_id', agentFilter);
-    if (dateFrom) q = q.gte('created_at', dateFrom.toISOString());
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59);
-      q = q.lte('created_at', end.toISOString());
-    }
-    const { data } = await q;
+    const data = await fetchListWithCache<any>('bookings', async () => {
+      let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
+      if (filter !== 'all') q = q.eq('status', filter as any);
+      if (agentFilter !== 'all') q = q.eq('agent_id', agentFilter);
+      if (dateFrom) q = q.gte('created_at', dateFrom.toISOString());
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59);
+        q = q.lte('created_at', end.toISOString());
+      }
+      return await q;
+    });
 
     const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
     const profileMap: Record<string, { name: string; phone: string }> = {};
