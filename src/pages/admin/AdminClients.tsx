@@ -62,11 +62,10 @@ export default function AdminClients() {
 
   const loadClients = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setClients((data as any[]) || []);
+    const data = await fetchListWithCache<Client>('clients', () =>
+      supabase.from('clients').select('*').order('created_at', { ascending: false })
+    );
+    setClients(data || []);
     setLoading(false);
   };
 
