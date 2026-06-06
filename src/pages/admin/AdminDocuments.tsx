@@ -75,8 +75,10 @@ export default function AdminDocuments() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
-    setDocuments((data as any[]) || []);
+    const data = await fetchListWithCache<any>('documents', async () =>
+      await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    );
+    setDocuments(data);
     setLoading(false);
   };
 
