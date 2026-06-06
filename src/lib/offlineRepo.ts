@@ -178,3 +178,32 @@ export async function seedCache(table: TableStore, rows: Record<string, any>[]):
 }
 
 export { cacheMarkSynced };
+
+/**
+ * Run a supabase query and seed the offline cache. If offline or the request
+ * fails, return the locally cached rows so screens keep rendering data.
+ * The optional `filter` lets callers narrow the cache fallback when offline.
+ */
+export async function fetchListWithCache<T = any>(
+  table: TableStore,
+  runQuery: () => Promise<{ data: any; error: any }>,
+  filter?: (row: any) => boolean
+): Promise<T[]> {
+  if (navigator.onLine) {
+    try {
+      const { data, error } = await runQuery();
+      if (!error && Array.isArray(data)) {
+        try { await seedCache(table, data as any[]); } catch {}
+        return data as T[];
+      }
+    } catch { /* fall through */ }
+  }
+  try {
+    const { cacheAll } = await import('./offlineDb');
+    const cached = await cacheAll(table);
+    const rows = cached.map((r) => r.data);
+    return (filter ? rows.filter(filter) : rows) as T[];
+  } catch {
+    return [];
+  }
+}
