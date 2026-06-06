@@ -45,19 +45,23 @@ export default function AdminBookings() {
       return await q;
     });
 
-    const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
-    const profileMap: Record<string, { name: string; phone: string }> = {};
-    (profiles || []).forEach(p => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone }; });
-    setAgents((profiles || []).map(p => ({ user_id: p.user_id, full_name: p.full_name })));
+    try {
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
+      const profileMap: Record<string, { name: string; phone: string }> = {};
+      (profiles || []).forEach(p => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone }; });
+      setAgents((profiles || []).map(p => ({ user_id: p.user_id, full_name: p.full_name })));
 
-    // Load commissions
-    const bookingIds = (data || []).map(b => b.id);
-    if (bookingIds.length > 0) {
-      const { data: comms } = await supabase.from('commissions').select('booking_id, amount, bonus_amount').in('booking_id', bookingIds);
-      const commMap: Record<string, { amount: number; bonus: number }> = {};
-      (comms || []).forEach(c => { commMap[c.booking_id] = { amount: Number(c.amount), bonus: Number(c.bonus_amount) }; });
-      setCommissions(commMap);
-    }
+      const bookingIds = (data || []).map(b => b.id);
+      if (bookingIds.length > 0) {
+        const { data: comms } = await supabase.from('commissions').select('booking_id, amount, bonus_amount').in('booking_id', bookingIds);
+        const commMap: Record<string, { amount: number; bonus: number }> = {};
+        (comms || []).forEach(c => { commMap[c.booking_id] = { amount: Number(c.amount), bonus: Number(c.bonus_amount) }; });
+        setCommissions(commMap);
+      }
+    } catch { /* offline — keep previous agents/commissions state */ }
+
+    const profileMap: Record<string, { name: string; phone: string }> = {};
+    agents.forEach(a => { profileMap[a.user_id] = { name: a.full_name, phone: '' }; });
 
     setBookings((data || []).map(b => ({
       ...b,
