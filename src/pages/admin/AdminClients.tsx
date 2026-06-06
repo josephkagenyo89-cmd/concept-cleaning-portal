@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -61,11 +62,10 @@ export default function AdminClients() {
 
   const loadClients = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setClients((data as any[]) || []);
+    const data = await fetchListWithCache<Client>('clients', async () =>
+      await supabase.from('clients').select('*').order('created_at', { ascending: false })
+    );
+    setClients(data || []);
     setLoading(false);
   };
 

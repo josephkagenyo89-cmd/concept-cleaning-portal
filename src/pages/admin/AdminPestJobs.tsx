@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,11 +42,13 @@ export default function AdminPestJobs() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('pest_jobs')
-      .select('id, client_name, client_phone, pest_type, status, service_date, price, created_at')
-      .order('created_at', { ascending: false });
-    setJobs((data as PestJob[]) || []);
+    const data = await fetchListWithCache<PestJob>('pest_jobs', async () =>
+      await (supabase as any)
+        .from('pest_jobs')
+        .select('id, client_name, client_phone, pest_type, status, service_date, price, created_at')
+        .order('created_at', { ascending: false })
+    );
+    setJobs(data);
     setLoading(false);
   };
 

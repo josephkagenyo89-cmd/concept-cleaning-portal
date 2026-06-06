@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,14 +83,21 @@ export default function ErpInvoices() {
   }, [user, profile]);
 
   const fetchData = async () => {
-    const { data } = await supabase.from('invoices').select('*').order('created_at', { ascending: false });
-    setInvoices((data || []) as Invoice[]);
+    const data = await fetchListWithCache<Invoice>('invoices', async () =>
+      await supabase.from('invoices').select('*').order('created_at', { ascending: false })
+    );
+    setInvoices(data);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-    supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
+    (async () => {
+      const services = await fetchListWithCache<any>('services', async () =>
+        await supabase.from('services').select('*').eq('is_active', true)
+      );
+      setServices(services);
+    })();
   }, []);
 
   const generateInvoiceNumber = async () => {

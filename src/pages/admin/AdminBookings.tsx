@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,30 +32,36 @@ export default function AdminBookings() {
   const [staffSignHasClient, setStaffSignHasClient] = useState(false);
 
   const load = async () => {
-    let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
-    if (filter !== 'all') q = q.eq('status', filter as any);
-    if (agentFilter !== 'all') q = q.eq('agent_id', agentFilter);
-    if (dateFrom) q = q.gte('created_at', dateFrom.toISOString());
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59);
-      q = q.lte('created_at', end.toISOString());
-    }
-    const { data } = await q;
+    const data = await fetchListWithCache<any>('bookings', async () => {
+      let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
+      if (filter !== 'all') q = q.eq('status', filter as any);
+      if (agentFilter !== 'all') q = q.eq('agent_id', agentFilter);
+      if (dateFrom) q = q.gte('created_at', dateFrom.toISOString());
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59);
+        q = q.lte('created_at', end.toISOString());
+      }
+      return await q;
+    });
 
-    const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
+    try {
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
+      const profileMap: Record<string, { name: string; phone: string }> = {};
+      (profiles || []).forEach(p => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone }; });
+      setAgents((profiles || []).map(p => ({ user_id: p.user_id, full_name: p.full_name })));
+
+      const bookingIds = (data || []).map(b => b.id);
+      if (bookingIds.length > 0) {
+        const { data: comms } = await supabase.from('commissions').select('booking_id, amount, bonus_amount').in('booking_id', bookingIds);
+        const commMap: Record<string, { amount: number; bonus: number }> = {};
+        (comms || []).forEach(c => { commMap[c.booking_id] = { amount: Number(c.amount), bonus: Number(c.bonus_amount) }; });
+        setCommissions(commMap);
+      }
+    } catch { /* offline — keep previous agents/commissions state */ }
+
     const profileMap: Record<string, { name: string; phone: string }> = {};
-    (profiles || []).forEach(p => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone }; });
-    setAgents((profiles || []).map(p => ({ user_id: p.user_id, full_name: p.full_name })));
-
-    // Load commissions
-    const bookingIds = (data || []).map(b => b.id);
-    if (bookingIds.length > 0) {
-      const { data: comms } = await supabase.from('commissions').select('booking_id, amount, bonus_amount').in('booking_id', bookingIds);
-      const commMap: Record<string, { amount: number; bonus: number }> = {};
-      (comms || []).forEach(c => { commMap[c.booking_id] = { amount: Number(c.amount), bonus: Number(c.bonus_amount) }; });
-      setCommissions(commMap);
-    }
+    agents.forEach(a => { profileMap[a.user_id] = { name: a.full_name, phone: '' }; });
 
     setBookings((data || []).map(b => ({
       ...b,

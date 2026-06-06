@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { readRecordById, fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,20 +35,33 @@ export default function AdminClientProfile() {
 
   const loadData = async () => {
     setLoading(true);
-    const [clientRes, bookingsRes, invoicesRes, incomeRes] = await Promise.all([
-      supabase.from('clients').select('*').eq('id', id).single(),
-      supabase.from('bookings').select('*, services(name)').eq('client_id', id as string).order('created_at', { ascending: false }),
-      supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
-      (supabase.from('income_records').select('*') as any).eq('client_id', id as string).order('date', { ascending: false }),
+    const [clientRow, bookingsRows, invoicesRows, incomeRows] = await Promise.all([
+      readRecordById('clients', id as string),
+      fetchListWithCache<any>(
+        'bookings',
+        async () => await supabase.from('bookings').select('*, services(name)').eq('client_id', id as string).order('created_at', { ascending: false }),
+        (b) => b.client_id === id,
+      ),
+      fetchListWithCache<any>(
+        'invoices',
+        async () => await supabase.from('invoices').select('*').eq('client_id', id as string).order('created_at', { ascending: false }),
+        (i) => i.client_id === id,
+      ),
+      (async () => {
+        try {
+          const { data } = await (supabase.from('income_records').select('*') as any).eq('client_id', id as string).order('date', { ascending: false });
+          return (data as any[]) || [];
+        } catch { return []; }
+      })(),
     ]);
 
-    if (clientRes.data) {
-      setClient(clientRes.data);
-      setNotes((clientRes.data as any).notes || '');
+    if (clientRow) {
+      setClient(clientRow);
+      setNotes((clientRow as any).notes || '');
     }
-    setBookings((bookingsRes.data as any[]) || []);
-    setInvoices((invoicesRes.data as any[]) || []);
-    setIncome((incomeRes.data as any[]) || []);
+    setBookings(bookingsRows);
+    setInvoices(invoicesRows);
+    setIncome(incomeRows);
     setLoading(false);
   };
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +24,13 @@ export default function AdminCertificates() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('service_certificates')
-      .select('*')
-      .order('date_created', { ascending: false });
-    setCerts((data || []) as CertificateRecord[]);
+    const data = await fetchListWithCache<CertificateRecord>('service_certificates', async () =>
+      await (supabase as any)
+        .from('service_certificates')
+        .select('*')
+        .order('date_created', { ascending: false })
+    );
+    setCerts(data);
 
     const generators = Array.from(
       new Map(((data || []) as CertificateRecord[]).map(c => [c.generated_by, c.generated_by_name || 'Unknown'])).entries()

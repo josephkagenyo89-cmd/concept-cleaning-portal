@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -36,16 +37,18 @@ export default function AdminFeedback() {
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from('customer_feedback' as any).select('*').order('created_at', { ascending: false });
-    if (ratingFilter !== 'all') q = q.eq('rating', Number(ratingFilter));
-    if (complaintsOnly) q = q.eq('is_complaint', true);
-    if (from) q = q.gte('created_at', from.toISOString());
-    if (to) {
-      const end = new Date(to); end.setHours(23, 59, 59);
-      q = q.lte('created_at', end.toISOString());
-    }
-    const { data } = await q;
-    setItems((data as any) || []);
+    const data = await fetchListWithCache<any>('customer_feedback', async () => {
+      let q = supabase.from('customer_feedback' as any).select('*').order('created_at', { ascending: false });
+      if (ratingFilter !== 'all') q = q.eq('rating', Number(ratingFilter));
+      if (complaintsOnly) q = q.eq('is_complaint', true);
+      if (from) q = q.gte('created_at', from.toISOString());
+      if (to) {
+        const end = new Date(to); end.setHours(23, 59, 59);
+        q = q.lte('created_at', end.toISOString());
+      }
+      return await q;
+    });
+    setItems(data);
     setLoading(false);
   };
 

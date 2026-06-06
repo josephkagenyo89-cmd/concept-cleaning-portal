@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,8 +76,10 @@ export default function AdminDocuments() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
-    setDocuments((data as any[]) || []);
+    const data = await fetchListWithCache<any>('documents', async () =>
+      await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    );
+    setDocuments(data);
     setLoading(false);
   };
 

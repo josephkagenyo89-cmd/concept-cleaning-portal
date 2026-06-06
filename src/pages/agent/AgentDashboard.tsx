@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchListWithCache } from '@/lib/offlineRepo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,51 +25,51 @@ export default function AgentDashboard() {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      // Wallet balance
-      const { data: ledger } = await supabase
-        .from('wallet_ledger')
-        .select('type, amount')
-        .eq('agent_id', user.id);
-      const bal = (ledger || []).reduce((sum, e) => sum + (e.type === 'credit' ? Number(e.amount) : -Number(e.amount)), 0);
-      setBalance(bal);
+      try {
+        const { data: ledger } = await supabase
+          .from('wallet_ledger')
+          .select('type, amount')
+          .eq('agent_id', user.id);
+        const bal = (ledger || []).reduce((sum, e) => sum + (e.type === 'credit' ? Number(e.amount) : -Number(e.amount)), 0);
+        setBalance(bal);
 
-      // Total earnings from commissions
-      const { data: comms } = await supabase
-        .from('commissions')
-        .select('amount, bonus_amount')
-        .eq('agent_id', user.id);
-      const earn = (comms || []).reduce((s, c) => s + Number(c.amount) + Number(c.bonus_amount), 0);
-      setTotalEarnings(earn);
+        const { data: comms } = await supabase
+          .from('commissions')
+          .select('amount, bonus_amount')
+          .eq('agent_id', user.id);
+        const earn = (comms || []).reduce((s, c) => s + Number(c.amount) + Number(c.bonus_amount), 0);
+        setTotalEarnings(earn);
 
-      // Cumulative revenue from completed bookings
-      const { data: completed } = await supabase
-        .from('bookings')
-        .select('price')
-        .eq('agent_id', user.id)
-        .eq('status', 'completed');
-      const rev = (completed || []).reduce((s, b) => s + Number(b.price), 0);
-      setCumulativeRevenue(rev);
+        const completed = await fetchListWithCache<any>(
+          'bookings',
+          async () => await supabase.from('bookings').select('price').eq('agent_id', user.id).eq('status', 'completed'),
+          (b) => b.agent_id === user.id && b.status === 'completed',
+        );
+        const rev = completed.reduce((s, b) => s + Number(b.price), 0);
+        setCumulativeRevenue(rev);
 
-      // Recent bookings
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select('id, client_name, status, price, service_date, created_at')
-        .eq('agent_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      setRecentBookings(bookings || []);
+        const bookings = await fetchListWithCache<any>(
+          'bookings',
+          async () => await supabase
+            .from('bookings')
+            .select('id, client_name, status, price, service_date, created_at, agent_id')
+            .eq('agent_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          (b) => b.agent_id === user.id,
+        );
+        setRecentBookings(bookings.slice(0, 5));
 
-      // Last payout
-      const { data: payouts } = await supabase
-        .from('payout_requests')
-        .select('requested_at, status')
-        .eq('agent_id', user.id)
-        .order('requested_at', { ascending: false })
-        .limit(1);
-      if (payouts && payouts.length > 0) {
-        setLastPayout(payouts[0].requested_at);
-      }
-
+        const { data: payouts } = await supabase
+          .from('payout_requests')
+          .select('requested_at, status')
+          .eq('agent_id', user.id)
+          .order('requested_at', { ascending: false })
+          .limit(1);
+        if (payouts && payouts.length > 0) {
+          setLastPayout(payouts[0].requested_at);
+        }
+      } catch { /* offline — keep what we have */ }
       setLoading(false);
     };
     load();
