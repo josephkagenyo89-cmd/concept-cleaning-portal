@@ -44,6 +44,8 @@ export default function AdminBookings() {
       }
       return await q;
     });
+    // Drafts live in the Drafts module — never show them in the main bookings list
+    const visible = (data || []).filter((b: any) => b.status !== 'draft');
 
     try {
       const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
