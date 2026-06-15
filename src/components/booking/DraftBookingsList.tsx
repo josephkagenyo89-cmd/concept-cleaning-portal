@@ -27,6 +27,7 @@ export default function DraftBookingsList({ basePath, scopeAgentId, title = 'Dra
         let q = supabase
           .from('bookings')
           .select('*')
+          .eq('status', 'draft' as any)
           .order('last_modified_at', { ascending: false });
         if (scopeAgentId) q = q.eq('agent_id', scopeAgentId);
         return await q;
