@@ -18,6 +18,7 @@ import { setPdfSettings } from '@/lib/documentPdf';
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
+  { to: '/admin/bookings/drafts', icon: FileText, label: 'Draft Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },

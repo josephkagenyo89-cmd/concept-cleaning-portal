@@ -50,6 +50,7 @@ export type Database = {
           agent_margin: number | null
           agent_price: number | null
           amount_paid: number | null
+          booking_code: string | null
           client_consent: boolean | null
           client_id: string | null
           client_name: string
@@ -57,10 +58,14 @@ export type Database = {
           client_signature: string | null
           client_signed_at: string | null
           commission_created: boolean
+          completion_percent: number | null
           created_at: string
           created_by_name: string | null
           created_by_role: string | null
           id: string
+          last_modified_at: string | null
+          last_modified_by: string | null
+          last_modified_by_name: string | null
           line_items: Json | null
           local_id: string | null
           location: string
@@ -86,6 +91,7 @@ export type Database = {
           agent_margin?: number | null
           agent_price?: number | null
           amount_paid?: number | null
+          booking_code?: string | null
           client_consent?: boolean | null
           client_id?: string | null
           client_name: string
@@ -93,10 +99,14 @@ export type Database = {
           client_signature?: string | null
           client_signed_at?: string | null
           commission_created?: boolean
+          completion_percent?: number | null
           created_at?: string
           created_by_name?: string | null
           created_by_role?: string | null
           id?: string
+          last_modified_at?: string | null
+          last_modified_by?: string | null
+          last_modified_by_name?: string | null
           line_items?: Json | null
           local_id?: string | null
           location: string
@@ -122,6 +132,7 @@ export type Database = {
           agent_margin?: number | null
           agent_price?: number | null
           amount_paid?: number | null
+          booking_code?: string | null
           client_consent?: boolean | null
           client_id?: string | null
           client_name?: string
@@ -129,10 +140,14 @@ export type Database = {
           client_signature?: string | null
           client_signed_at?: string | null
           commission_created?: boolean
+          completion_percent?: number | null
           created_at?: string
           created_by_name?: string | null
           created_by_role?: string | null
           id?: string
+          last_modified_at?: string | null
+          last_modified_by?: string | null
+          last_modified_by_name?: string | null
           line_items?: Json | null
           local_id?: string | null
           location?: string
@@ -1794,6 +1809,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
+      next_booking_code: { Args: never; Returns: string }
       next_certificate_number: { Args: never; Returns: string }
       next_client_code: { Args: never; Returns: string }
       next_expense_voucher_number: { Args: never; Returns: string }
@@ -1813,6 +1829,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "fully_confirmed"
+        | "draft"
       commission_tier: "bronze" | "silver" | "gold"
       ledger_type: "credit" | "debit"
       notice_priority: "normal" | "important" | "urgent"
@@ -1953,6 +1970,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "fully_confirmed",
+        "draft",
       ],
       commission_tier: ["bronze", "silver", "gold"],
       ledger_type: ["credit", "debit"],

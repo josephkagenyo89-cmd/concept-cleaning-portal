@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,17 +13,22 @@ import { getTier, calculateCommission } from '@/lib/commission';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { savePending } from '@/lib/offlineDb';
 import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
 import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
+import DraftStatusBadge from '@/components/booking/DraftStatusBadge';
+import { createDraftBooking, patchDraft, loadBookingDraft, computeCompletionPercent, DraftRef } from '@/lib/bookingDrafts';
+import { useAutoSaveDraft } from '@/hooks/useAutoSaveDraft';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const draftIdParam = searchParams.get('draftId');
+
   const [services, setServices] = useState<any[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
@@ -33,17 +38,22 @@ export default function AgentBooking() {
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'agent' });
 
+  const [draftRef, setDraftRef] = useState<DraftRef | null>(null);
+  const [bookingCode, setBookingCode] = useState<string | null>(null);
+  const [bookingStatus, setBookingStatus] = useState<string>('draft');
+  const [hydrated, setHydrated] = useState(false);
+
   useEffect(() => {
     if (user && profile) {
-      setSalesperson({ id: user.id, name: profile.full_name || 'Agent', role: 'agent' });
+      setSalesperson((s) => s.id ? s : { id: user.id, name: profile.full_name || 'Agent', role: 'agent' });
     }
   }, [user, profile]);
 
+  // Load services + cumulative revenue
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from('services').select('*').eq('is_active', true);
       setServices(data || []);
-
       if (user) {
         const { data: completed } = await supabase
           .from('bookings')
@@ -57,9 +67,76 @@ export default function AgentBooking() {
     load();
   }, [user]);
 
-  const tier = getTier(cumulativeRevenue);
+  // Bootstrap draft: either resume from ?draftId= or create a fresh one
+  useEffect(() => {
+    if (!user || !profile) return;
+    if (draftRef) return;
 
-  // Computed prices from line items
+    const bootstrap = async () => {
+      if (draftIdParam) {
+        const row = await loadBookingDraft(draftIdParam);
+        if (row) {
+          setDraftRef({ localId: row.local_id || row.id, id: row.id || null, booking_code: row.booking_code });
+          setBookingCode(row.booking_code || null);
+          setBookingStatus(row.status || 'draft');
+          // hydrate form state
+          if (row.client_id || row.client_name) {
+            setSelectedClient({
+              id: row.client_id,
+              full_name: row.client_name || '',
+              phone: row.client_phone || '',
+              location: row.location || '',
+            } as any);
+          }
+          if (row.service_date) setDate(new Date(row.service_date));
+          if (row.agent_price) setAgentPrice(String(row.agent_price));
+          if (Array.isArray(row.line_items) && row.line_items.length && services.length) {
+            const items: LineItem[] = row.line_items
+              .map((li: any) => {
+                const svc = services.find((s) => s.id === li.serviceId);
+                if (!svc) return null;
+                return {
+                  service: svc,
+                  quantity: li.quantity || 1,
+                  unitPrice: li.unitPrice || svc.price_min || 0,
+                  total: li.total || 0,
+                } as LineItem;
+              })
+              .filter(Boolean) as LineItem[];
+            setLineItems(items);
+          }
+          if (row.salesperson_id) {
+            setSalesperson({
+              id: row.salesperson_id,
+              name: row.salesperson_name || '',
+              role: row.salesperson_role || 'agent',
+            });
+          }
+          setHydrated(true);
+          return;
+        }
+      }
+      // Fresh draft
+      const ref = await createDraftBooking({
+        userId: user.id,
+        userName: profile.full_name || 'Agent',
+        userRole: 'agent',
+      });
+      setDraftRef(ref);
+      setHydrated(true);
+      // Try to fetch the server-generated booking_code shortly after
+      setTimeout(async () => {
+        const row = await loadBookingDraft(ref.localId);
+        if (row?.booking_code) {
+          setBookingCode(row.booking_code);
+          setDraftRef((cur) => cur ? { ...cur, id: row.id, booking_code: row.booking_code } : cur);
+        }
+      }, 1200);
+    };
+    bootstrap();
+  }, [user, profile, draftIdParam, services]);
+
+  const tier = getTier(cumulativeRevenue);
   const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
@@ -72,26 +149,67 @@ export default function AgentBooking() {
   const hasServices = lineItems.length > 0;
   const primaryService = lineItems[0]?.service || null;
 
-  // Auto-update agent price when line items change
   const handleLineItemsChange = (items: LineItem[]) => {
     setLineItems(items);
     const newSystemPrice = items.reduce((sum, item) => sum + item.total, 0);
-    // Auto-set if agent hasn't manually adjusted price upward
     if (!agentPrice || currentAgentPrice <= systemPrice) {
       setAgentPrice(newSystemPrice > 0 ? String(newSystemPrice) : '');
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ---------- Auto-save ----------
+  const completionPercent = useMemo(() => computeCompletionPercent({
+    hasClient: !!selectedClient,
+    serviceCount: lineItems.length,
+    hasDate: !!date,
+    priceValid: currentAgentPrice >= systemPrice && systemPrice > 0,
+  }), [selectedClient, lineItems, date, currentAgentPrice, systemPrice]);
+
+  const autoSavePayload = useMemo(() => ({
+    client_id: selectedClient?.id || null,
+    client_name: selectedClient?.full_name || '',
+    client_phone: selectedClient?.phone || '',
+    location: selectedClient?.location || '',
+    service_id: primaryService?.id || null,
+    service_date: date ? format(date, 'yyyy-MM-dd') : null,
+    price: finalPrice,
+    system_price: systemPrice,
+    agent_price: finalPrice,
+    agent_margin: agentMargin,
+    quantity: String(lineItems.length),
+    line_items: lineItems.map((i) => ({
+      serviceName: i.service.name,
+      serviceId: i.service.id,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      total: i.total,
+    })),
+    salesperson_id: salesperson.id || user?.id,
+    salesperson_name: salesperson.name || profile?.full_name || 'Agent',
+    salesperson_role: salesperson.role || 'agent',
+    completion_percent: completionPercent,
+  }), [selectedClient, primaryService, date, finalPrice, systemPrice, agentMargin, lineItems, salesperson, user, profile, completionPercent]);
+
+  const { status: saveStatus, lastSavedAt } = useAutoSaveDraft({
+    value: autoSavePayload,
+    enabled: hydrated && !!draftRef && bookingStatus === 'draft',
+    onSave: async (val) => {
+      if (!draftRef || !user) return;
+      await patchDraft(draftRef, val, { userId: user.id, userName: profile?.full_name || 'Agent' });
+    },
+  });
+
+  // ---------- Confirm (Draft → Pending) ----------
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
+    if (!user || !draftRef || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
     if (!selectedClient) {
       toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
       return;
     }
     setLoading(true);
 
-    // Update CRM stats (booking_count, total_spend, status) for the existing client
+    // CRM upsert (only on confirm, not draft)
     await upsertClientForBooking({
       clientName: selectedClient.full_name,
       clientPhone: selectedClient.phone,
@@ -100,80 +218,42 @@ export default function AgentBooking() {
       createdBy: user.id,
       createdByRole: 'agent',
     });
-    const clientId = selectedClient.id;
 
-    const lineItemsData = lineItems.map(i => ({
-      serviceName: i.service.name,
-      serviceId: i.service.id,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      total: i.total,
-    }));
+    // Flush latest state + flip status to pending via offline-safe update
+    await patchDraft(draftRef, {
+      ...autoSavePayload,
+      status: 'pending',
+    }, { userId: user.id, userName: profile?.full_name || 'Agent' });
 
-    const bookingData = {
-      agent_id: user.id,
-      client_name: selectedClient.full_name,
-      client_phone: selectedClient.phone,
-      location: selectedClient.location || '',
-      service_id: primaryService.id,
-      service_date: format(date, 'yyyy-MM-dd'),
-      price: finalPrice,
-      system_price: systemPrice,
-      agent_price: finalPrice,
-      agent_margin: agentMargin,
-      quantity: String(lineItems.length),
-      created_by_name: profile?.full_name || 'Agent',
-      created_by_role: 'agent',
-      salesperson_id: salesperson.id || user.id,
-      salesperson_name: salesperson.name || profile?.full_name || 'Agent',
-      salesperson_role: salesperson.role || 'agent',
-      line_items: lineItemsData,
-      client_id: clientId,
-    };
-
-    if (!navigator.onLine) {
-      await savePending({
-        localId: crypto.randomUUID(),
-        type: 'booking',
-        data: bookingData,
-        createdAt: new Date().toISOString(),
-        synced: false,
-      });
-      setLoading(false);
-      toast({ title: 'Saved offline', description: 'Booking will sync when you reconnect.' });
-      navigate('/agent');
-      return;
-    }
-
-    const { data: inserted, error } = await supabase.from('bookings').insert(bookingData).select('id').single();
+    setBookingStatus('pending');
     setLoading(false);
-    if (error) {
-      toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
-    } else {
-      // Auto-generate quotation document in background
-      try {
-        const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
-        await autoCreateQuotationForBooking({
-          clientName: selectedClient.full_name,
-          clientPhone: selectedClient.phone,
-          clientLocation: selectedClient.location || '',
-          lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
-          totalAmount: finalPrice,
-          serviceDate: date,
-          createdById: user.id,
-          createdBy: profile?.full_name || 'Agent',
-          createdByRole: 'agent',
-          bookingId: (inserted as any)?.id,
-          clientId,
-          salespersonName: salesperson.name || profile?.full_name || 'Agent',
-        });
-      } catch (e) { console.warn('Auto-quotation failed', e); }
-      toast({ title: 'Booking created!', description: `Quotation auto-saved. ${lineItems.length} service${lineItems.length > 1 ? 's' : ''} booked.` });
-      navigate('/agent');
-    }
+
+    // Auto-generate quotation document (best-effort)
+    try {
+      const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
+      await autoCreateQuotationForBooking({
+        clientName: selectedClient.full_name,
+        clientPhone: selectedClient.phone,
+        clientLocation: selectedClient.location || '',
+        lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+        totalAmount: finalPrice,
+        serviceDate: date,
+        createdById: user.id,
+        createdBy: profile?.full_name || 'Agent',
+        createdByRole: 'agent',
+        bookingId: draftRef.id || undefined,
+        clientId: selectedClient.id,
+        salespersonName: salesperson.name || profile?.full_name || 'Agent',
+      });
+    } catch (e) { console.warn('Auto-quotation failed', e); }
+
+    toast({
+      title: 'Booking confirmed',
+      description: `${bookingCode || 'Booking'} moved to Pending. Quotation saved.`,
+    });
+    navigate('/agent');
   };
 
-  // Quotation line items format
   const quotationLineItems = lineItems.map(i => ({
     name: i.service.name,
     quantity: i.quantity,
@@ -186,47 +266,45 @@ export default function AgentBooking() {
 
   return (
     <div className="max-w-lg mx-auto pb-20 md:pb-6">
-      <h1 className="text-2xl font-bold mb-4">New Booking</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Services */}
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="text-2xl font-bold">{draftIdParam ? 'Resume Booking' : 'New Booking'}</h1>
+        <Button size="sm" variant="ghost" onClick={() => navigate('/agent/drafts')}>Drafts</Button>
+      </div>
+
+      <div className="mb-3">
+        <DraftStatusBadge
+          status={saveStatus}
+          lastSavedAt={lastSavedAt}
+          bookingCode={bookingCode}
+          bookingStatus={bookingStatus}
+        />
+      </div>
+
+      <form onSubmit={handleConfirm} className="space-y-4">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Services</CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Services</CardTitle></CardHeader>
           <CardContent>
-            <MultiServiceSelector
-              services={services}
-              lineItems={lineItems}
-              onChange={handleLineItemsChange}
-            />
+            <MultiServiceSelector services={services} lineItems={lineItems} onChange={handleLineItemsChange} />
           </CardContent>
         </Card>
 
-        {/* Salesperson */}
         <Card>
           <CardContent className="pt-4">
             <SalespersonSelector value={salesperson} onChange={setSalesperson} />
           </CardContent>
         </Card>
 
-        {/* Client (CRM) */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Client</CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Client</CardTitle></CardHeader>
           <CardContent>
             <ClientSearchSelector value={selectedClient} onChange={setSelectedClient} />
           </CardContent>
         </Card>
 
-        {/* Service Date & Pricing */}
         {hasServices && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Date & Pricing</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Date & Pricing</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {/* Service Date */}
               <div className="space-y-1.5">
                 <Label>Service Date</Label>
                 <Popover>
@@ -242,7 +320,6 @@ export default function AgentBooking() {
                 </Popover>
               </div>
 
-              {/* Agent Price (editable) */}
               {systemPrice > 0 && (
                 <div className="space-y-1.5">
                   <Label>Your Price (Ksh)</Label>
@@ -264,7 +341,6 @@ export default function AgentBooking() {
           </Card>
         )}
 
-        {/* Price Breakdown & Commission Preview */}
         {systemPrice > 0 && currentAgentPrice >= systemPrice && !priceError && (
           <PriceBreakdown
             serviceName={lineItems.length === 1 ? lineItems[0].service.name : `${lineItems.length} Services`}
@@ -277,7 +353,6 @@ export default function AgentBooking() {
           />
         )}
 
-        {/* Quotation actions */}
         {canQuote && (
           <Card>
             <CardContent className="p-4">
@@ -303,10 +378,13 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice || bookingStatus !== 'draft'}
         >
-          {loading ? 'Creating...' : `Create Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
+          {loading ? 'Confirming…' : `Confirm Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Changes auto-save. You can close and resume anytime from Drafts.
+        </p>
       </form>
     </div>
   );

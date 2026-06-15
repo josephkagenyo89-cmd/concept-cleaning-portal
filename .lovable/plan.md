@@ -1,81 +1,87 @@
-## Offline-First Upgrade Plan
+# Booking Drafts & Auto-Save Upgrade
 
-Make Concept Cleaning Services keep working without internet, then safely sync to Lovable Cloud when connectivity returns. No existing workflows, CRM rules, income approval logic, or document formatting changes — we only add a local storage + sync layer behind them.
+Add a true draft workflow to the Booking module so every "New Booking" click immediately reserves a Booking ID, persists a draft, and auto-saves every change — online or offline — without disturbing the existing quotation/invoice/income/CRM/commission flows.
 
-### 1. Local storage foundation (IndexedDB)
+## What changes for the user
 
-Expand `src/lib/offlineDb.ts` from a single `pending_sync` store into a proper multi-store IndexedDB database (`concept-cleaning-offline`, version 2):
+1. Clicking **New Booking** (agent or admin) instantly creates a draft with a code like `BK202600001`. The code is visible at the top of the form.
+2. Status lifecycle: **Draft → Pending → Confirmed → Completed → Locked**. Existing statuses keep working; "draft" is the new starting state and the existing lock/invoice/commission triggers stay tied to `fully_confirmed`/`completed`.
+3. Every field change (client, services, notes, discount, schedule, signatures, attachments) is auto-saved after a short debounce. A subtle "Saved · just now / Saving… / Offline – queued" indicator replaces the need for a Save button. The existing "Create Booking" button becomes **Confirm Booking** (moves Draft → Pending and runs the existing submit logic).
+4. New **Draft Bookings** page (admin + agent) lists drafts with Booking ID, client, status, created/updated dates, and a completion %. Clicking a row resumes editing.
+5. A search bar on Drafts and Bookings lets users find a booking by Booking ID, Client ID, name, or phone, then resume editing if still in Draft/Pending.
+6. Drafts work fully offline via the existing `offlineRepo` + sync engine; refresh / logout / reconnect restore the draft, its signatures, and any queued attachments.
+7. Audit fields (`created_by_name/role`, `last_modified_by`, `last_modified_at`) are written on every auto-save.
 
-- `bookings`, `clients`, `invoices`, `quotations`, `receipts`, `service_certificates`, `pest_jobs`, `pest_inspections`, `pest_treatments`, `pest_chemical_usage`, `pest_followups`, `customer_feedback`
-- `signatures` (base64 PNG blobs keyed by `{type, parentLocalId}`)
-- `photos` (Blob + metadata, keyed by localId, linked to `pest_jobs`)
-- `pdfs` (generated PDF Blobs keyed by document number)
-- `sync_queue` (ordered mutation log: `{ id, table, op: 'insert'|'update', payload, localId, parentLocalIds, createdAt, attempts, lastError, synced }`)
+## Out of scope (explicitly untouched)
 
-Every cached record carries `synced: boolean`, `lastUpdated: ISO`, `offlineCreated: boolean`, and a `localId` (UUID generated client-side, used for idempotency and to link children to a not-yet-uploaded parent).
+CRM upsert, quotation PDF, auto-invoice trigger, income approval, commission rules, multi-service pricing, discount math, document module, certificate module, pest module.
 
-### 2. Unified data access layer
+## Technical plan
 
-New `src/lib/offlineRepo.ts` wraps Supabase reads/writes for each supported table:
+### Database migration
 
-- `read(table, filter)` → returns the union of cached rows + live Supabase rows (cache-first when offline, network-first when online with cache fallback).
-- `create(table, payload)` → writes to IndexedDB immediately with `synced:false, offlineCreated:true`, enqueues a `sync_queue` entry, and (if online) attempts immediate flush.
-- `update(table, id|localId, patch)` → patches local copy, enqueues update.
-- Safe-merge rule: server row wins on scalar fields when `server.updated_at > local.lastUpdated`; otherwise local pending changes are reapplied on top. Inserts use `localId` as an idempotency key stored in a new nullable `local_id` column on each synced table to prevent duplicates on retry.
+Add to `public.bookings`:
 
-Existing pages keep calling `supabase.from(...)` for now; we migrate the highest-value flows (booking create, client create, pest job create, signature capture, feedback submit, certificate issue) to `offlineRepo` so they no longer block on the network.
+- `booking_code text unique` — human Booking ID, format `BK{YYYY}{00000}`.
+- `last_modified_by uuid` (nullable, references `auth.users` informally), `last_modified_by_name text`, `last_modified_at timestamptz default now()`.
+- `completion_percent int default 0`.
+- Extend allowed `status` values to include `'draft'` (existing column is free-text, no enum change needed — just allow it in code/RLS).
 
-### 3. Sync engine
+Add sequence + function for booking codes:
 
-Replace `src/hooks/useOfflineSync.ts` with a queue-driven engine:
+```text
+booking_code_seq  (start 1)
+public.next_booking_code() -> 'BK' || extract(year from now()) || lpad(nextval,5,'0')
+```
 
-- Triggers: app mount (if online), `window` `online` event, every 60s while online, and after each local mutation.
-- Processes `sync_queue` in FIFO order. For each item:
-  1. Resolve any `parentLocalIds` to their now-known server UUIDs (look up in local cache where the parent insert response was stored).
-  2. Send insert/update to Supabase using `local_id` for idempotency (insert uses `upsert(..., { onConflict: 'local_id' })` where the column exists).
-  3. On success: mark queue entry `synced`, update local row with returned server id + `synced:true`.
-  4. On failure: increment `attempts`, store `lastError`, exponential backoff (max 5 retries, then surface in a "Sync issues" toast).
-- A single migration adds nullable `local_id text unique` columns to: `bookings, clients, invoices, quotations, service_certificates, pest_jobs, pest_inspections, pest_treatments, pest_chemical_usage, pest_followups, customer_feedback`. No existing data is touched.
+Trigger `assign_booking_code` BEFORE INSERT to populate `booking_code` when null.
 
-### 4. Offline document generation
+RLS: keep existing policies; add allowance so the booking creator (`agent_id = auth.uid()` or admin/super) can read/update their own `draft` rows. The existing select/update policies for agents on their bookings already cover drafts — verify and extend only if needed.
 
-`documentPdf.ts`, `quotationPdf.ts`, `serviceCertificates.ts`, `pestCertificate.ts` already build PDFs client-side with jsPDF — they work offline today. We add:
+Existing trigger `auto_create_invoice_on_lock` already gates on `fully_confirmed` so drafts will not auto-invoice. No changes there.
 
-- Cache the generated PDF Blob in the `pdfs` store keyed by `document_number` (or `localId` when no number yet) so users can re-download offline.
-- When offline, document/certificate numbers fall back to a local format `OFFLINE-{table}-{shortLocalId}`; the sync engine replaces the placeholder with the real server-issued number on first successful upload (via the existing `next_*_number()` functions) and regenerates the cached PDF.
+### Frontend
 
-### 5. Offline signatures and photos
+- New `src/lib/bookingDrafts.ts`:
+    - `createDraftBooking(user, profile)` → inserts a minimal row with `status='draft'` via `offlineRepo.createRecord('bookings', …)`. Returns `{ id?, localId, booking_code? }`. Offline path generates a temporary client-side `BK-LOCAL-…` placeholder shown to the user; once synced, the server-issued `booking_code` replaces it.
+    - `autoSaveDraft(ref, patch)` — debounced wrapper around `offlineRepo.updateRecord('bookings', ref, patch)` with `last_modified_by/at` stamped.
+    - `computeCompletionPercent(state)` — weighted check of client, services, date, price, signatures.
 
-- Signature capture (`StaffSignatureDialog`, client signature page, pest job signature pad) writes base64 to the `signatures` store and patches the parent record locally; sync uploads them as part of the parent record's update payload.
-- Pest photos (`PestPhotosUploader`) store the original `File`/`Blob` in the `photos` store and create a `sync_queue` entry of type `storage_upload` targeting the `pest-photos` bucket. Sync uploads the blob, then inserts the `pest_photos` row with the resulting `storage_path`.
+- New `src/hooks/useAutoSaveDraft.ts` — generic debounce (800ms) + status state (`idle | saving | saved | offline-queued | error`).
 
-### 6. Service worker / PWA shell
+- New `src/components/booking/DraftStatusBadge.tsx` — small inline indicator next to the Booking ID header.
 
-To prevent white screens when offline:
+- Refactor `src/pages/agent/AgentBooking.tsx`:
+    - On mount (no draft id in URL), call `createDraftBooking`, then `navigate('/agent/booking/:id', { replace: true })`.
+    - Wire each field setter through `autoSaveDraft`.
+    - Replace the legacy `savePending` offline path — drafts are now the offline path.
+    - "Create Booking" becomes "Confirm Booking" → calls `updateRecord` with `status='pending'`, then runs the existing post-confirm logic (CRM upsert is already there, quotation auto-doc stays).
 
-- Add `vite-plugin-pwa` with `registerType: 'autoUpdate'`, precache the app shell (JS/CSS/fonts/icons), runtime-cache Supabase GET responses with `NetworkFirst` (5s timeout → cache fallback), and runtime-cache images with `CacheFirst`.
-- Keep `/~oauth` and `/sign` on `navigateFallbackDenylist`.
-- `manifest.json` already exists; we wire it through the plugin.
+- Mirror changes in `src/pages/admin/AdminBookService.tsx`.
 
-### 7. UI surface
+- New `src/pages/admin/AdminDraftBookings.tsx` and `src/pages/agent/AgentDraftBookings.tsx` (thin wrappers around a shared `DraftBookingsList` component) — list `status='draft'` rows scoped by role, with search by code/client/phone, "Resume" button routes to the booking editor.
 
-- `NetworkStatus` banner already exists — extend it to show "Syncing N pending changes…" with a count from `sync_queue`, and a "Synced ✓" pulse when the queue empties.
-- Add small "Saved offline" badges on records where `synced === false` in list views (Bookings, Clients, Pest Jobs, Certificates, Feedback).
-- No layout, navigation, or business-rule changes beyond these badges.
+- Add routes in `src/App.tsx`:
+    - `/agent/bookings/new` (creates + redirects), `/agent/bookings/:id` (resume), `/agent/bookings/drafts`
+    - `/admin/bookings/new`, `/admin/bookings/:id`, `/admin/bookings/drafts`
 
-### Safety guarantees
+- Add nav entries in `AdminLayout.tsx` ("Drafts") and `AgentBottomNav.tsx`/`AgentLayout.tsx` ("Drafts").
 
-- Income approval, commission triggers, RLS policies, document generator output, CRM lifecycle, and existing edge functions are untouched.
-- The `local_id` columns are additive and nullable — existing rows and queries are unaffected.
-- All offline writes still pass through the same RLS-protected Supabase calls on sync, so server-side authorization is unchanged.
-- If IndexedDB is unavailable (private mode, quota exceeded), the app falls back to direct Supabase calls with a one-time warning toast.
+- `AdminBookings.tsx`: hide `status='draft'` from the main list (drafts live in the new module), and add a "Search & Resume" input that jumps to a draft/pending if found.
 
-### Deliverables
+### Offline resilience
 
-- Migration: add `local_id` columns + unique indexes.
-- New: `src/lib/offlineRepo.ts`, `src/lib/offlineSyncEngine.ts`, `src/lib/offlinePdfCache.ts`, `src/lib/offlinePhotoQueue.ts`.
-- Rewritten: `src/lib/offlineDb.ts` (multi-store), `src/hooks/useOfflineSync.ts`.
-- Updated: `NetworkStatus.tsx`, `vite.config.ts` (PWA plugin), booking/client/pest/feedback/signature/certificate call sites switched to `offlineRepo`.
-- Package add: `vite-plugin-pwa`, `workbox-window`.
+Drafts are written via `offlineRepo` so they land in IndexedDB immediately. Signatures (base64) and attachments use the existing `signatures` / `photos` stores keyed by `localId`. Reload restores from IndexedDB; sync engine flushes inserts/updates in FIFO with `local_id` idempotency (already implemented).
 
-Approve and I'll execute the migration first, then ship the code in one pass.
+### Safety checks
+
+- `auto_create_invoice_on_lock` fires only on `fully_confirmed` — drafts never auto-invoice.
+- `upsertClientForBooking` runs only on Confirm, not on draft creation — no CRM noise from abandoned drafts.
+- Auto-quotation generation stays on Confirm.
+
+## Deliverables
+
+1. SQL migration: `booking_code`, sequence, function, trigger, audit columns, completion_percent.
+2. New lib + hook + components listed above.
+3. Refactored agent/admin booking editors + new Drafts pages + routes + nav links.
+4. No changes to CRM, quotation, invoice, income, commission, discount, or pest modules.
