@@ -65,7 +65,7 @@ export default function AdminBookings() {
     const profileMap: Record<string, { name: string; phone: string }> = {};
     agents.forEach(a => { profileMap[a.user_id] = { name: a.full_name, phone: '' }; });
 
-    setBookings((data || []).map(b => ({
+    setBookings(visible.map(b => ({
       ...b,
       agent_name: profileMap[b.agent_id]?.name || 'Unknown',
       agent_phone: profileMap[b.agent_id]?.phone || '',
