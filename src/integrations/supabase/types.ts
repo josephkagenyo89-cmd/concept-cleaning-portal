@@ -1829,6 +1829,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "fully_confirmed"
+        | "draft"
       commission_tier: "bronze" | "silver" | "gold"
       ledger_type: "credit" | "debit"
       notice_priority: "normal" | "important" | "urgent"
@@ -1969,6 +1970,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "fully_confirmed",
+        "draft",
       ],
       commission_tier: ["bronze", "silver", "gold"],
       ledger_type: ["credit", "debit"],
