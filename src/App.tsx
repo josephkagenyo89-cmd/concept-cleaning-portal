@@ -130,6 +130,7 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
             <Route path="bookings" element={<AdminBookings />} />
+            <Route path="bookings/drafts" element={<AdminDraftBookings />} />
             <Route path="book-service" element={<AdminBookService />} />
             <Route path="quotations" element={<AdminQuotations />} />
             <Route path="documents" element={<AdminDocuments />} />
