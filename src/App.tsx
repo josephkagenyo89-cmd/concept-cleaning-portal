@@ -51,6 +51,8 @@ const AdminPestJobs = lazy(() => import("@/pages/admin/AdminPestJobs"));
 const AdminPestJobDetail = lazy(() => import("@/pages/admin/AdminPestJobDetail"));
 const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals"));
 const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
+const AdminDraftBookings = lazy(() => import("@/pages/admin/AdminDraftBookings"));
+const AgentDraftBookings = lazy(() => import("@/pages/agent/AgentDraftBookings"));
 
 const queryClient = new QueryClient();
 
