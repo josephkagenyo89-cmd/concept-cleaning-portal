@@ -28,25 +28,11 @@ export default function NetworkStatus() {
     };
   }, []);
 
-  if (online && !showRestored && pending === 0) return null;
-
-  const syncing = online && pending > 0;
+  if ((online && !showRestored) || (online && pending > 0)) return null;
 
   return (
-    <div className={`fixed top-0 left-0 right-0 z-[200] flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-300 ${
-      !online
-        ? 'bg-destructive text-destructive-foreground'
-        : syncing
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-green-600 text-white'
-    }`}>
-      {!online ? (
-        <><WifiOff className="h-4 w-4" /> Offline Mode — changes will sync automatically{pending > 0 ? ` (${pending} queued)` : ''}</>
-      ) : syncing ? (
-        <><CloudUpload className="h-4 w-4 animate-pulse" /> Syncing {pending} pending change{pending === 1 ? '' : 's'}…</>
-      ) : (
-        <><Wifi className="h-4 w-4" /> Back online — Data synced successfully</>
-      )}
+    <div className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-300 bg-destructive text-destructive-foreground">
+      <WifiOff className="h-4 w-4" /> Offline Mode — changes will sync automatically{pending > 0 ? ` (${pending} queued)` : ''}
     </div>
   );
 }
