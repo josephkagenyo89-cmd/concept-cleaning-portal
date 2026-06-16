@@ -51,8 +51,6 @@ const AdminPestJobs = lazy(() => import("@/pages/admin/AdminPestJobs"));
 const AdminPestJobDetail = lazy(() => import("@/pages/admin/AdminPestJobDetail"));
 const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals"));
 const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
-const AdminDraftBookings = lazy(() => import("@/pages/admin/AdminDraftBookings"));
-const AgentDraftBookings = lazy(() => import("@/pages/agent/AgentDraftBookings"));
 
 const queryClient = new QueryClient();
 
@@ -130,7 +128,6 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
             <Route path="bookings" element={<AdminBookings />} />
-            <Route path="bookings/drafts" element={<AdminDraftBookings />} />
             <Route path="book-service" element={<AdminBookService />} />
             <Route path="quotations" element={<AdminQuotations />} />
             <Route path="documents" element={<AdminDocuments />} />
@@ -163,7 +160,6 @@ function AppRoutes() {
           <Route path="/agent" element={<AgentLayout />}>
             <Route index element={<AgentDashboard />} />
             <Route path="book" element={<AgentBooking />} />
-            <Route path="drafts" element={<AgentDraftBookings />} />
             <Route path="wallet" element={<AgentWallet />} />
             <Route path="messages" element={<AgentMessages />} />
             <Route path="profile" element={<AgentProfile />} />
