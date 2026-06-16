@@ -191,9 +191,6 @@ export default function AdminBookings() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Bookings</h1>
         <div className="flex gap-2 flex-wrap">
-          <Button size="sm" variant="outline" asChild>
-            <a href="/admin/bookings/drafts"><FileText className="h-4 w-4 mr-1" />Drafts</a>
-          </Button>
           <Button size="sm" variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
           <Button size="sm" variant="outline" onClick={() => downloadPDF()}><FileText className="h-4 w-4 mr-1" />PDF</Button>
           <Button size="sm" variant="outline" onClick={handlePrint}><Printer className="h-4 w-4 mr-1" />Print</Button>
