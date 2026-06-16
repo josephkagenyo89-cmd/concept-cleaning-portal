@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { WifiOff, Wifi, CloudUpload } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { onSyncStatus, getPendingCount, triggerSync } from '@/lib/offlineSyncEngine';
 
 export default function NetworkStatus() {
