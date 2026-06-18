@@ -60,13 +60,16 @@ export default function AgentBooking() {
   }, [user]);
 
   const tier = getTier(cumulativeRevenue);
-  const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
+  const systemPrice = discountedTotal; // minimum the agent can charge
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
   const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
     ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}`
     : null;
+  const discountReasonMissing = !!discount.type && discount.value > 0 && !discount.reason.trim();
   const commission = finalPrice > 0 && !priceError ? calculateCommission(finalPrice, tier) : null;
 
   const hasServices = lineItems.length > 0;
