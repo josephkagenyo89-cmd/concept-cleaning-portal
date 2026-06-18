@@ -19,6 +19,8 @@ import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
+import DiscountSection, { DiscountState } from '@/components/booking/DiscountSection';
+import { computeDiscount, needsApproval } from '@/lib/discounts';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
@@ -32,6 +34,7 @@ export default function AgentBooking() {
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'agent' });
+  const [discount, setDiscount] = useState<DiscountState>({ type: '', value: 0, reason: '' });
 
   useEffect(() => {
     if (user && profile) {
