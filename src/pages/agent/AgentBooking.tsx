@@ -90,6 +90,10 @@ export default function AgentBooking() {
       toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
       return;
     }
+    if (discountReasonMissing) {
+      toast({ title: 'Discount reason required', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
     await upsertClientForBooking({
@@ -101,6 +105,11 @@ export default function AgentBooking() {
       createdByRole: 'agent',
     });
 
+    const hasDiscount = !!discount.type && discountAmount > 0;
+    const approvalStatus = hasDiscount
+      ? (needsApproval('agent') ? 'pending' : 'approved')
+      : 'not_required';
+
     const payload: any = {
       agent_id: user.id,
       client_id: selectedClient.id,
@@ -110,9 +119,15 @@ export default function AgentBooking() {
       service_id: primaryService?.id || null,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
-      system_price: systemPrice,
+      system_price: subtotal,
       agent_price: finalPrice,
       agent_margin: agentMargin,
+      subtotal,
+      discount_type: hasDiscount ? discount.type : null,
+      discount_value: hasDiscount ? discount.value : 0,
+      discount_amount: discountAmount,
+      discount_reason: hasDiscount ? discount.reason : null,
+      discount_approval_status: approvalStatus,
       quantity: String(lineItems.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Agent',
@@ -144,6 +159,9 @@ export default function AgentBooking() {
         clientLocation: selectedClient.location || '',
         lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         totalAmount: finalPrice,
+        subtotal,
+        discountAmount,
+        discountReason: hasDiscount ? discount.reason : undefined,
         serviceDate: date,
         createdById: user.id,
         createdBy: profile?.full_name || 'Agent',
@@ -153,6 +171,14 @@ export default function AgentBooking() {
         salespersonName: salesperson.name || profile?.full_name || 'Agent',
       });
     } catch (e) { console.warn('Auto-quotation failed', e); }
+
+    const note = hasDiscount && approvalStatus === 'pending'
+      ? 'Discount pending admin approval.'
+      : 'Booking moved to Pending. Quotation saved.';
+    toast({ title: 'Booking saved', description: note });
+    navigate('/agent');
+  };
+
 
     toast({ title: 'Booking saved', description: 'Booking moved to Pending. Quotation saved.' });
     navigate('/agent');
