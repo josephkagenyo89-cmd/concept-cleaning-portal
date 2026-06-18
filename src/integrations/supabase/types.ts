@@ -62,6 +62,13 @@ export type Database = {
           created_at: string
           created_by_name: string | null
           created_by_role: string | null
+          discount_amount: number
+          discount_approval_status: string
+          discount_approved_at: string | null
+          discount_approved_by: string | null
+          discount_reason: string | null
+          discount_type: string | null
+          discount_value: number
           id: string
           last_modified_at: string | null
           last_modified_by: string | null
@@ -83,6 +90,7 @@ export type Database = {
           staff_signed_at: string | null
           staff_signed_name: string | null
           status: Database["public"]["Enums"]["booking_status"]
+          subtotal: number | null
           system_price: number | null
           updated_at: string
         }
@@ -103,6 +111,13 @@ export type Database = {
           created_at?: string
           created_by_name?: string | null
           created_by_role?: string | null
+          discount_amount?: number
+          discount_approval_status?: string
+          discount_approved_at?: string | null
+          discount_approved_by?: string | null
+          discount_reason?: string | null
+          discount_type?: string | null
+          discount_value?: number
           id?: string
           last_modified_at?: string | null
           last_modified_by?: string | null
@@ -124,6 +139,7 @@ export type Database = {
           staff_signed_at?: string | null
           staff_signed_name?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
+          subtotal?: number | null
           system_price?: number | null
           updated_at?: string
         }
@@ -144,6 +160,13 @@ export type Database = {
           created_at?: string
           created_by_name?: string | null
           created_by_role?: string | null
+          discount_amount?: number
+          discount_approval_status?: string
+          discount_approved_at?: string | null
+          discount_approved_by?: string | null
+          discount_reason?: string | null
+          discount_type?: string | null
+          discount_value?: number
           id?: string
           last_modified_at?: string | null
           last_modified_by?: string | null
@@ -165,6 +188,7 @@ export type Database = {
           staff_signed_at?: string | null
           staff_signed_name?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
+          subtotal?: number | null
           system_price?: number | null
           updated_at?: string
         }
@@ -509,6 +533,8 @@ export type Database = {
           created_by: string
           date: string
           description: string | null
+          discount_amount: number
+          discount_reason: string | null
           id: string
           invoice_id: string | null
           mpesa_code: string | null
@@ -516,6 +542,7 @@ export type Database = {
           service: string | null
           source: string
           status: string
+          subtotal: number | null
         }
         Insert: {
           amount: number
@@ -527,6 +554,8 @@ export type Database = {
           created_by: string
           date?: string
           description?: string | null
+          discount_amount?: number
+          discount_reason?: string | null
           id?: string
           invoice_id?: string | null
           mpesa_code?: string | null
@@ -534,6 +563,7 @@ export type Database = {
           service?: string | null
           source?: string
           status?: string
+          subtotal?: number | null
         }
         Update: {
           amount?: number
@@ -545,6 +575,8 @@ export type Database = {
           created_by?: string
           date?: string
           description?: string | null
+          discount_amount?: number
+          discount_reason?: string | null
           id?: string
           invoice_id?: string | null
           mpesa_code?: string | null
@@ -552,6 +584,7 @@ export type Database = {
           service?: string | null
           source?: string
           status?: string
+          subtotal?: number | null
         }
         Relationships: [
           {
@@ -580,6 +613,8 @@ export type Database = {
           created_at: string
           created_by: string
           date: string
+          discount_amount: number
+          discount_reason: string | null
           due_date: string | null
           id: string
           invoice_number: string
@@ -593,6 +628,7 @@ export type Database = {
           salesperson_name: string | null
           salesperson_role: string | null
           service: string
+          subtotal: number | null
           updated_at: string
         }
         Insert: {
@@ -604,6 +640,8 @@ export type Database = {
           created_at?: string
           created_by: string
           date?: string
+          discount_amount?: number
+          discount_reason?: string | null
           due_date?: string | null
           id?: string
           invoice_number: string
@@ -617,6 +655,7 @@ export type Database = {
           salesperson_name?: string | null
           salesperson_role?: string | null
           service: string
+          subtotal?: number | null
           updated_at?: string
         }
         Update: {
@@ -628,6 +667,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           date?: string
+          discount_amount?: number
+          discount_reason?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string
@@ -641,6 +682,7 @@ export type Database = {
           salesperson_name?: string | null
           salesperson_role?: string | null
           service?: string
+          subtotal?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1454,6 +1496,8 @@ export type Database = {
           created_by: string
           created_by_name: string
           created_by_role: string
+          discount_amount: number
+          discount_reason: string | null
           id: string
           line_items: Json | null
           local_id: string | null
@@ -1464,6 +1508,7 @@ export type Database = {
           salesperson_role: string | null
           service_date: string | null
           service_name: string
+          subtotal: number | null
         }
         Insert: {
           client_name: string
@@ -1472,6 +1517,8 @@ export type Database = {
           created_by: string
           created_by_name: string
           created_by_role?: string
+          discount_amount?: number
+          discount_reason?: string | null
           id?: string
           line_items?: Json | null
           local_id?: string | null
@@ -1482,6 +1529,7 @@ export type Database = {
           salesperson_role?: string | null
           service_date?: string | null
           service_name: string
+          subtotal?: number | null
         }
         Update: {
           client_name?: string
@@ -1490,6 +1538,8 @@ export type Database = {
           created_by?: string
           created_by_name?: string
           created_by_role?: string
+          discount_amount?: number
+          discount_reason?: string | null
           id?: string
           line_items?: Json | null
           local_id?: string | null
@@ -1500,6 +1550,7 @@ export type Database = {
           salesperson_role?: string | null
           service_date?: string | null
           service_name?: string
+          subtotal?: number | null
         }
         Relationships: []
       }
@@ -1516,6 +1567,8 @@ export type Database = {
           client_signed_at: string | null
           created_at: string
           date_created: string
+          discount_amount: number
+          discount_reason: string | null
           document_reference: string | null
           generated_by: string
           generated_by_name: string | null
@@ -1531,6 +1584,7 @@ export type Database = {
           staff_signature: string
           staff_signed_at: string | null
           staff_signed_name: string | null
+          subtotal: number | null
         }
         Insert: {
           amount_paid?: number
@@ -1544,6 +1598,8 @@ export type Database = {
           client_signed_at?: string | null
           created_at?: string
           date_created?: string
+          discount_amount?: number
+          discount_reason?: string | null
           document_reference?: string | null
           generated_by: string
           generated_by_name?: string | null
@@ -1559,6 +1615,7 @@ export type Database = {
           staff_signature: string
           staff_signed_at?: string | null
           staff_signed_name?: string | null
+          subtotal?: number | null
         }
         Update: {
           amount_paid?: number
@@ -1572,6 +1629,8 @@ export type Database = {
           client_signed_at?: string | null
           created_at?: string
           date_created?: string
+          discount_amount?: number
+          discount_reason?: string | null
           document_reference?: string | null
           generated_by?: string
           generated_by_name?: string | null
@@ -1587,6 +1646,7 @@ export type Database = {
           staff_signature?: string
           staff_signed_at?: string | null
           staff_signed_name?: string | null
+          subtotal?: number | null
         }
         Relationships: []
       }
