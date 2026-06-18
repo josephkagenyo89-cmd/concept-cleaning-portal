@@ -19,6 +19,8 @@ import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { getTier } from '@/lib/commission';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
+import DiscountSection, { DiscountState } from '@/components/booking/DiscountSection';
+import { computeDiscount } from '@/lib/discounts';
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
@@ -31,6 +33,7 @@ export default function AdminBookService() {
   const [date, setDate] = useState<Date>();
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'admin' });
+  const [discount, setDiscount] = useState<DiscountState>({ type: '', value: 0, reason: '' });
 
   useEffect(() => {
     if (user && profile) {
