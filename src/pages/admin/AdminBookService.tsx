@@ -45,12 +45,15 @@ export default function AdminBookService() {
     supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
   }, []);
 
-  const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
+  const systemPrice = discountedTotal;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
   const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
     ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}` : null;
+  const discountReasonMissing = !!discount.type && discount.value > 0 && !discount.reason.trim();
   const tier = getTier(0);
   const commission = null;
 
@@ -75,6 +78,10 @@ export default function AdminBookService() {
       toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
       return;
     }
+    if (discountReasonMissing) {
+      toast({ title: 'Discount reason required', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
     await upsertClientForBooking({
@@ -86,6 +93,7 @@ export default function AdminBookService() {
       createdByRole: 'admin',
     });
 
+    const hasDiscount = !!discount.type && discountAmount > 0;
     const payload: any = {
       agent_id: user.id,
       client_id: selectedClient.id,
@@ -95,9 +103,17 @@ export default function AdminBookService() {
       service_id: primaryService?.id || null,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
-      system_price: systemPrice,
+      system_price: subtotal,
       agent_price: finalPrice,
       agent_margin: agentMargin,
+      subtotal,
+      discount_type: hasDiscount ? discount.type : null,
+      discount_value: hasDiscount ? discount.value : 0,
+      discount_amount: discountAmount,
+      discount_reason: hasDiscount ? discount.reason : null,
+      discount_approval_status: hasDiscount ? 'approved' : 'not_required',
+      discount_approved_by: hasDiscount ? user.id : null,
+      discount_approved_at: hasDiscount ? new Date().toISOString() : null,
       quantity: String(lineItems.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Admin',
@@ -129,6 +145,9 @@ export default function AdminBookService() {
         clientLocation: selectedClient.location || '',
         lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         totalAmount: finalPrice,
+        subtotal,
+        discountAmount,
+        discountReason: hasDiscount ? discount.reason : undefined,
         serviceDate: date,
         createdById: user.id,
         createdBy: profile?.full_name || 'Admin',
