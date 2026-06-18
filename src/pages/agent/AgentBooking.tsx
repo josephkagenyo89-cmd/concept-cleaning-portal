@@ -19,6 +19,8 @@ import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
+import DiscountSection, { DiscountState } from '@/components/booking/DiscountSection';
+import { computeDiscount, needsApproval } from '@/lib/discounts';
 
 export default function AgentBooking() {
   const { user, profile } = useAuth();
@@ -32,6 +34,7 @@ export default function AgentBooking() {
   const [cumulativeRevenue, setCumulativeRevenue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'agent' });
+  const [discount, setDiscount] = useState<DiscountState>({ type: '', value: 0, reason: '' });
 
   useEffect(() => {
     if (user && profile) {
@@ -57,13 +60,16 @@ export default function AgentBooking() {
   }, [user]);
 
   const tier = getTier(cumulativeRevenue);
-  const systemPrice = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
+  const systemPrice = discountedTotal; // minimum the agent can charge
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
   const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
     ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}`
     : null;
+  const discountReasonMissing = !!discount.type && discount.value > 0 && !discount.reason.trim();
   const commission = finalPrice > 0 && !priceError ? calculateCommission(finalPrice, tier) : null;
 
   const hasServices = lineItems.length > 0;
@@ -84,6 +90,10 @@ export default function AgentBooking() {
       toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
       return;
     }
+    if (discountReasonMissing) {
+      toast({ title: 'Discount reason required', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
     await upsertClientForBooking({
@@ -95,6 +105,11 @@ export default function AgentBooking() {
       createdByRole: 'agent',
     });
 
+    const hasDiscount = !!discount.type && discountAmount > 0;
+    const approvalStatus = hasDiscount
+      ? (needsApproval('agent') ? 'pending' : 'approved')
+      : 'not_required';
+
     const payload: any = {
       agent_id: user.id,
       client_id: selectedClient.id,
@@ -104,9 +119,15 @@ export default function AgentBooking() {
       service_id: primaryService?.id || null,
       service_date: format(date, 'yyyy-MM-dd'),
       price: finalPrice,
-      system_price: systemPrice,
+      system_price: subtotal,
       agent_price: finalPrice,
       agent_margin: agentMargin,
+      subtotal,
+      discount_type: hasDiscount ? discount.type : null,
+      discount_value: hasDiscount ? discount.value : 0,
+      discount_amount: discountAmount,
+      discount_reason: hasDiscount ? discount.reason : null,
+      discount_approval_status: approvalStatus,
       quantity: String(lineItems.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Agent',
@@ -138,6 +159,9 @@ export default function AgentBooking() {
         clientLocation: selectedClient.location || '',
         lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         totalAmount: finalPrice,
+        subtotal,
+        discountAmount,
+        discountReason: hasDiscount ? discount.reason : undefined,
         serviceDate: date,
         createdById: user.id,
         createdBy: profile?.full_name || 'Agent',
@@ -148,9 +172,13 @@ export default function AgentBooking() {
       });
     } catch (e) { console.warn('Auto-quotation failed', e); }
 
-    toast({ title: 'Booking saved', description: 'Booking moved to Pending. Quotation saved.' });
+    const note = hasDiscount && approvalStatus === 'pending'
+      ? 'Discount pending admin approval.'
+      : 'Booking moved to Pending. Quotation saved.';
+    toast({ title: 'Booking saved', description: note });
     navigate('/agent');
   };
+
 
   const quotationLineItems = lineItems.map(i => ({
     name: i.service.name,
@@ -173,6 +201,11 @@ export default function AgentBooking() {
             <MultiServiceSelector services={services} lineItems={lineItems} onChange={handleLineItemsChange} />
           </CardContent>
         </Card>
+
+        {hasServices && (
+          <DiscountSection subtotal={subtotal} value={discount} onChange={setDiscount} />
+        )}
+
 
         <Card>
           <CardContent className="pt-4">
@@ -264,10 +297,11 @@ export default function AgentBooking() {
         <Button
           type="submit"
           className="w-full"
-          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice}
+          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice || discountReasonMissing}
         >
           {loading ? 'Saving…' : `Save Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
         </Button>
+
       </form>
     </div>
   );

@@ -155,6 +155,26 @@ export default function AdminClientProfile() {
         </CardContent>
       </Card>
 
+      {/* Discount History */}
+      {(() => {
+        const discounted = bookings.filter((b: any) => Number(b.discount_amount || 0) > 0);
+        const totalDiscount = discounted.reduce((s, b: any) => s + Number(b.discount_amount || 0), 0);
+        if (discounted.length === 0) return null;
+        const last = discounted[0];
+        return (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Discount History</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div><p className="text-xs text-muted-foreground">Total Saved</p><p className="font-semibold">Ksh {totalDiscount.toLocaleString()}</p></div>
+                <div><p className="text-xs text-muted-foreground">Discounts</p><p className="font-semibold">{discounted.length}</p></div>
+                <div><p className="text-xs text-muted-foreground">Last</p><p className="font-semibold">{format(new Date(last.created_at), 'dd MMM')}</p></div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Notes */}
       <Card>
         <CardHeader className="pb-2">

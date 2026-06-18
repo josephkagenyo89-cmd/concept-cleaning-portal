@@ -16,6 +16,9 @@ interface QuotationData {
   serviceName: string;
   serviceDate: string;
   price: number;
+  subtotal?: number;
+  discountAmount?: number;
+  discountReason?: string;
   lineItems?: LineItemInput[];
   salespersonName?: string;
 }
@@ -34,7 +37,10 @@ function toDocData(data: QuotationData): DocumentData {
     clientName: data.clientName,
     clientPhone: data.clientPhone,
     lineItems: items,
-    totalAmount: items.reduce((s, i) => s + i.total, 0),
+    totalAmount: data.price,
+    subtotal: data.subtotal,
+    discountAmount: data.discountAmount,
+    discountReason: data.discountReason,
     serviceDate: data.serviceDate,
   };
 }

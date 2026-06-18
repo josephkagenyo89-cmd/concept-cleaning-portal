@@ -1,87 +1,70 @@
-# Booking Drafts & Auto-Save Upgrade
+# Booking Discount System
 
-Add a true draft workflow to the Booking module so every "New Booking" click immediately reserves a Booking ID, persists a draft, and auto-saves every change — online or offline — without disturbing the existing quotation/invoice/income/CRM/commission flows.
+Add discount support to the Booking Module so an agreed discount flows automatically into quotations, invoices, receipts, certificates, income records, and client CRM — without disturbing existing commission, multi-service, or approval logic.
 
-## What changes for the user
+## Scope
 
-1. Clicking **New Booking** (agent or admin) instantly creates a draft with a code like `BK202600001`. The code is visible at the top of the form.
-2. Status lifecycle: **Draft → Pending → Confirmed → Completed → Locked**. Existing statuses keep working; "draft" is the new starting state and the existing lock/invoice/commission triggers stay tied to `fully_confirmed`/`completed`.
-3. Every field change (client, services, notes, discount, schedule, signatures, attachments) is auto-saved after a short debounce. A subtle "Saved · just now / Saving… / Offline – queued" indicator replaces the need for a Save button. The existing "Create Booking" button becomes **Confirm Booking** (moves Draft → Pending and runs the existing submit logic).
-4. New **Draft Bookings** page (admin + agent) lists drafts with Booking ID, client, status, created/updated dates, and a completion %. Clicking a row resumes editing.
-5. A search bar on Drafts and Bookings lets users find a booking by Booking ID, Client ID, name, or phone, then resume editing if still in Draft/Pending.
-6. Drafts work fully offline via the existing `offlineRepo` + sync engine; refresh / logout / reconnect restore the draft, its signatures, and any queued attachments.
-7. Audit fields (`created_by_name/role`, `last_modified_by`, `last_modified_at`) are written on every auto-save.
+In scope: booking form UI, calculation engine, document propagation (quotation/invoice/receipt/SCC), approval workflow, CRM display, reporting filter.
+Out of scope: changes to commission tier formulas, invoice/income approval workflow rules, pest module.
 
-## Out of scope (explicitly untouched)
-
-CRM upsert, quotation PDF, auto-invoice trigger, income approval, commission rules, multi-service pricing, discount math, document module, certificate module, pest module.
-
-## Technical plan
-
-### Database migration
+## 1. Database (single migration)
 
 Add to `public.bookings`:
+- `subtotal numeric` — sum of line items before discount
+- `discount_type text` — `'percent' | 'fixed' | null`
+- `discount_value numeric default 0`
+- `discount_amount numeric default 0` — computed at save time
+- `discount_reason text`
+- `discount_approval_status text default 'not_required'` — `not_required | pending | approved | rejected`
+- `discount_approved_by uuid`
+- `discount_approved_at timestamptz`
 
-- `booking_code text unique` — human Booking ID, format `BK{YYYY}{00000}`.
-- `last_modified_by uuid` (nullable, references `auth.users` informally), `last_modified_by_name text`, `last_modified_at timestamptz default now()`.
-- `completion_percent int default 0`.
-- Extend allowed `status` values to include `'draft'` (existing column is free-text, no enum change needed — just allow it in code/RLS).
+Mirror discount fields on `quotations`, `invoices`, `service_certificates`, `income_records` (subtotal, discount_amount, discount_reason). `price`/`amount`/`total` columns continue to store the FINAL (post-discount) value so all existing downstream code keeps working. Discount fields are additive.
 
-Add sequence + function for booking codes:
+Approval rule (enforced in app, not DB):
+- Agent + discount > 0 → `pending`
+- Admin or Super Admin → auto `approved` with their id
+- Booking cannot move past `pending` status until discount is approved
 
-```text
-booking_code_seq  (start 1)
-public.next_booking_code() -> 'BK' || extract(year from now()) || lpad(nextval,5,'0')
-```
+## 2. Shared library
 
-Trigger `assign_booking_code` BEFORE INSERT to populate `booking_code` when null.
+New `src/lib/discounts.ts`:
+- `computeDiscount(subtotal, type, value)` → `{ discountAmount, finalTotal }`
+- `formatDiscountLabel(type, value)` → e.g. `10% off` or `KSh 500 off`
+- `needsApproval(role)` → `role === 'agent'`
 
-RLS: keep existing policies; add allowance so the booking creator (`agent_id = auth.uid()` or admin/super) can read/update their own `draft` rows. The existing select/update policies for agents on their bookings already cover drafts — verify and extend only if needed.
+## 3. Booking forms
 
-Existing trigger `auto_create_invoice_on_lock` already gates on `fully_confirmed` so drafts will not auto-invoice. No changes there.
+`src/pages/agent/AgentBooking.tsx` and `src/pages/admin/AdminBookService.tsx`:
+- New Discount card below Services: Type select, Value input, Reason text.
+- Replace `systemPrice` math with subtotal → discount → final. "Your Price" minimum becomes `finalTotal` (so agent margin still works on top).
+- Payload writes new discount columns + `discount_approval_status`.
+- Pass discount to `autoCreateQuotationForBooking`.
 
-### Frontend
+## 4. Document generators
 
-- New `src/lib/bookingDrafts.ts`:
-    - `createDraftBooking(user, profile)` → inserts a minimal row with `status='draft'` via `offlineRepo.createRecord('bookings', …)`. Returns `{ id?, localId, booking_code? }`. Offline path generates a temporary client-side `BK-LOCAL-…` placeholder shown to the user; once synced, the server-issued `booking_code` replaces it.
-    - `autoSaveDraft(ref, patch)` — debounced wrapper around `offlineRepo.updateRecord('bookings', ref, patch)` with `last_modified_by/at` stamped.
-    - `computeCompletionPercent(state)` — weighted check of client, services, date, price, signatures.
+- `src/lib/autoDocuments.ts`, `src/lib/quotationPdf.ts`, `src/lib/documentPdf.ts`, `src/lib/serviceCertificates.ts`: accept optional `subtotal`, `discountAmount`, `discountReason`. PDF totals block renders `Subtotal / Discount / Total` when discount > 0; otherwise unchanged.
+- `auto_create_invoice_on_lock` DB trigger: copy discount fields from booking → invoice (amend in same migration).
+- Receipt rendering pulls discount fields from invoice.
 
-- New `src/hooks/useAutoSaveDraft.ts` — generic debounce (800ms) + status state (`idle | saving | saved | offline-queued | error`).
+## 5. Approval workflow
 
-- New `src/components/booking/DraftStatusBadge.tsx` — small inline indicator next to the Booking ID header.
+- New `src/pages/admin/AdminDiscountApprovals.tsx` listing bookings with `discount_approval_status='pending'`. Approve / Reject buttons (admin + super_admin).
+- Sidebar link in `AdminLayout`.
+- `AdminBookings` row badge "Discount pending" when applicable; block status transitions while pending.
 
-- Refactor `src/pages/agent/AgentBooking.tsx`:
-    - On mount (no draft id in URL), call `createDraftBooking`, then `navigate('/agent/booking/:id', { replace: true })`.
-    - Wire each field setter through `autoSaveDraft`.
-    - Replace the legacy `savePending` offline path — drafts are now the offline path.
-    - "Create Booking" becomes "Confirm Booking" → calls `updateRecord` with `status='pending'`, then runs the existing post-confirm logic (CRM upsert is already there, quotation auto-doc stays).
+## 6. CRM + reporting
 
-- Mirror changes in `src/pages/admin/AdminBookService.tsx`.
+- `AdminClientProfile`: new "Discounts" summary (total received, last date, count) using `bookings.discount_amount`.
+- `AdminAnalytics` / `ErpReports`: new "Discounts granted" tile + breakdown by salesperson and date range (simple aggregations on `bookings`).
 
-- New `src/pages/admin/AdminDraftBookings.tsx` and `src/pages/agent/AgentDraftBookings.tsx` (thin wrappers around a shared `DraftBookingsList` component) — list `status='draft'` rows scoped by role, with search by code/client/phone, "Resume" button routes to the booking editor.
+## 7. Safety checks
 
-- Add routes in `src/App.tsx`:
-    - `/agent/bookings/new` (creates + redirects), `/agent/bookings/:id` (resume), `/agent/bookings/drafts`
-    - `/admin/bookings/new`, `/admin/bookings/:id`, `/admin/bookings/drafts`
+- Existing rows have `discount_amount=0` default → all current totals unchanged.
+- Commission still calculated on final (post-discount) price — already the booking `price`.
+- No anon access; new admin pages reuse existing role guards.
 
-- Add nav entries in `AdminLayout.tsx` ("Drafts") and `AgentBottomNav.tsx`/`AgentLayout.tsx` ("Drafts").
+## Files
 
-- `AdminBookings.tsx`: hide `status='draft'` from the main list (drafts live in the new module), and add a "Search & Resume" input that jumps to a draft/pending if found.
-
-### Offline resilience
-
-Drafts are written via `offlineRepo` so they land in IndexedDB immediately. Signatures (base64) and attachments use the existing `signatures` / `photos` stores keyed by `localId`. Reload restores from IndexedDB; sync engine flushes inserts/updates in FIFO with `local_id` idempotency (already implemented).
-
-### Safety checks
-
-- `auto_create_invoice_on_lock` fires only on `fully_confirmed` — drafts never auto-invoice.
-- `upsertClientForBooking` runs only on Confirm, not on draft creation — no CRM noise from abandoned drafts.
-- Auto-quotation generation stays on Confirm.
-
-## Deliverables
-
-1. SQL migration: `booking_code`, sequence, function, trigger, audit columns, completion_percent.
-2. New lib + hook + components listed above.
-3. Refactored agent/admin booking editors + new Drafts pages + routes + nav links.
-4. No changes to CRM, quotation, invoice, income, commission, discount, or pest modules.
+Created: `src/lib/discounts.ts`, `src/components/booking/DiscountSection.tsx`, `src/pages/admin/AdminDiscountApprovals.tsx`, 1 migration.
+Edited: both booking pages, `autoDocuments.ts`, `quotationPdf.ts`, `documentPdf.ts`, `serviceCertificates.ts`, `AdminLayout.tsx`, `AdminBookings.tsx`, `AdminClientProfile.tsx`, `ErpReports.tsx`, `App.tsx`.

@@ -8,6 +8,9 @@ interface AutoQuotationParams {
   clientLocation?: string;
   lineItems: { name: string; quantity?: number; unitPrice?: number; total: number }[];
   totalAmount: number;
+  subtotal?: number;
+  discountAmount?: number;
+  discountReason?: string;
   serviceDate?: Date;
   createdById: string;
   createdBy: string;
@@ -36,6 +39,9 @@ export async function autoCreateQuotationForBooking(params: AutoQuotationParams)
     service_name: params.lineItems.map(i => i.name).join(', '),
     service_date: params.serviceDate ? format(params.serviceDate, 'yyyy-MM-dd') : null,
     price: params.totalAmount,
+    subtotal: params.subtotal ?? null,
+    discount_amount: params.discountAmount ?? 0,
+    discount_reason: params.discountReason ?? null,
     created_by: params.createdById,
     created_by_name: params.salespersonName || params.createdBy,
     created_by_role: params.createdByRole,
@@ -44,6 +50,7 @@ export async function autoCreateQuotationForBooking(params: AutoQuotationParams)
     salesperson_name: params.salespersonName || params.createdBy,
     salesperson_role: params.createdByRole,
   } as any).select('id').single();
+
 
   // Save into documents registry
   await saveDocumentRecord({

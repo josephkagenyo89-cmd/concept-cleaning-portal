@@ -81,6 +81,9 @@ export interface DocumentData {
   paymentReason?: string;
   lineItems: DocumentLineItem[];
   totalAmount: number;
+  subtotal?: number;
+  discountAmount?: number;
+  discountReason?: string;
   paymentStatus?: string;
   notes?: string;
   serviceDate?: string;
@@ -320,10 +323,14 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   const valueX = summaryX + summaryW - 3;
   const rowH = 9;
 
-  const subtotal = data.totalAmount;
+  const discountAmount = Math.max(0, Number(data.discountAmount) || 0);
+  const subtotal = discountAmount > 0
+    ? (Number(data.subtotal) || (data.totalAmount + discountAmount))
+    : data.totalAmount;
+  const afterDiscount = discountAmount > 0 ? subtotal - discountAmount : subtotal;
   const vatRate = tax.vat_enabled ? Number(tax.vat_percentage) || 0 : 0;
-  const vatAmount = +(subtotal * vatRate / 100).toFixed(2);
-  const grandTotal = subtotal + vatAmount;
+  const vatAmount = +(afterDiscount * vatRate / 100).toFixed(2);
+  const grandTotal = afterDiscount + vatAmount;
 
   doc.setDrawColor(...BORDER_GRAY);
   doc.setLineWidth(0.3);
@@ -335,6 +342,13 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   doc.text('Subtotal', labelX, y + 6);
   doc.text(fmt(subtotal), valueX, y + 6, { align: 'right' });
   y += rowH;
+
+  if (discountAmount > 0) {
+    doc.rect(summaryX, y, summaryW, rowH, 'S');
+    doc.text('Discount', labelX, y + 6);
+    doc.text(`-${fmt(discountAmount)} ${cur}`, valueX, y + 6, { align: 'right' });
+    y += rowH;
+  }
 
   doc.rect(summaryX, y, summaryW, rowH, 'S');
   doc.text(`VAT ${vatRate}%`, labelX, y + 6);
