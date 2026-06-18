@@ -180,10 +180,6 @@ export default function AgentBooking() {
   };
 
 
-    toast({ title: 'Booking saved', description: 'Booking moved to Pending. Quotation saved.' });
-    navigate('/agent');
-  };
-
   const quotationLineItems = lineItems.map(i => ({
     name: i.service.name,
     quantity: i.quantity,
