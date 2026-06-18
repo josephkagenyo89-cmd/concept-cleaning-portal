@@ -19,6 +19,7 @@ const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
+  { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },
   { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
   { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
   { to: '/admin/certificates', icon: Award, label: 'Certificates' },
