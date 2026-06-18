@@ -181,6 +181,10 @@ export default function AdminBookService() {
           </CardContent>
         </Card>
 
+        {hasServices && (
+          <DiscountSection subtotal={subtotal} value={discount} onChange={setDiscount} />
+        )}
+
         <Card>
           <CardContent className="pt-4">
             <SalespersonSelector value={salesperson} onChange={setSalesperson} />
