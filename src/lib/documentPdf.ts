@@ -1,5 +1,14 @@
 import jsPDF from 'jspdf';
 import { DEFAULT_SETTINGS, type AllSettings } from '@/lib/settings';
+import {
+  getWatermarkText,
+  getVerificationCode,
+  drawDiagonalWatermark,
+  drawCompanySeal,
+  drawGoldCertifiedSeal,
+  drawQrCode,
+  buildVerificationPayload,
+} from '@/lib/documentSecurity';
 
 // Settings snapshot used during PDF rendering. Updated by setPdfSettings().
 let pdfSettings: AllSettings = DEFAULT_SETTINGS;
