@@ -108,9 +108,8 @@ export default function AgentBooking() {
       createdByRole: 'agent',
     });
 
-    const hasDiscount = !!discount.type && discountAmount > 0;
     const approvalStatus = hasDiscount
-      ? (needsApproval('agent') ? 'pending' : 'approved')
+      ? (requiresApproval ? 'pending' : 'approved')
       : 'not_required';
 
     const payload: any = {
