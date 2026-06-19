@@ -63,10 +63,12 @@ export type Database = {
           created_by_name: string | null
           created_by_role: string | null
           discount_amount: number
+          discount_approval_comment: string | null
           discount_approval_status: string
           discount_approved_at: string | null
           discount_approved_by: string | null
           discount_reason: string | null
+          discount_requested_at: string | null
           discount_type: string | null
           discount_value: number
           id: string
@@ -112,10 +114,12 @@ export type Database = {
           created_by_name?: string | null
           created_by_role?: string | null
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_approval_status?: string
           discount_approved_at?: string | null
           discount_approved_by?: string | null
           discount_reason?: string | null
+          discount_requested_at?: string | null
           discount_type?: string | null
           discount_value?: number
           id?: string
@@ -161,10 +165,12 @@ export type Database = {
           created_by_name?: string | null
           created_by_role?: string | null
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_approval_status?: string
           discount_approved_at?: string | null
           discount_approved_by?: string | null
           discount_reason?: string | null
+          discount_requested_at?: string | null
           discount_type?: string | null
           discount_value?: number
           id?: string
@@ -534,6 +540,7 @@ export type Database = {
           date: string
           description: string | null
           discount_amount: number
+          discount_approval_comment: string | null
           discount_reason: string | null
           id: string
           invoice_id: string | null
@@ -555,6 +562,7 @@ export type Database = {
           date?: string
           description?: string | null
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           id?: string
           invoice_id?: string | null
@@ -576,6 +584,7 @@ export type Database = {
           date?: string
           description?: string | null
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           id?: string
           invoice_id?: string | null
@@ -614,6 +623,7 @@ export type Database = {
           created_by: string
           date: string
           discount_amount: number
+          discount_approval_comment: string | null
           discount_reason: string | null
           due_date: string | null
           id: string
@@ -641,6 +651,7 @@ export type Database = {
           created_by: string
           date?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           due_date?: string | null
           id?: string
@@ -668,6 +679,7 @@ export type Database = {
           created_by?: string
           date?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           due_date?: string | null
           id?: string
@@ -1497,6 +1509,7 @@ export type Database = {
           created_by_name: string
           created_by_role: string
           discount_amount: number
+          discount_approval_comment: string | null
           discount_reason: string | null
           id: string
           line_items: Json | null
@@ -1518,6 +1531,7 @@ export type Database = {
           created_by_name: string
           created_by_role?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           id?: string
           line_items?: Json | null
@@ -1539,6 +1553,7 @@ export type Database = {
           created_by_name?: string
           created_by_role?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           id?: string
           line_items?: Json | null
@@ -1568,6 +1583,7 @@ export type Database = {
           created_at: string
           date_created: string
           discount_amount: number
+          discount_approval_comment: string | null
           discount_reason: string | null
           document_reference: string | null
           generated_by: string
@@ -1599,6 +1615,7 @@ export type Database = {
           created_at?: string
           date_created?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           document_reference?: string | null
           generated_by: string
@@ -1630,6 +1647,7 @@ export type Database = {
           created_at?: string
           date_created?: string
           discount_amount?: number
+          discount_approval_comment?: string | null
           discount_reason?: string | null
           document_reference?: string | null
           generated_by?: string

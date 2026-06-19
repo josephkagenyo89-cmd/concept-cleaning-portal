@@ -92,7 +92,10 @@ export interface DocumentData {
   totalAmount: number;
   subtotal?: number;
   discountAmount?: number;
+  discountType?: 'percent' | 'fixed' | null | '';
+  discountValue?: number;
   discountReason?: string;
+  discountStatus?: 'pending' | 'approved' | 'rejected' | 'not_required';
   paymentStatus?: string;
   notes?: string;
   serviceDate?: string;
@@ -336,7 +339,9 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   const subtotal = discountAmount > 0
     ? (Number(data.subtotal) || (data.totalAmount + discountAmount))
     : data.totalAmount;
-  const afterDiscount = discountAmount > 0 ? subtotal - discountAmount : subtotal;
+  const isPending = data.discountStatus === 'pending';
+  const showDiscount = discountAmount > 0 && !isPending;
+  const afterDiscount = showDiscount ? subtotal - discountAmount : subtotal;
   const vatRate = tax.vat_enabled ? Number(tax.vat_percentage) || 0 : 0;
   const vatAmount = +(afterDiscount * vatRate / 100).toFixed(2);
   const grandTotal = afterDiscount + vatAmount;
@@ -348,14 +353,30 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
-  doc.text('Subtotal', labelX, y + 6);
+  doc.text('Services Subtotal', labelX, y + 6);
   doc.text(fmt(subtotal), valueX, y + 6, { align: 'right' });
   y += rowH;
 
   if (discountAmount > 0) {
+    const typeLabel = data.discountType === 'percent' ? 'Percentage' : 'Fixed Amount';
+    const valueLabel = data.discountType === 'percent'
+      ? `${Number(data.discountValue) || 0}%`
+      : `${fmt(Number(data.discountValue) || discountAmount)} ${cur}`;
+
     doc.rect(summaryX, y, summaryW, rowH, 'S');
-    doc.text('Discount', labelX, y + 6);
-    doc.text(`-${fmt(discountAmount)} ${cur}`, valueX, y + 6, { align: 'right' });
+    doc.text(`Discount Type: ${typeLabel}`, labelX, y + 6);
+    doc.text(valueLabel, valueX, y + 6, { align: 'right' });
+    y += rowH;
+
+    doc.rect(summaryX, y, summaryW, rowH, 'S');
+    doc.text('Discount Amount', labelX, y + 6);
+    if (isPending) {
+      doc.setTextColor(180, 120, 0);
+      doc.text('AWAITING APPROVAL', valueX, y + 6, { align: 'right' });
+      doc.setTextColor(...DARK);
+    } else {
+      doc.text(`-${fmt(discountAmount)} ${cur}`, valueX, y + 6, { align: 'right' });
+    }
     y += rowH;
   }
 

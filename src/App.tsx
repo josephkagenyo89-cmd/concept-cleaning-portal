@@ -52,6 +52,7 @@ const AdminPestJobDetail = lazy(() => import("@/pages/admin/AdminPestJobDetail")
 const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals"));
 const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
 const AdminDiscountApprovals = lazy(() => import("@/pages/admin/AdminDiscountApprovals"));
+const AdminDiscountReports = lazy(() => import("@/pages/admin/AdminDiscountReports"));
 
 const queryClient = new QueryClient();
 
@@ -130,6 +131,7 @@ function AppRoutes() {
             <Route index element={<AdminOverview />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
+            <Route path="discount-reports" element={<AdminDiscountReports />} />
             <Route path="book-service" element={<AdminBookService />} />
             <Route path="quotations" element={<AdminQuotations />} />
             <Route path="documents" element={<AdminDocuments />} />

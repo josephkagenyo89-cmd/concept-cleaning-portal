@@ -238,6 +238,13 @@ export default function AdminBookService() {
             tier={tier}
             commission={commission}
             lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
+            discount={discountAmount > 0 ? {
+              subtotal,
+              type: discount.type,
+              value: discount.value,
+              amount: discountAmount,
+              status: 'approved',
+            } : undefined}
           />
         )}
 

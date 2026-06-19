@@ -62,7 +62,10 @@ export default function AgentBooking() {
   const tier = getTier(cumulativeRevenue);
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
-  const systemPrice = discountedTotal; // minimum the agent can charge
+  const hasDiscount = !!discount.type && discountAmount > 0;
+  const requiresApproval = hasDiscount && needsApproval('agent');
+  // While agent's discount is pending approval, the minimum price is the full subtotal.
+  const systemPrice = requiresApproval ? subtotal : discountedTotal;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
@@ -105,9 +108,8 @@ export default function AgentBooking() {
       createdByRole: 'agent',
     });
 
-    const hasDiscount = !!discount.type && discountAmount > 0;
     const approvalStatus = hasDiscount
-      ? (needsApproval('agent') ? 'pending' : 'approved')
+      ? (requiresApproval ? 'pending' : 'approved')
       : 'not_required';
 
     const payload: any = {
@@ -128,6 +130,7 @@ export default function AgentBooking() {
       discount_amount: discountAmount,
       discount_reason: hasDiscount ? discount.reason : null,
       discount_approval_status: approvalStatus,
+      discount_requested_at: hasDiscount ? new Date().toISOString() : null,
       quantity: String(lineItems.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Agent',
@@ -160,7 +163,8 @@ export default function AgentBooking() {
         lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         totalAmount: finalPrice,
         subtotal,
-        discountAmount,
+        // Only flow discount into the quotation totals once approved
+        discountAmount: approvalStatus === 'approved' ? discountAmount : 0,
         discountReason: hasDiscount ? discount.reason : undefined,
         serviceDate: date,
         createdById: user.id,
@@ -269,6 +273,13 @@ export default function AgentBooking() {
             tier={tier}
             commission={commission}
             lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
+            discount={hasDiscount ? {
+              subtotal,
+              type: discount.type,
+              value: discount.value,
+              amount: discountAmount,
+              status: requiresApproval ? 'pending' : 'approved',
+            } : undefined}
           />
         )}
 
