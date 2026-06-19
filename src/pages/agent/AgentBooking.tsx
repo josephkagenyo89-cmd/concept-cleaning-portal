@@ -130,6 +130,7 @@ export default function AgentBooking() {
       discount_amount: discountAmount,
       discount_reason: hasDiscount ? discount.reason : null,
       discount_approval_status: approvalStatus,
+      discount_requested_at: hasDiscount ? new Date().toISOString() : null,
       quantity: String(lineItems.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Agent',
