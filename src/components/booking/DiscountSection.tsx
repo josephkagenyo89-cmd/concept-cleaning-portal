@@ -57,12 +57,22 @@ export default function DiscountSection({ subtotal, value, onChange }: Props) {
 
         {hasDiscount && (
           <div className="space-y-1.5">
-            <Label>Reason</Label>
+            <Label>Reason <span className="text-destructive">*</span></Label>
+            <Select
+              value={value.reason && REASON_PRESETS.includes(value.reason) ? value.reason : (value.reason ? '__custom' : '')}
+              onValueChange={(v) => onChange({ ...value, reason: v === '__custom' ? value.reason || '' : v })}
+            >
+              <SelectTrigger><SelectValue placeholder="Select a reason" /></SelectTrigger>
+              <SelectContent>
+                {REASON_PRESETS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                <SelectItem value="__custom">Other (type below)…</SelectItem>
+              </SelectContent>
+            </Select>
             <Textarea
               rows={2}
               value={value.reason}
               onChange={(e) => onChange({ ...value, reason: e.target.value })}
-              placeholder="Why is this discount being applied?"
+              placeholder="Discount reason (required)"
               required
             />
             {requiresReason && <p className="text-xs text-destructive">A reason is required for any discount.</p>}
