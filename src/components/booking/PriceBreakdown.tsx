@@ -77,7 +77,41 @@ export default function PriceBreakdown({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        {discount && discount.amount > 0 && (
+          <div className="border-t pt-2 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Services Subtotal:</span>
+              <span className="font-medium">Ksh {discount.subtotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Discount Type:</span>
+              <span className="font-medium capitalize">{discount.type === 'percent' ? 'Percentage' : 'Fixed Amount'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Discount Value:</span>
+              <span className="font-medium">{discount.type === 'percent' ? `${discount.value}%` : `Ksh ${discount.value.toLocaleString()}`}</span>
+            </div>
+            <div className="flex justify-between text-destructive">
+              <span>Discount Amount:</span>
+              <span className="font-medium">− Ksh {discount.amount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1">
+              <span className="text-muted-foreground">Status:</span>
+              <Badge variant={discount.status === 'approved' ? 'default' : discount.status === 'rejected' ? 'destructive' : 'outline'}>
+                {discount.status === 'pending' ? 'Pending Approval'
+                  : discount.status === 'approved' ? 'Approved'
+                  : discount.status === 'rejected' ? 'Rejected' : '—'}
+              </Badge>
+            </div>
+            {discount.status === 'pending' && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 italic">
+                Discount awaiting approval — not applied to invoice total yet.
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 text-sm border-t pt-2">
           <span className="text-muted-foreground">Your Price:</span>
           <span className="font-bold text-foreground">Ksh {agentPrice.toLocaleString()}</span>
 
@@ -87,6 +121,8 @@ export default function PriceBreakdown({
               <span className="font-medium text-primary">+Ksh {agentMargin.toLocaleString()}</span>
             </>
           )}
+          <span className="text-muted-foreground font-medium">Final Total:</span>
+          <span className="font-bold text-primary">Ksh {agentPrice.toLocaleString()}</span>
         </div>
 
         {commission && (
