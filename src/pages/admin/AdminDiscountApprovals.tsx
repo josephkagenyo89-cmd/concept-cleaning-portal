@@ -4,14 +4,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { formatDiscountLabel } from '@/lib/discounts';
+
+type Decision = 'approve' | 'reject';
 
 export default function AdminDiscountApprovals() {
   const { user, isAdmin } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState<any>(null);
+  const [decision, setDecision] = useState<Decision>('approve');
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -26,20 +36,36 @@ export default function AdminDiscountApprovals() {
 
   useEffect(() => { load(); }, []);
 
-  const decide = async (id: string, approve: boolean) => {
+  const openDialog = (b: any, d: Decision) => {
+    setActive(b);
+    setDecision(d);
+    setComment('');
+    setOpen(true);
+  };
+
+  const confirm = async () => {
+    if (!active) return;
+    if (!comment.trim()) {
+      toast({ title: 'Approval comment required', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
     const { error } = await supabase
       .from('bookings')
       .update({
-        discount_approval_status: approve ? 'approved' : 'rejected',
+        discount_approval_status: decision === 'approve' ? 'approved' : 'rejected',
         discount_approved_by: user?.id,
         discount_approved_at: new Date().toISOString(),
+        discount_approval_comment: comment.trim(),
       } as any)
-      .eq('id', id);
+      .eq('id', active.id);
+    setSubmitting(false);
     if (error) {
       toast({ title: 'Failed', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: approve ? 'Discount approved' : 'Discount rejected' });
+    toast({ title: decision === 'approve' ? 'Discount approved' : 'Discount rejected' });
+    setOpen(false);
     load();
   };
 
@@ -51,7 +77,7 @@ export default function AdminDiscountApprovals() {
     <div className="space-y-4 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold">Discount Approvals</h1>
       <p className="text-sm text-muted-foreground">
-        Bookings with discounts requested by agents — pending your review.
+        Bookings with discounts requested by agents — pending your review. Discounts only apply to invoices and receipts after approval.
       </p>
 
       {loading ? (
@@ -78,22 +104,52 @@ export default function AdminDiscountApprovals() {
               <div className="grid grid-cols-3 gap-2">
                 <div><span className="text-muted-foreground">Subtotal</span><br/>Ksh {Number(b.subtotal || 0).toLocaleString()}</div>
                 <div><span className="text-muted-foreground">Discount</span><br/>− Ksh {Number(b.discount_amount || 0).toLocaleString()}</div>
-                <div><span className="text-muted-foreground">Final</span><br/><b>Ksh {Number(b.price || 0).toLocaleString()}</b></div>
+                <div><span className="text-muted-foreground">Current Price</span><br/><b>Ksh {Number(b.price || 0).toLocaleString()}</b></div>
               </div>
               {b.discount_reason && (
-                <p className="text-xs text-muted-foreground italic">Reason: {b.discount_reason}</p>
+                <p className="text-xs"><span className="text-muted-foreground">Reason:</span> {b.discount_reason}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                Requested by {b.created_by_name} on {format(new Date(b.created_at), 'PPP')}
+                Requested by {b.created_by_name} on {format(new Date(b.discount_requested_at || b.created_at), 'PPP p')}
               </p>
               <div className="flex gap-2 pt-2">
-                <Button size="sm" onClick={() => decide(b.id, true)}>Approve</Button>
-                <Button size="sm" variant="outline" onClick={() => decide(b.id, false)}>Reject</Button>
+                <Button size="sm" onClick={() => openDialog(b, 'approve')}>Approve Discount</Button>
+                <Button size="sm" variant="outline" onClick={() => openDialog(b, 'reject')}>Reject Discount</Button>
               </div>
             </CardContent>
           </Card>
         ))
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{decision === 'approve' ? 'Approve' : 'Reject'} Discount</DialogTitle>
+          </DialogHeader>
+          {active && (
+            <div className="text-sm space-y-1">
+              <p><b>{active.client_name}</b> — {formatDiscountLabel(active.discount_type, active.discount_value)}</p>
+              <p className="text-muted-foreground">Discount amount: Ksh {Number(active.discount_amount || 0).toLocaleString()}</p>
+              {active.discount_reason && <p className="text-muted-foreground italic">Requested reason: {active.discount_reason}</p>}
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Approval Comment <span className="text-destructive">*</span></Label>
+            <Textarea
+              rows={3}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={decision === 'approve' ? 'Reason for approving this discount…' : 'Reason for rejecting this discount…'}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={confirm} disabled={submitting || !comment.trim()} variant={decision === 'reject' ? 'destructive' : 'default'}>
+              {submitting ? 'Saving…' : (decision === 'approve' ? 'Approve' : 'Reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
