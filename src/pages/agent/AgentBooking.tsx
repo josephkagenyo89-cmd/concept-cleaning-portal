@@ -273,6 +273,13 @@ export default function AgentBooking() {
             tier={tier}
             commission={commission}
             lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
+            discount={hasDiscount ? {
+              subtotal,
+              type: discount.type,
+              value: discount.value,
+              amount: discountAmount,
+              status: requiresApproval ? 'pending' : 'approved',
+            } : undefined}
           />
         )}
 
