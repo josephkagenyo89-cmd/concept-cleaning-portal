@@ -62,7 +62,10 @@ export default function AgentBooking() {
   const tier = getTier(cumulativeRevenue);
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
-  const systemPrice = discountedTotal; // minimum the agent can charge
+  const hasDiscount = !!discount.type && discountAmount > 0;
+  const requiresApproval = hasDiscount && needsApproval('agent');
+  // While agent's discount is pending approval, the minimum price is the full subtotal.
+  const systemPrice = requiresApproval ? subtotal : discountedTotal;
   const currentAgentPrice = Number(agentPrice) || 0;
   const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
   const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
