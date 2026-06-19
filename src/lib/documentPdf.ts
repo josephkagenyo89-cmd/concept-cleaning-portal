@@ -597,7 +597,16 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   const doc = new jsPDF();
   const w = doc.internal.pageSize.getWidth();
   const h = doc.internal.pageSize.getHeight();
+  const g = pdfSettings.general;
 
+  // 1. Security layer (drawn first so all content sits on top)
+  drawDiagonalWatermark(doc, w, h, getWatermarkText(data.documentType));
+  drawCompanySeal(doc, w / 2, h / 2 + 30, {
+    companyName: g.company_name,
+    year: new Date().getFullYear(),
+  });
+
+  // 2. Document content
   let y = drawHeader(doc, w);
   y = drawClientSection(doc, y, data);
   y = drawDocTitle(doc, w, y, data);
@@ -609,7 +618,13 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   y = drawTermsAndNotes(doc, y, data);
   y = drawSignatures(doc, w, y, data.signatures);
 
-  drawFooter(doc, w, h, 1, 1);
+  // 3. Gold "Certified & Verified" seal for receipts and certificates
+  if (['receipt', 'service_certificate', 'pest_certificate'].includes(data.documentType)) {
+    drawGoldCertifiedSeal(doc, w - 32, h - 70, 16);
+  }
+
+  // 4. Footer (verification code, QR, timestamp)
+  drawFooter(doc, w, h, 1, 1, data);
 
   return doc;
 }
