@@ -1,10 +1,20 @@
 import { Card, CardContent, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import TierBadge from '@/components/agent/TierBadge';
 import { Tier } from '@/lib/commission';
+import type { DiscountType } from '@/lib/discounts';
 
 interface LineItemDisplay {
   name: string;
   unitPrice: number;
+}
+
+interface DiscountInfo {
+  subtotal: number;
+  type: DiscountType;
+  value: number;
+  amount: number;
+  status: 'not_required' | 'pending' | 'approved' | 'rejected' | string;
 }
 
 interface PriceBreakdownProps {
@@ -18,11 +28,12 @@ interface PriceBreakdownProps {
   unitPrice?: number;
   /** Multi-service line items — if provided, overrides single service display */
   lineItems?: LineItemDisplay[];
+  discount?: DiscountInfo;
 }
 
 export default function PriceBreakdown({
   serviceName, systemPrice, agentPrice, agentMargin, tier, commission,
-  quantity = 1, unitPrice, lineItems,
+  quantity = 1, unitPrice, lineItems, discount,
 }: PriceBreakdownProps) {
   if (systemPrice <= 0) return null;
 
