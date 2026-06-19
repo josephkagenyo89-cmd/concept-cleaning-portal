@@ -163,7 +163,8 @@ export default function AgentBooking() {
         lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         totalAmount: finalPrice,
         subtotal,
-        discountAmount,
+        // Only flow discount into the quotation totals once approved
+        discountAmount: approvalStatus === 'approved' ? discountAmount : 0,
         discountReason: hasDiscount ? discount.reason : undefined,
         serviceDate: date,
         createdById: user.id,
