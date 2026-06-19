@@ -5,6 +5,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { computeDiscount, DiscountType } from '@/lib/discounts';
 
+const REASON_PRESETS = [
+  'Loyal Customer',
+  'Repeat Business',
+  'Promotional Offer',
+  'Service Recovery',
+  'Corporate Agreement',
+  'Management Approval',
+];
+
 export interface DiscountState {
   type: DiscountType;
   value: number;
