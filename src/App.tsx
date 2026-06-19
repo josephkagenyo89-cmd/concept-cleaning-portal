@@ -131,6 +131,7 @@ function AppRoutes() {
             <Route index element={<AdminOverview />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
+            <Route path="discount-reports" element={<AdminDiscountReports />} />
             <Route path="book-service" element={<AdminBookService />} />
             <Route path="quotations" element={<AdminQuotations />} />
             <Route path="documents" element={<AdminDocuments />} />
