@@ -92,7 +92,10 @@ export interface DocumentData {
   totalAmount: number;
   subtotal?: number;
   discountAmount?: number;
+  discountType?: 'percent' | 'fixed' | null | '';
+  discountValue?: number;
   discountReason?: string;
+  discountStatus?: 'pending' | 'approved' | 'rejected' | 'not_required';
   paymentStatus?: string;
   notes?: string;
   serviceDate?: string;
