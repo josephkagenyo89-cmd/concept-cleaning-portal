@@ -251,7 +251,9 @@ export default function AdminBookings() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                      <div className="space-y-0.5">
-                      <p className="font-semibold">{b.client_name}</p>
+                      <p className="font-semibold">
+                        <a href={`/admin/bookings/${b.id}`} className="hover:text-primary hover:underline">{b.client_name}</a>
+                      </p>
                       <p className="text-xs text-muted-foreground">{b.client_phone} · {b.location}</p>
                       <p className="text-xs text-muted-foreground">Agent: {b.agent_name} · {b.agent_phone}</p>
                       <p className="text-xs text-muted-foreground">
@@ -262,6 +264,7 @@ export default function AdminBookings() {
                       <p className="text-xs text-muted-foreground">
                         Created by: {b.created_by_name || b.agent_name} <span className="font-medium">({b.created_by_role || 'agent'})</span>
                       </p>
+                      <a href={`/admin/bookings/${b.id}`} className="inline-block text-xs text-primary font-semibold hover:underline mt-1">View Details →</a>
                     </div>
                     <div className="text-right space-y-0.5">
                       <p className="font-bold">Ksh {Number(b.price).toLocaleString()}</p>
