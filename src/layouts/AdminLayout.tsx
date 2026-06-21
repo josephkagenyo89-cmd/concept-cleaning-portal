@@ -59,26 +59,40 @@ export default function AdminLayout() {
     <div className="min-h-screen flex bg-background">
       <BlockingNoticeModal notices={blockingNotices} onAcknowledged={refresh} />
       {/* Mobile header */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b bg-sidebar text-sidebar-foreground px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-bold">Concept Admin</span>
+          <div className="h-8 w-8 rounded-md bg-primary/15 ring-1 ring-primary/40 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-bold tracking-wide">CONCEPT</div>
+            <div className="text-[10px] uppercase tracking-[0.15em] opacity-80">Cleaning Services</div>
+          </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
       </div>
 
       {/* Sidebar */}
       <aside className={cn(
-        'fixed inset-y-0 left-0 z-40 w-60 border-r bg-card transition-transform md:translate-x-0 md:static',
+        'fixed inset-y-0 left-0 z-40 w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:translate-x-0 md:static flex flex-col',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        <div className="flex items-center gap-2 border-b px-4 py-4 hidden md:flex">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-bold">Concept Admin</span>
+        {/* Brand */}
+        <div className="hidden md:flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
+          <div className="h-10 w-10 rounded-lg bg-primary/15 ring-1 ring-primary/40 flex items-center justify-center shrink-0">
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-base font-extrabold tracking-wide">CONCEPT</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/70">Cleaning Services</div>
+            <div className="text-[10px] italic text-sidebar-foreground/60 mt-0.5">Professional. Reliable. Sparkling.</div>
+          </div>
         </div>
-        <nav className="flex flex-col gap-1 p-3 mt-14 md:mt-0 overflow-y-auto max-h-[calc(100vh-60px)]">
+
+        <nav className="flex-1 flex flex-col gap-0.5 px-3 py-3 mt-14 md:mt-0 overflow-y-auto">
+          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Main</p>
           {navItems.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
@@ -86,41 +100,51 @@ export default function AdminLayout() {
               end={end}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
-                  isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')
+                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
               }
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
-          <div className="pt-3 mt-3 border-t">
-            <p className="px-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ERP & Accounting</p>
-            {erpNavItems.map(({ to, icon: Icon, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')
-                }
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </NavLink>
-            ))}
-          </div>
-          <div className="mt-auto pt-4 border-t">
-            <button
-              onClick={signOut}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted w-full"
+
+          <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">ERP & Accounting</p>
+          {erpNavItems.map(({ to, icon: Icon, label, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
+              }
             >
-              <LogOut className="h-4 w-4" /> Sign Out
-            </button>
-          </div>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          ))}
         </nav>
+
+        {/* Support card */}
+        <div className="px-3 pb-3 mt-auto">
+          <div className="rounded-lg bg-sidebar-accent/60 ring-1 ring-sidebar-border p-3 text-center">
+            <div className="text-[11px] font-semibold text-sidebar-foreground">Need Support?</div>
+            <a href="tel:+254796563741" className="block text-xs text-sidebar-foreground/85 hover:text-sidebar-foreground mt-1">+254 796 563 741</a>
+            <a href="mailto:support@conceptcs.co.ke" className="block text-[11px] text-sidebar-foreground/70 hover:text-sidebar-foreground truncate">support@conceptcs.co.ke</a>
+          </div>
+          <button
+            onClick={signOut}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground border border-sidebar-border"
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Overlay */}
