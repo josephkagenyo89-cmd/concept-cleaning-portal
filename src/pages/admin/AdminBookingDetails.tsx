@@ -431,7 +431,7 @@ export default function AdminBookingDetails() {
       </Card>
 
       {/* Discount + Approval + Price Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <SectionCard icon={ShieldAlert} title="Discount">
           <Field label="Discount Type" value={booking.discount_type === 'percent' ? 'Percentage (%)' : booking.discount_type === 'fixed' ? 'Fixed (KES)' : '—'} />
           <Field label="Discount Value" value={booking.discount_value ? (booking.discount_type === 'percent' ? `${booking.discount_value} %` : `KES ${fmt(Number(booking.discount_value))}`) : '—'} />
