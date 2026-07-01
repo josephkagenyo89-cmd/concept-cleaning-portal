@@ -508,6 +508,20 @@ export default function AdminBookingDetails() {
             </div>
           </CardContent>
         </Card>
+
+        <SectionCard icon={CreditCard} title="Payment Summary">
+          <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
+          <Field label="Deposit" value={`KES ${fmt(Number(booking.deposit_amount || 0))}`} />
+          <Field label="Amount Paid" value={<span className="text-emerald-700 font-semibold">KES {fmt(Number(booking.amount_paid || 0))}</span>} />
+          <Field label="Balance" value={<span className="text-red-600 font-bold">KES {fmt(Math.max(0, totals.grand - Number(booking.amount_paid || 0)))}</span>} />
+          <div className="mt-1">
+            <p className="text-xs text-slate-500 mb-1">Payment Status</p>
+            <StatusPill status={Number(booking.amount_paid || 0) >= totals.grand && totals.grand > 0 ? 'paid' : Number(booking.amount_paid || 0) > 0 ? 'partial' : 'unpaid'} />
+          </div>
+          <Button size="sm" className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
+          </Button>
+        </SectionCard>
       </div>
 
       {/* Tabs: Payments / Attachments / Notes / History / Activity */}
