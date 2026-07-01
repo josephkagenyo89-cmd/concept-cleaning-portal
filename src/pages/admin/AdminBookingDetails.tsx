@@ -193,19 +193,41 @@ export default function AdminBookingDetails() {
           <div className="text-[11px] text-slate-500">Role: Administrator</div>
         </div>
         <div className="flex-1" />
-        <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-          <Plus className="h-3.5 w-3.5 mr-1" /> New Booking
-        </Button>
-        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-          <Save className="h-3.5 w-3.5 mr-1" /> Save
-        </Button>
-        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-          <FileText className="h-3.5 w-3.5 mr-1" /> Generate Quotation
-        </Button>
-        <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-          <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirm Booking
-        </Button>
-        <Button size="sm" variant="ghost" className="text-slate-600"><MoreHorizontal className="h-4 w-4 mr-1" /> More</Button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <Link to="/admin/book"><Plus className="h-3.5 w-3.5 mr-1" /> New Booking</Link>
+          </Button>
+          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Save className="h-3.5 w-3.5 mr-1" /> Save
+          </Button>
+          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+            <FileText className="h-3.5 w-3.5 mr-1" /> Quotation
+          </Button>
+          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirm
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <Lock className="h-3.5 w-3.5 mr-1" /> Lock
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Award className="h-3.5 w-3.5 mr-1" /> Certificate
+          </Button>
+          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <MessageCircle className="h-3.5 w-3.5 mr-1" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => window.print()}>
+            <Printer className="h-3.5 w-3.5 mr-1" /> Print
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <Download className="h-3.5 w-3.5 mr-1" /> PDF
+          </Button>
+        </div>
         <Button size="icon" variant="ghost" className="relative text-slate-600">
           <Bell className="h-4 w-4" />
           <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">3</span>
