@@ -15,6 +15,7 @@ import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
   Pencil, Trash2, MessageCircle, ShieldAlert, BadgeCheck,
+  Lock, Receipt, Award, Printer, Download, Phone, Mail, CreditCard,
 } from 'lucide-react';
 
 const VAT_RATE = 0.16;
