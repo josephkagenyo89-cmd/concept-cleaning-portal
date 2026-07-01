@@ -15,6 +15,7 @@ import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
   Pencil, Trash2, MessageCircle, ShieldAlert, BadgeCheck,
+  Lock, Receipt, Award, Printer, Download, Phone, Mail, CreditCard,
 } from 'lucide-react';
 
 const VAT_RATE = 0.16;
@@ -192,19 +193,41 @@ export default function AdminBookingDetails() {
           <div className="text-[11px] text-slate-500">Role: Administrator</div>
         </div>
         <div className="flex-1" />
-        <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-          <Plus className="h-3.5 w-3.5 mr-1" /> New Booking
-        </Button>
-        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-          <Save className="h-3.5 w-3.5 mr-1" /> Save
-        </Button>
-        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-          <FileText className="h-3.5 w-3.5 mr-1" /> Generate Quotation
-        </Button>
-        <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-          <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirm Booking
-        </Button>
-        <Button size="sm" variant="ghost" className="text-slate-600"><MoreHorizontal className="h-4 w-4 mr-1" /> More</Button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <Link to="/admin/book"><Plus className="h-3.5 w-3.5 mr-1" /> New Booking</Link>
+          </Button>
+          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Save className="h-3.5 w-3.5 mr-1" /> Save
+          </Button>
+          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+            <FileText className="h-3.5 w-3.5 mr-1" /> Quotation
+          </Button>
+          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirm
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <Lock className="h-3.5 w-3.5 mr-1" /> Lock
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
+          </Button>
+          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Award className="h-3.5 w-3.5 mr-1" /> Certificate
+          </Button>
+          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <MessageCircle className="h-3.5 w-3.5 mr-1" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => window.print()}>
+            <Printer className="h-3.5 w-3.5 mr-1" /> Print
+          </Button>
+          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <Download className="h-3.5 w-3.5 mr-1" /> PDF
+          </Button>
+        </div>
         <Button size="icon" variant="ghost" className="relative text-slate-600">
           <Bell className="h-4 w-4" />
           <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">3</span>
@@ -269,26 +292,47 @@ export default function AdminBookingDetails() {
           <Field label="Phone" value={booking.client_phone} />
           <Field label="Email" value={booking.client_email || '—'} />
           <Field label="Address" value={booking.location} />
-          {booking.client_id && (
-            <Button asChild size="sm" variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">
-              <Link to={`/admin/clients/${booking.client_id}`}>View Client Profile</Link>
+          <Field label="Category" value={<Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">{booking.client_category || 'Regular'}</Badge>} />
+          <div className="grid grid-cols-2 gap-1.5 pt-2">
+            {booking.client_id && (
+              <Button asChild size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 col-span-2">
+                <Link to={`/admin/clients/${booking.client_id}`}>View Client Profile</Link>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="border-slate-200 h-8">
+              <Pencil className="h-3 w-3 mr-1" /> Edit
             </Button>
-          )}
+            {booking.client_phone && (
+              <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8">
+                <a href={`tel:${booking.client_phone}`}><Phone className="h-3 w-3 mr-1" /> Call</a>
+              </Button>
+            )}
+            {booking.client_phone && (
+              <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 col-span-2">
+                <a href={`https://wa.me/${booking.client_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">
+                  <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
         </SectionCard>
 
         <SectionCard icon={MapPin} title="Service Location">
-          <Field label="Location Code" value={locationCode} />
-          <Field label="Location Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
+          <Field label="Site Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
           <Field label="Address" value={booking.location} />
+          <Field label="GPS" value={booking.gps_coordinates || '—'} />
+          <Field label="Contact" value={booking.site_contact_name || booking.client_name || '—'} />
+          <Field label="Contact Phone" value={booking.site_contact_phone || booking.client_phone || '—'} />
           <Button size="sm" variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
         </SectionCard>
 
         <SectionCard icon={CalIcon} title="Booking Information">
           <Field label="Salesperson" value={<span className="font-semibold uppercase text-primary">{booking.salesperson_name || booking.created_by_name || '—'}</span>} />
-          <Field label="Shipment Mode" value="ROAD" />
+          <Field label="Technician" value={booking.assigned_technician || '—'} />
           <Field label="Preferred Date" value={format(new Date(booking.service_date || booking.created_at), 'dd/MM/yyyy')} />
           <Field label="Preferred Time" value={booking.preferred_time || '09:00 AM'} />
-          <Field label="Payment Terms" value="Cash" />
+          <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
+          <Field label="Booking Source" value={booking.source || 'Direct'} />
           <Field label="Created By" value={booking.created_by_name || '—'} />
         </SectionCard>
 
@@ -303,6 +347,12 @@ export default function AdminBookingDetails() {
           </div>
           <Field label="Approved By" value={booking.discount_approved_by ? 'Admin User' : '—'} />
           <Field label="Approved On" value={booking.discount_approved_at ? format(new Date(booking.discount_approved_at), 'dd/MM/yyyy hh:mm a') : '—'} />
+          <div className="mt-2">
+            <p className="text-xs text-slate-500 mb-1">Locked</p>
+            <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${booking.is_locked ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+              <Lock className="h-3 w-3" /> {booking.is_locked ? 'Locked' : 'Unlocked'}
+            </span>
+          </div>
         </SectionCard>
       </div>
 
@@ -381,7 +431,7 @@ export default function AdminBookingDetails() {
       </Card>
 
       {/* Discount + Approval + Price Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <SectionCard icon={ShieldAlert} title="Discount">
           <Field label="Discount Type" value={booking.discount_type === 'percent' ? 'Percentage (%)' : booking.discount_type === 'fixed' ? 'Fixed (KES)' : '—'} />
           <Field label="Discount Value" value={booking.discount_value ? (booking.discount_type === 'percent' ? `${booking.discount_value} %` : `KES ${fmt(Number(booking.discount_value))}`) : '—'} />
@@ -458,6 +508,20 @@ export default function AdminBookingDetails() {
             </div>
           </CardContent>
         </Card>
+
+        <SectionCard icon={CreditCard} title="Payment Summary">
+          <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
+          <Field label="Deposit" value={`KES ${fmt(Number(booking.deposit_amount || 0))}`} />
+          <Field label="Amount Paid" value={<span className="text-emerald-700 font-semibold">KES {fmt(Number(booking.amount_paid || 0))}</span>} />
+          <Field label="Balance" value={<span className="text-red-600 font-bold">KES {fmt(Math.max(0, totals.grand - Number(booking.amount_paid || 0)))}</span>} />
+          <div className="mt-1">
+            <p className="text-xs text-slate-500 mb-1">Payment Status</p>
+            <StatusPill status={Number(booking.amount_paid || 0) >= totals.grand && totals.grand > 0 ? 'paid' : Number(booking.amount_paid || 0) > 0 ? 'partial' : 'unpaid'} />
+          </div>
+          <Button size="sm" className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
+          </Button>
+        </SectionCard>
       </div>
 
       {/* Tabs: Payments / Attachments / Notes / History / Activity */}
@@ -516,30 +580,40 @@ export default function AdminBookingDetails() {
         </CardContent>
       </Card>
 
-      {/* Footer */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-3 px-2 py-3 border-t border-slate-100 text-xs text-slate-500">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <div>
-            <p className="font-semibold text-slate-700">GENERATED ON</p>
-            <p>{format(new Date(booking.created_at), 'dd/MM/yyyy hh:mm a')}</p>
+      {/* Verification Footer */}
+      <div className="rounded-lg border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <BadgeCheck className="h-8 w-8 text-emerald-600" />
+            <div>
+              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Verification Code</p>
+              <p className="text-sm font-mono font-bold text-slate-800">{bookingNo}-{(booking.id || '').slice(-6).toUpperCase()}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <UserIcon className="h-4 w-4 text-blue-600" />
-          <div>
-            <p className="font-semibold text-slate-700">GENERATED BY</p>
-            <p>{booking.created_by_name || 'Admin'}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs text-slate-600 flex-1 md:px-6">
+            <div>
+              <p className="font-semibold text-slate-700 text-[10px] uppercase">Generated On</p>
+              <p>{format(new Date(booking.created_at), 'dd/MM/yyyy hh:mm a')}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 text-[10px] uppercase">Generated By</p>
+              <p>{booking.created_by_name || 'Admin'}</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <div>
+                <p className="font-semibold text-emerald-700 text-[10px] uppercase">Secured Document</p>
+                <p>Official Booking</p>
+              </div>
+            </div>
           </div>
+          {qrUrl && (
+            <div className="flex flex-col items-center">
+              <img src={qrUrl} alt="Verify" className="h-16 w-16 border-2 border-emerald-300 rounded bg-white p-0.5" />
+              <p className="text-[9px] text-slate-500 mt-1">Scan to verify</p>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-emerald-600" />
-          <div>
-            <p className="font-semibold text-emerald-700">SECURED DOCUMENT</p>
-            <p>Official Booking Document</p>
-          </div>
-        </div>
-        {qrUrl && <img src={qrUrl} alt="Verify" className="h-14 w-14 border border-slate-200 rounded" />}
       </div>
     </div>
   );
