@@ -292,26 +292,47 @@ export default function AdminBookingDetails() {
           <Field label="Phone" value={booking.client_phone} />
           <Field label="Email" value={booking.client_email || '—'} />
           <Field label="Address" value={booking.location} />
-          {booking.client_id && (
-            <Button asChild size="sm" variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">
-              <Link to={`/admin/clients/${booking.client_id}`}>View Client Profile</Link>
+          <Field label="Category" value={<Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">{booking.client_category || 'Regular'}</Badge>} />
+          <div className="grid grid-cols-2 gap-1.5 pt-2">
+            {booking.client_id && (
+              <Button asChild size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 col-span-2">
+                <Link to={`/admin/clients/${booking.client_id}`}>View Client Profile</Link>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="border-slate-200 h-8">
+              <Pencil className="h-3 w-3 mr-1" /> Edit
             </Button>
-          )}
+            {booking.client_phone && (
+              <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8">
+                <a href={`tel:${booking.client_phone}`}><Phone className="h-3 w-3 mr-1" /> Call</a>
+              </Button>
+            )}
+            {booking.client_phone && (
+              <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 col-span-2">
+                <a href={`https://wa.me/${booking.client_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">
+                  <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
         </SectionCard>
 
         <SectionCard icon={MapPin} title="Service Location">
-          <Field label="Location Code" value={locationCode} />
-          <Field label="Location Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
+          <Field label="Site Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
           <Field label="Address" value={booking.location} />
+          <Field label="GPS" value={booking.gps_coordinates || '—'} />
+          <Field label="Contact" value={booking.site_contact_name || booking.client_name || '—'} />
+          <Field label="Contact Phone" value={booking.site_contact_phone || booking.client_phone || '—'} />
           <Button size="sm" variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
         </SectionCard>
 
         <SectionCard icon={CalIcon} title="Booking Information">
           <Field label="Salesperson" value={<span className="font-semibold uppercase text-primary">{booking.salesperson_name || booking.created_by_name || '—'}</span>} />
-          <Field label="Shipment Mode" value="ROAD" />
+          <Field label="Technician" value={booking.assigned_technician || '—'} />
           <Field label="Preferred Date" value={format(new Date(booking.service_date || booking.created_at), 'dd/MM/yyyy')} />
           <Field label="Preferred Time" value={booking.preferred_time || '09:00 AM'} />
-          <Field label="Payment Terms" value="Cash" />
+          <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
+          <Field label="Booking Source" value={booking.source || 'Direct'} />
           <Field label="Created By" value={booking.created_by_name || '—'} />
         </SectionCard>
 
@@ -326,6 +347,12 @@ export default function AdminBookingDetails() {
           </div>
           <Field label="Approved By" value={booking.discount_approved_by ? 'Admin User' : '—'} />
           <Field label="Approved On" value={booking.discount_approved_at ? format(new Date(booking.discount_approved_at), 'dd/MM/yyyy hh:mm a') : '—'} />
+          <div className="mt-2">
+            <p className="text-xs text-slate-500 mb-1">Locked</p>
+            <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${booking.is_locked ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+              <Lock className="h-3 w-3" /> {booking.is_locked ? 'Locked' : 'Unlocked'}
+            </span>
+          </div>
         </SectionCard>
       </div>
 
