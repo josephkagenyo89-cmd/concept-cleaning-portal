@@ -1,39 +1,87 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { CalendarIcon } from 'lucide-react';
+import {
+  CalendarIcon, Plus, Save, FileText, CheckCircle2, Lock, Receipt, Award,
+  Printer, Download, MessageCircle, Trash2, User as UserIcon, MapPin,
+  Calendar as CalIcon, ShieldCheck, Phone, Mail, CreditCard, Paperclip,
+  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import MultiServiceSelector, { LineItem } from '@/components/booking/MultiServiceSelector';
-import PriceBreakdown from '@/components/booking/PriceBreakdown';
-import QuotationActions from '@/components/booking/QuotationActions';
+import ServiceSearch from '@/components/booking/ServiceSearch';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
-import { getTier } from '@/lib/commission';
-import { upsertClientForBooking } from '@/lib/clientManager';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
-import DiscountSection, { DiscountState } from '@/components/booking/DiscountSection';
-import { computeDiscount } from '@/lib/discounts';
+import { upsertClientForBooking } from '@/lib/clientManager';
+import { computeDiscount, DiscountType } from '@/lib/discounts';
+
+const VAT_RATE = 0; // Display-only; kept at 0 so persisted price matches existing invoice logic.
+
+interface LineRow {
+  service: any;
+  quantity: number;
+  unitPrice: number;
+  discountPct: number; // per-line UI-only
+  description?: string;
+}
+
+function money(n: number) {
+  return `KES ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function numberToWords(num: number): string {
+  if (!isFinite(num) || num < 0) return '';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const inW = (n: number): string => {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inW(n % 100) : '');
+    if (n < 1_000_000) return inW(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inW(n % 1000) : '');
+    return inW(Math.floor(n / 1_000_000)) + ' Million' + (n % 1_000_000 ? ' ' + inW(n % 1_000_000) : '');
+  };
+  const whole = Math.floor(num);
+  const cents = Math.round((num - whole) * 100);
+  const wholePart = whole === 0 ? 'Zero' : inW(whole);
+  return `Kenya Shillings ${wholePart}${cents ? ` and ${inW(cents)} Cents` : ''} Only.`;
+}
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   const [services, setServices] = useState<any[]>([]);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [rows, setRows] = useState<LineRow[]>([]);
   const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
-  const [agentPrice, setAgentPrice] = useState('');
   const [date, setDate] = useState<Date>();
+  const [time, setTime] = useState('09:00');
+  const [technician, setTechnician] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('Cash');
+  const [shipmentMode, setShipmentMode] = useState('ROAD');
+  const [instructions, setInstructions] = useState('');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [salesperson, setSalesperson] = useState({ id: '', name: '', role: 'admin' });
-  const [discount, setDiscount] = useState<DiscountState>({ type: '', value: 0, reason: '' });
+
+  // Global discount (persisted)
+  const [discType, setDiscType] = useState<DiscountType>('');
+  const [discValue, setDiscValue] = useState<number>(0);
+  const [discReason, setDiscReason] = useState('');
 
   useEffect(() => {
     if (user && profile) {
@@ -45,35 +93,51 @@ export default function AdminBookService() {
     supabase.from('services').select('*').eq('is_active', true).then(({ data }) => setServices(data || []));
   }, []);
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  const { discountAmount, finalTotal: discountedTotal } = computeDiscount(subtotal, discount.type, discount.value);
-  const systemPrice = discountedTotal;
-  const currentAgentPrice = Number(agentPrice) || 0;
-  const agentMargin = currentAgentPrice > systemPrice ? currentAgentPrice - systemPrice : 0;
-  const finalPrice = currentAgentPrice >= systemPrice ? currentAgentPrice : systemPrice;
-  const priceError = currentAgentPrice > 0 && currentAgentPrice < systemPrice
-    ? `Price cannot be less than Ksh ${systemPrice.toLocaleString()}` : null;
-  const discountReasonMissing = !!discount.type && discount.value > 0 && !discount.reason.trim();
-  const tier = getTier(0);
-  const commission = null;
+  // Preview booking no (generated by DB on save)
+  const previewBookingNo = useMemo(() => {
+    const y = new Date().getFullYear();
+    return `BK-${y}-DRAFT`;
+  }, []);
 
-  const hasServices = lineItems.length > 0;
-  const primaryService = lineItems[0]?.service || null;
+  const subtotal = rows.reduce((s, r) => s + r.quantity * r.unitPrice, 0);
+  const lineDiscountsTotal = rows.reduce((s, r) => s + r.quantity * r.unitPrice * (r.discountPct / 100), 0);
+  const subtotalAfterLineDisc = subtotal - lineDiscountsTotal;
 
-  const handleLineItemsChange = (items: LineItem[]) => {
-    setLineItems(items);
-    const newSystemPrice = items.reduce((sum, item) => sum + item.total, 0);
-    if (!agentPrice || currentAgentPrice <= systemPrice) {
-      setAgentPrice(newSystemPrice > 0 ? String(newSystemPrice) : '');
-    }
+  const { discountAmount: globalDiscount, finalTotal: subAfterAllDisc } =
+    computeDiscount(subtotalAfterLineDisc, discType, discValue);
+
+  const vatAmount = subAfterAllDisc * VAT_RATE;
+  const grandTotal = subAfterAllDisc + vatAmount;
+
+  const hasServices = rows.length > 0;
+  const hasDiscount = (globalDiscount > 0) || lineDiscountsTotal > 0;
+  const discountReasonMissing = !!discType && discValue > 0 && !discReason.trim();
+  const primaryService = rows[0]?.service || null;
+
+  const addService = (svc: any) => {
+    if (!svc) return;
+    if (rows.some(r => r.service.id === svc.id)) { setAddOpen(false); return; }
+    setRows([...rows, {
+      service: svc,
+      quantity: 1,
+      unitPrice: Number(svc.base_price) || 0,
+      discountPct: 0,
+      description: svc.description || svc.category || '',
+    }]);
+    setAddOpen(false);
   };
 
-  const canQuote = hasServices && !!selectedClient
-    && currentAgentPrice >= systemPrice && systemPrice > 0 && !priceError;
+  const updateRow = (idx: number, patch: Partial<LineRow>) => {
+    setRows(rs => rs.map((r, i) => i === idx ? { ...r, ...patch } : r));
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !hasServices || !date || priceError || currentAgentPrice < systemPrice) return;
+  const removeRow = (idx: number) => setRows(rs => rs.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    if (!user || !hasServices || !date) {
+      toast({ title: 'Missing information', description: 'Add at least one service and pick a date.', variant: 'destructive' });
+      return;
+    }
     if (!selectedClient) {
       toast({ title: 'Select a client', description: 'Search the CRM and select a client first.', variant: 'destructive' });
       return;
@@ -84,6 +148,7 @@ export default function AdminBookService() {
     }
     setLoading(true);
 
+    const finalPrice = subAfterAllDisc; // preserve pre-VAT logic used by invoices
     await upsertClientForBooking({
       clientName: selectedClient.full_name,
       clientPhone: selectedClient.phone,
@@ -93,7 +158,6 @@ export default function AdminBookService() {
       createdByRole: 'admin',
     });
 
-    const hasDiscount = !!discount.type && discountAmount > 0;
     const payload: any = {
       agent_id: user.id,
       client_id: selectedClient.id,
@@ -105,28 +169,28 @@ export default function AdminBookService() {
       price: finalPrice,
       system_price: subtotal,
       agent_price: finalPrice,
-      agent_margin: agentMargin,
+      agent_margin: 0,
       subtotal,
-      discount_type: hasDiscount ? discount.type : null,
-      discount_value: hasDiscount ? discount.value : 0,
-      discount_amount: discountAmount,
-      discount_reason: hasDiscount ? discount.reason : null,
+      discount_type: discType || null,
+      discount_value: discType ? discValue : 0,
+      discount_amount: globalDiscount + lineDiscountsTotal,
+      discount_reason: hasDiscount ? (discReason || 'Line-item discount') : null,
       discount_approval_status: hasDiscount ? 'approved' : 'not_required',
       discount_approved_by: hasDiscount ? user.id : null,
       discount_approved_at: hasDiscount ? new Date().toISOString() : null,
-      quantity: String(lineItems.length),
+      quantity: String(rows.length),
       status: 'pending',
       created_by_name: profile?.full_name || 'Admin',
       created_by_role: 'admin',
       salesperson_id: salesperson.id || user.id,
       salesperson_name: salesperson.name || profile?.full_name || 'Admin',
       salesperson_role: salesperson.role || 'admin',
-      line_items: lineItems.map((i) => ({
-        serviceName: i.service.name,
-        serviceId: i.service.id,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        total: i.total,
+      line_items: rows.map(r => ({
+        serviceName: r.service.name,
+        serviceId: r.service.id,
+        quantity: r.quantity,
+        unitPrice: r.unitPrice,
+        total: r.quantity * r.unitPrice * (1 - r.discountPct / 100),
       })),
     };
 
@@ -143,11 +207,16 @@ export default function AdminBookService() {
         clientName: selectedClient.full_name,
         clientPhone: selectedClient.phone,
         clientLocation: selectedClient.location || '',
-        lineItems: lineItems.map(i => ({ name: i.service.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+        lineItems: rows.map(r => ({
+          name: r.service.name,
+          quantity: r.quantity,
+          unitPrice: r.unitPrice,
+          total: r.quantity * r.unitPrice * (1 - r.discountPct / 100),
+        })),
         totalAmount: finalPrice,
         subtotal,
-        discountAmount,
-        discountReason: hasDiscount ? discount.reason : undefined,
+        discountAmount: globalDiscount + lineDiscountsTotal,
+        discountReason: hasDiscount ? (discReason || 'Line-item discount') : undefined,
         serviceDate: date,
         createdById: user.id,
         createdBy: profile?.full_name || 'Admin',
@@ -162,123 +231,553 @@ export default function AdminBookService() {
     navigate('/admin/bookings');
   };
 
-  const quotationLineItems = lineItems.map(i => ({
-    name: i.service.name,
-    quantity: i.quantity,
-    unitPrice: i.unitPrice,
-    total: i.total,
-  }));
+  const disabledMsg = 'Available after saving the booking';
+  const notImplemented = (label: string) =>
+    toast({ title: label, description: disabledMsg });
 
   return (
-    <div className="max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-3">Book Service (Admin)</h1>
+    <div className="min-h-screen bg-muted/30 -m-4 md:-m-6 p-4 md:p-6">
+      {/* Top Action Bar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-background border rounded-lg px-4 py-3 shadow-sm">
+        <div>
+          <div className="text-xs text-muted-foreground">Welcome, <span className="font-semibold text-foreground">{profile?.full_name || 'Admin'}</span></div>
+          <div className="text-xs text-muted-foreground">Role: Administrator</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setRows([]); setSelectedClient(null); setDate(undefined); setDiscType(''); setDiscValue(0); setDiscReason(''); }}>
+            <Plus className="h-4 w-4" /> New Booking
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={loading}>
+            <Save className="h-4 w-4" /> {loading ? 'Saving…' : 'Save'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Generate Quotation')}>
+            <FileText className="h-4 w-4" /> Generate Quotation
+          </Button>
+          <Button variant="outline" size="sm" className="text-primary" onClick={handleSave} disabled={loading}>
+            <CheckCircle2 className="h-4 w-4" /> Confirm Booking
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => notImplemented('More actions')}>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-4 w-4" />
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground grid place-items-center">3</span>
+          </Button>
+          <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
+            {(profile?.full_name || 'A').split(' ').map(p => p[0]).slice(0, 2).join('')}
+          </div>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Page Header */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Booking Details</h1>
+          <div className="text-xs text-muted-foreground mt-1">
+            <Link to="/admin" className="hover:underline">Home</Link>
+            <span className="mx-1">›</span>
+            <Link to="/admin/bookings" className="hover:underline">Bookings</Link>
+            <span className="mx-1">›</span>
+            <span>New Booking</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Booking No.</div>
+            <div className="text-lg font-bold text-primary">{previewBookingNo}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Status</div>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30">DRAFT</Badge>
+          </div>
+          <div className="hidden md:flex flex-col items-center">
+            <div className="h-16 w-16 rounded border-2 border-dashed border-muted-foreground/30 grid place-items-center">
+              <span className="text-[8px] text-muted-foreground text-center leading-tight">QR<br/>on save</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1">Scan to Verify</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 1: Client / Location / Booking Info / Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        {/* Client Information */}
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Services</CardTitle></CardHeader>
-          <CardContent>
-            <MultiServiceSelector services={services} lineItems={lineItems} onChange={handleLineItemsChange} />
-          </CardContent>
-        </Card>
-
-        {hasServices && (
-          <DiscountSection subtotal={subtotal} value={discount} onChange={setDiscount} />
-        )}
-
-        <Card>
-          <CardContent className="pt-4">
-            <SalespersonSelector value={salesperson} onChange={setSalesperson} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Client</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <UserIcon className="h-4 w-4" /> Client Information
+            </div>
             <ClientSearchSelector value={selectedClient} onChange={setSelectedClient} />
+            {selectedClient && (
+              <div className="text-xs space-y-1.5 pt-2 border-t">
+                <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium text-primary">{selectedClient.full_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="font-medium">{selectedClient.phone}</span></div>
+                {selectedClient.location && (
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground">Address</span><span className="font-medium text-right">{selectedClient.location}</span></div>
+                )}
+                <div className="pt-2 flex gap-1">
+                  <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" asChild>
+                    <a href={`tel:${selectedClient.phone}`}><Phone className="h-3 w-3" /> Call</a>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" asChild>
+                    <a href={`https://wa.me/${selectedClient.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"><MessageCircle className="h-3 w-3" /> WhatsApp</a>
+                  </Button>
+                </div>
+                <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-primary" asChild>
+                  <Link to={`/admin/clients/${selectedClient.id}`}>View Client Profile →</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {hasServices && (
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Date & Pricing</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Service Date</Label>
+        {/* Service Location */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <MapPin className="h-4 w-4" /> Service Location
+            </div>
+            <div className="space-y-2 text-xs">
+              <div>
+                <Label className="text-xs">Address / Site</Label>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="Building, floor, street…"
+                  defaultValue={selectedClient?.location || ''}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Site Contact</Label>
+                <Input className="h-8 text-xs" placeholder="Contact person on-site" />
+              </div>
+              <div>
+                <Label className="text-xs">Contact Phone</Label>
+                <Input className="h-8 text-xs" placeholder="+254…" />
+              </div>
+              <div>
+                <Label className="text-xs">GPS Coordinates</Label>
+                <Input className="h-8 text-xs" placeholder="-1.2921, 36.8219" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Booking Information */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <CalIcon className="h-4 w-4" /> Booking Information
+            </div>
+            <div className="space-y-2 text-xs">
+              <SalespersonSelector value={salesperson} onChange={setSalesperson} />
+              <div>
+                <Label className="text-xs">Shipment Mode</Label>
+                <Select value={shipmentMode} onValueChange={setShipmentMode}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ROAD">Road</SelectItem>
+                    <SelectItem value="ON_SITE">On-Site</SelectItem>
+                    <SelectItem value="PICKUP">Pickup</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Preferred Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, 'PPP') : 'Pick a date'}
+                    <Button variant="outline" size="sm" className={cn('w-full h-8 justify-start text-xs font-normal', !date && 'text-muted-foreground')}>
+                      <CalendarIcon className="h-3 w-3" />
+                      {date ? format(date, 'PP') : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={date} onSelect={setDate} disabled={d => d < new Date()} initialFocus className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
+              <div>
+                <Label className="text-xs">Preferred Time</Label>
+                <Input className="h-8 text-xs" type="time" value={time} onChange={e => setTime(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Payment Terms</Label>
+                <Select value={paymentTerms} onValueChange={setPaymentTerms}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="M-Pesa">M-Pesa</SelectItem>
+                    <SelectItem value="Bank">Bank Transfer</SelectItem>
+                    <SelectItem value="On Completion">On Completion</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Assigned Technician</Label>
+                <Input className="h-8 text-xs" value={technician} onChange={e => setTechnician(e.target.value)} placeholder="Technician name" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              {systemPrice > 0 && (
-                <div className="space-y-1.5">
-                  <Label>Your Price (Ksh)</Label>
-                  <Input type="number" value={agentPrice} onChange={e => setAgentPrice(e.target.value)} min={systemPrice} required placeholder={`Min: ${systemPrice.toLocaleString()}`} />
-                  {priceError && <p className="text-xs text-destructive">{priceError}</p>}
-                  <p className="text-xs text-muted-foreground">Cannot be below Ksh {systemPrice.toLocaleString()}</p>
-                </div>
+        {/* Status & Approval */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <ShieldCheck className="h-4 w-4" /> Status & Approval
+            </div>
+            <div className="text-xs space-y-2">
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Booking Status</span><Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">DRAFT</Badge></div>
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Lock Status</span><Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">UNLOCKED</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Created By</span><span className="font-medium">{profile?.full_name || 'Admin'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Created On</span><span className="font-medium">{format(new Date(), 'dd/MM/yyyy HH:mm')}</span></div>
+              <div className="pt-2 border-t space-y-1">
+                <Button variant="outline" size="sm" className="w-full h-7 text-xs" onClick={() => notImplemented('Lock Booking')}>
+                  <Lock className="h-3 w-3" /> Lock Booking
+                </Button>
+                <Button variant="outline" size="sm" className="w-full h-7 text-xs" onClick={() => notImplemented('Generate Invoice')}>
+                  <Receipt className="h-3 w-3" /> Generate Invoice
+                </Button>
+                <Button variant="outline" size="sm" className="w-full h-7 text-xs" onClick={() => notImplemented('Generate Certificate')}>
+                  <Award className="h-3 w-3" /> Certificate
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Services Table */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <FileText className="h-4 w-4" /> Services
+            </div>
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" /> Add Service
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground">
+                  <th className="p-2 text-left border">#</th>
+                  <th className="p-2 text-left border">Service</th>
+                  <th className="p-2 text-left border">Description</th>
+                  <th className="p-2 text-center border w-16">Qty</th>
+                  <th className="p-2 text-center border w-20">Unit</th>
+                  <th className="p-2 text-right border w-28">Unit Price (KES)</th>
+                  <th className="p-2 text-right border w-24">Discount (%)</th>
+                  <th className="p-2 text-right border w-24">VAT ({(VAT_RATE * 100).toFixed(0)}%)</th>
+                  <th className="p-2 text-right border w-28">Total (KES)</th>
+                  <th className="p-2 text-center border w-16">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="p-8 text-center text-muted-foreground border">
+                      No services added. Click <span className="font-medium text-primary">Add Service</span> to begin.
+                    </td>
+                  </tr>
+                )}
+                {rows.map((r, idx) => {
+                  const lineSub = r.quantity * r.unitPrice;
+                  const lineDisc = lineSub * (r.discountPct / 100);
+                  const afterDisc = lineSub - lineDisc;
+                  const lineVat = afterDisc * VAT_RATE;
+                  const lineTotal = afterDisc + lineVat;
+                  return (
+                    <tr key={r.service.id} className="hover:bg-muted/30">
+                      <td className="p-2 border text-center">{idx + 1}</td>
+                      <td className="p-2 border font-medium">{r.service.name}</td>
+                      <td className="p-2 border">
+                        <Input
+                          className="h-7 text-xs"
+                          value={r.description || ''}
+                          onChange={e => updateRow(idx, { description: e.target.value })}
+                          placeholder={r.service.category}
+                        />
+                      </td>
+                      <td className="p-2 border">
+                        <Input
+                          type="number" min={1}
+                          className="h-7 text-xs text-center"
+                          value={r.quantity}
+                          onChange={e => updateRow(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                        />
+                      </td>
+                      <td className="p-2 border text-center text-muted-foreground">JOB</td>
+                      <td className="p-2 border">
+                        <Input
+                          type="number" min={0}
+                          className="h-7 text-xs text-right"
+                          value={r.unitPrice}
+                          onChange={e => updateRow(idx, { unitPrice: Number(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="p-2 border">
+                        <Input
+                          type="number" min={0} max={100}
+                          className="h-7 text-xs text-right"
+                          value={r.discountPct}
+                          onChange={e => updateRow(idx, { discountPct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
+                        />
+                      </td>
+                      <td className="p-2 border text-right text-muted-foreground">{lineVat.toFixed(2)}</td>
+                      <td className="p-2 border text-right font-semibold">{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="p-2 border text-center">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeRow(idx)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {rows.length > 0 && (
+                <tfoot>
+                  <tr className="bg-muted/30 font-semibold">
+                    <td colSpan={4} className="p-2 border">Total Items: {rows.length}</td>
+                    <td colSpan={4} className="p-2 border text-right">Sub Total (Before Discount):</td>
+                    <td colSpan={2} className="p-2 border text-right text-primary">{money(subtotal)}</td>
+                  </tr>
+                </tfoot>
               )}
-            </CardContent>
-          </Card>
-        )}
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-        {systemPrice > 0 && currentAgentPrice >= systemPrice && !priceError && (
-          <PriceBreakdown
-            serviceName={lineItems.length === 1 ? lineItems[0].service.name : `${lineItems.length} Services`}
-            systemPrice={systemPrice}
-            agentPrice={finalPrice}
-            agentMargin={agentMargin}
-            tier={tier}
-            commission={commission}
-            lineItems={lineItems.length > 1 ? lineItems.map(i => ({ name: i.service.name, unitPrice: i.unitPrice })) : undefined}
-            discount={discountAmount > 0 ? {
-              subtotal,
-              type: discount.type,
-              value: discount.value,
-              amount: discountAmount,
-              status: 'approved',
-            } : undefined}
+      {/* Row 2: Discount / Approval / Price Breakdown / Payment Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        {/* Discount Information */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <ShieldAlert className="h-4 w-4" /> Discount Information
+            </div>
+            <div className="space-y-2 text-xs">
+              <div>
+                <Label className="text-xs">Discount Type</Label>
+                <Select value={discType || 'none'} onValueChange={(v) => { setDiscType(v === 'none' ? '' : (v as DiscountType)); if (v === 'none') setDiscValue(0); }}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No discount</SelectItem>
+                    <SelectItem value="percent">Percentage (%)</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount (KES)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Discount Value</Label>
+                <Input type="number" min={0} disabled={!discType} className="h-8 text-xs"
+                  value={discValue || ''} onChange={e => setDiscValue(Number(e.target.value) || 0)} />
+              </div>
+              <div>
+                <Label className="text-xs">Discount Amount</Label>
+                <Input readOnly className="h-8 text-xs bg-muted/50" value={money(globalDiscount)} />
+              </div>
+              <div>
+                <Label className="text-xs">Discount Reason {discType && discValue > 0 && <span className="text-destructive">*</span>}</Label>
+                <Textarea rows={2} className="text-xs" value={discReason} onChange={e => setDiscReason(e.target.value)}
+                  placeholder="Loyal customer, promo, etc." />
+                {discountReasonMissing && <p className="text-[10px] text-destructive">Required.</p>}
+              </div>
+              <div className="flex justify-between text-[11px] pt-1 border-t">
+                <span className="text-muted-foreground">Requested By</span>
+                <span className="font-medium">{profile?.full_name || 'Admin'}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Discount Approval */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <CheckCircle2 className="h-4 w-4" /> Discount Approval
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Status</span>
+                {hasDiscount
+                  ? <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">APPROVED</Badge>
+                  : <Badge variant="outline">N/A</Badge>}
+              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Approved By</span><span className="font-medium">{hasDiscount ? (profile?.full_name || 'Admin') : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Approved On</span><span className="font-medium">{hasDiscount ? format(new Date(), 'dd/MM/yyyy HH:mm') : '—'}</span></div>
+              <div>
+                <Label className="text-xs">Approval Comment</Label>
+                <Textarea rows={3} className="text-xs" placeholder="Approved as per management discretion." />
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" className="flex-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700">
+                  <CheckCircle2 className="h-3 w-3" /> Approve
+                </Button>
+                <Button size="sm" variant="destructive" className="flex-1 h-7 text-xs">
+                  Reject
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Price Breakdown */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <FileText className="h-4 w-4" /> Price Breakdown
+            </div>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between"><span className="text-muted-foreground">Sub Total (Before Discount)</span><span className="font-medium">{money(subtotal)}</span></div>
+              {lineDiscountsTotal > 0 && (
+                <div className="flex justify-between text-destructive"><span>Line Discounts</span><span>− {money(lineDiscountsTotal)}</span></div>
+              )}
+              {globalDiscount > 0 && (
+                <div className="flex justify-between text-destructive"><span>Discount {discType === 'percent' ? `(${discValue}%)` : ''}</span><span>− {money(globalDiscount)}</span></div>
+              )}
+              <div className="flex justify-between pt-1 border-t"><span className="text-muted-foreground">Sub Total (After Discount)</span><span className="font-medium">{money(subAfterAllDisc)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">VAT ({(VAT_RATE * 100).toFixed(0)}%)</span><span className="font-medium">+ {money(vatAmount)}</span></div>
+              <div className="flex justify-between pt-2 border-t items-center">
+                <span className="text-primary font-bold">Grand Total</span>
+                <span className="text-primary font-bold text-lg">{money(grandTotal)}</span>
+              </div>
+              <div className="rounded-md bg-primary/5 border border-primary/20 p-2 mt-2">
+                <div className="text-[10px] font-semibold text-primary uppercase mb-0.5">Amount in Words</div>
+                <div className="text-[11px] text-muted-foreground italic">{numberToWords(grandTotal) || '—'}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Summary */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <CreditCard className="h-4 w-4" /> Payment Summary
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-muted-foreground">Payment Terms</span><span className="font-medium">{paymentTerms}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Deposit Amount</span><span className="font-medium">KES 0.00</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount Paid</span><span className="font-medium">KES 0.00</span></div>
+              <div className="flex justify-between pt-2 border-t"><span className="text-muted-foreground">Balance Amount</span><span className="font-bold text-destructive">{money(grandTotal)}</span></div>
+              <Button className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700" size="sm" onClick={() => notImplemented('Record Payment')}>
+                <CreditCard className="h-4 w-4" /> Record Payment
+              </Button>
+              <Button variant="outline" className="w-full" size="sm" onClick={() => notImplemented('Send WhatsApp')}>
+                <MessageCircle className="h-4 w-4" /> Send WhatsApp
+              </Button>
+              <div className="grid grid-cols-2 gap-1">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => notImplemented('Print')}>
+                  <Printer className="h-3 w-3" /> Print
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => notImplemented('Download PDF')}>
+                  <Download className="h-3 w-3" /> PDF
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Special Instructions */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <Label className="text-xs font-semibold text-primary mb-2 block">Special Instructions</Label>
+          <Textarea rows={2} value={instructions} onChange={e => setInstructions(e.target.value)}
+            placeholder="Any special access, parking, safety or client-specific instructions…" className="text-sm" />
+        </CardContent>
+      </Card>
+
+      {/* Tabs: Attachments / Notes / History / Activity */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <Tabs defaultValue="attachments">
+            <TabsList>
+              <TabsTrigger value="attachments"><Paperclip className="h-3 w-3" /> Attachments <Badge variant="secondary" className="ml-1 h-4 text-[10px]">0</Badge></TabsTrigger>
+              <TabsTrigger value="notes"><StickyNote className="h-3 w-3" /> Notes</TabsTrigger>
+              <TabsTrigger value="history"><History className="h-3 w-3" /> History</TabsTrigger>
+              <TabsTrigger value="activity"><Activity className="h-3 w-3" /> Activity Log</TabsTrigger>
+            </TabsList>
+            <TabsContent value="attachments" className="pt-3">
+              <div className="border-2 border-dashed rounded-lg p-6 text-center text-xs text-muted-foreground">
+                <Paperclip className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                Upload photos, site images, contracts and supporting documents after saving the booking.
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" disabled>Upload files</Button>
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="notes" className="pt-3">
+              <Textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)}
+                placeholder="Internal notes (visible to staff only)…" className="text-sm" />
+            </TabsContent>
+            <TabsContent value="history" className="pt-3">
+              <ol className="relative border-l pl-4 space-y-3 text-xs">
+                <li>
+                  <div className="absolute -left-1.5 w-3 h-3 rounded-full bg-primary" />
+                  <div className="font-medium">Draft created</div>
+                  <div className="text-muted-foreground">by {profile?.full_name || 'Admin'} · {format(new Date(), 'dd/MM/yyyy HH:mm')}</div>
+                </li>
+                <li className="text-muted-foreground italic">Approval, lock and modification history will appear here after saving.</li>
+              </ol>
+            </TabsContent>
+            <TabsContent value="activity" className="pt-3">
+              <div className="text-xs text-muted-foreground italic">Activity log will populate after the booking is saved.</div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Verification Footer */}
+      <div className="rounded-lg border bg-gradient-to-r from-primary/5 via-background to-primary/5 p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground">Verification Code</div>
+              <div className="font-mono font-semibold">CCS-BOK-DRAFT</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <CalIcon className="h-5 w-5 text-primary" />
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground">Generated On</div>
+              <div className="font-semibold">{format(new Date(), 'dd/MM/yyyy HH:mm')}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <UserIcon className="h-5 w-5 text-primary" />
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground">Generated By</div>
+              <div className="font-semibold">{profile?.full_name || 'Admin'}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 justify-end">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <div className="text-right">
+              <div className="text-[10px] uppercase text-emerald-600 font-semibold">Secured Document</div>
+              <div className="text-muted-foreground">Official Booking Document</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Service Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Service</DialogTitle>
+          </DialogHeader>
+          <ServiceSearch
+            services={services.filter(s => !rows.some(r => r.service.id === s.id))}
+            selectedService={null}
+            onSelect={(s) => s && addService(s)}
           />
-        )}
-
-        {canQuote && (
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm font-medium mb-2">Generate Quotation</p>
-              <QuotationActions
-                clientName={selectedClient!.full_name}
-                clientPhone={selectedClient!.phone}
-                serviceName={lineItems.map(i => i.service.name).join(', ')}
-                serviceDate={date}
-                price={finalPrice}
-                userId={user?.id || ''}
-                userName={profile?.full_name || 'Admin'}
-                userRole="admin"
-                disabled={!canQuote}
-                lineItems={quotationLineItems}
-                salespersonId={salesperson.id}
-                salespersonName={salesperson.name}
-                salespersonRole={salesperson.role}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loading || !hasServices || !date || !selectedClient || !!priceError || systemPrice <= 0 || currentAgentPrice < systemPrice || discountReasonMissing}
-        >
-          {loading ? 'Saving…' : `Save Booking${lineItems.length > 1 ? ` (${lineItems.length} services)` : ''}`}
-        </Button>
-      </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
