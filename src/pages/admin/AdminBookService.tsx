@@ -18,7 +18,7 @@ import {
   CalendarIcon, Plus, Save, FileText, CheckCircle2, Lock, Receipt, Award,
   Printer, Download, MessageCircle, Trash2, User as UserIcon, MapPin,
   Calendar as CalIcon, ShieldCheck, Phone, Mail, CreditCard, Paperclip,
-  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell,
+  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -27,8 +27,7 @@ import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import { computeDiscount, DiscountType } from '@/lib/discounts';
-
-const VAT_RATE = 0; // Display-only; kept at 0 so persisted price matches existing invoice logic.
+import { useSettings } from '@/hooks/useSettings';
 
 interface LineRow {
   service: any;
@@ -62,7 +61,10 @@ function numberToWords(num: number): string {
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
+  // Display-only VAT rate driven by Settings. Persisted price stays pre-VAT (unchanged business logic).
+  const VAT_RATE = settings.tax.vat_enabled ? (Number(settings.tax.vat_percentage) || 0) / 100 : 0;
 
   const [services, setServices] = useState<any[]>([]);
   const [rows, setRows] = useState<LineRow[]>([]);
@@ -247,14 +249,26 @@ export default function AdminBookService() {
           <Button variant="outline" size="sm" onClick={() => { setRows([]); setSelectedClient(null); setDate(undefined); setDiscType(''); setDiscValue(0); setDiscReason(''); }}>
             <Plus className="h-4 w-4" /> New Booking
           </Button>
+          <Button variant="outline" size="sm" onClick={handleSave} disabled={loading}>
+            <Save className="h-4 w-4" /> Save Draft
+          </Button>
           <Button size="sm" onClick={handleSave} disabled={loading}>
-            <Save className="h-4 w-4" /> {loading ? 'Saving…' : 'Save'}
+            <Save className="h-4 w-4" /> {loading ? 'Saving…' : 'Save Booking'}
           </Button>
           <Button variant="outline" size="sm" onClick={() => notImplemented('Generate Quotation')}>
             <FileText className="h-4 w-4" /> Generate Quotation
           </Button>
           <Button variant="outline" size="sm" className="text-primary" onClick={handleSave} disabled={loading}>
             <CheckCircle2 className="h-4 w-4" /> Confirm Booking
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Print')}>
+            <Printer className="h-4 w-4" /> Print
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Generate PDF')}>
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Send WhatsApp')}>
+            <MessageCircle className="h-4 w-4" /> WhatsApp
           </Button>
           <Button variant="outline" size="icon" onClick={() => notImplemented('More actions')}>
             <MoreHorizontal className="h-4 w-4" />
@@ -468,16 +482,17 @@ export default function AdminBookService() {
                   <th className="p-2 text-center border w-16">Qty</th>
                   <th className="p-2 text-center border w-20">Unit</th>
                   <th className="p-2 text-right border w-28">Unit Price (KES)</th>
-                  <th className="p-2 text-right border w-24">Discount (%)</th>
+                  <th className="p-2 text-right border w-20">Discount (%)</th>
+                  <th className="p-2 text-right border w-24">Discount (KES)</th>
                   <th className="p-2 text-right border w-24">VAT ({(VAT_RATE * 100).toFixed(0)}%)</th>
                   <th className="p-2 text-right border w-28">Total (KES)</th>
-                  <th className="p-2 text-center border w-16">Action</th>
+                  <th className="p-2 text-center border w-20">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground border">
+                    <td colSpan={11} className="p-8 text-center text-muted-foreground border">
                       No services added. Click <span className="font-medium text-primary">Add Service</span> to begin.
                     </td>
                   </tr>
@@ -525,12 +540,18 @@ export default function AdminBookService() {
                           onChange={e => updateRow(idx, { discountPct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
                         />
                       </td>
+                      <td className="p-2 border text-right text-destructive">{lineDisc.toFixed(2)}</td>
                       <td className="p-2 border text-right text-muted-foreground">{lineVat.toFixed(2)}</td>
                       <td className="p-2 border text-right font-semibold">{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="p-2 border text-center">
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeRow(idx)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => toast({ title: 'Edit inline', description: 'Update quantity, price or discount directly in the row.' })}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeRow(idx)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -539,7 +560,7 @@ export default function AdminBookService() {
               {rows.length > 0 && (
                 <tfoot>
                   <tr className="bg-muted/30 font-semibold">
-                    <td colSpan={4} className="p-2 border">Total Items: {rows.length}</td>
+                    <td colSpan={5} className="p-2 border">Total Items: {rows.length}</td>
                     <td colSpan={4} className="p-2 border text-right">Sub Total (Before Discount):</td>
                     <td colSpan={2} className="p-2 border text-right text-primary">{money(subtotal)}</td>
                   </tr>
