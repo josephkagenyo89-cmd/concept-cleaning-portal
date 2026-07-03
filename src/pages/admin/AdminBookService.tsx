@@ -482,10 +482,11 @@ export default function AdminBookService() {
                   <th className="p-2 text-center border w-16">Qty</th>
                   <th className="p-2 text-center border w-20">Unit</th>
                   <th className="p-2 text-right border w-28">Unit Price (KES)</th>
-                  <th className="p-2 text-right border w-24">Discount (%)</th>
+                  <th className="p-2 text-right border w-20">Discount (%)</th>
+                  <th className="p-2 text-right border w-24">Discount (KES)</th>
                   <th className="p-2 text-right border w-24">VAT ({(VAT_RATE * 100).toFixed(0)}%)</th>
                   <th className="p-2 text-right border w-28">Total (KES)</th>
-                  <th className="p-2 text-center border w-16">Action</th>
+                  <th className="p-2 text-center border w-20">Action</th>
                 </tr>
               </thead>
               <tbody>
