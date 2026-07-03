@@ -492,7 +492,7 @@ export default function AdminBookService() {
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground border">
+                    <td colSpan={11} className="p-8 text-center text-muted-foreground border">
                       No services added. Click <span className="font-medium text-primary">Add Service</span> to begin.
                     </td>
                   </tr>
