@@ -61,7 +61,10 @@ function numberToWords(num: number): string {
 
 export default function AdminBookService() {
   const { user, profile } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
+  // Display-only VAT rate driven by Settings. Persisted price stays pre-VAT (unchanged business logic).
+  const VAT_RATE = settings.tax.vat_enabled ? (Number(settings.tax.vat_percentage) || 0) / 100 : 0;
 
   const [services, setServices] = useState<any[]>([]);
   const [rows, setRows] = useState<LineRow[]>([]);
