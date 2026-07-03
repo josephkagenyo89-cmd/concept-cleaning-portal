@@ -18,8 +18,9 @@ import {
   CalendarIcon, Plus, Save, FileText, CheckCircle2, Lock, Receipt, Award,
   Printer, Download, MessageCircle, Trash2, User as UserIcon, MapPin,
   Calendar as CalIcon, ShieldCheck, Phone, Mail, CreditCard, Paperclip,
-  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil,
+  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil, Settings,
 } from 'lucide-react';
+import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import ServiceSearch from '@/components/booking/ServiceSearch';
