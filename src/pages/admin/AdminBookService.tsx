@@ -18,8 +18,9 @@ import {
   CalendarIcon, Plus, Save, FileText, CheckCircle2, Lock, Receipt, Award,
   Printer, Download, MessageCircle, Trash2, User as UserIcon, MapPin,
   Calendar as CalIcon, ShieldCheck, Phone, Mail, CreditCard, Paperclip,
-  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil,
+  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil, Settings,
 } from 'lucide-react';
+import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import ServiceSearch from '@/components/booking/ServiceSearch';
@@ -60,9 +61,10 @@ function numberToWords(num: number): string {
 }
 
 export default function AdminBookService() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Display-only VAT rate driven by Settings. Persisted price stays pre-VAT (unchanged business logic).
   const VAT_RATE = settings.tax.vat_enabled ? (Number(settings.tax.vat_percentage) || 0) / 100 : 0;
 
@@ -273,6 +275,11 @@ export default function AdminBookService() {
           <Button variant="outline" size="icon" onClick={() => notImplemented('More actions')}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
+          {isAdmin && (
+            <Button variant="outline" size="icon" title="Booking Settings" onClick={() => setSettingsOpen(true)}>
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-4 w-4" />
             <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground grid place-items-center">3</span>
@@ -799,6 +806,8 @@ export default function AdminBookService() {
           />
         </DialogContent>
       </Dialog>
+
+      <BookingSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
