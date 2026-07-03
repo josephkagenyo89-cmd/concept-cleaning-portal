@@ -560,7 +560,7 @@ export default function AdminBookService() {
               {rows.length > 0 && (
                 <tfoot>
                   <tr className="bg-muted/30 font-semibold">
-                    <td colSpan={4} className="p-2 border">Total Items: {rows.length}</td>
+                    <td colSpan={5} className="p-2 border">Total Items: {rows.length}</td>
                     <td colSpan={4} className="p-2 border text-right">Sub Total (Before Discount):</td>
                     <td colSpan={2} className="p-2 border text-right text-primary">{money(subtotal)}</td>
                   </tr>
