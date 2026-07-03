@@ -18,7 +18,7 @@ import {
   CalendarIcon, Plus, Save, FileText, CheckCircle2, Lock, Receipt, Award,
   Printer, Download, MessageCircle, Trash2, User as UserIcon, MapPin,
   Calendar as CalIcon, ShieldCheck, Phone, Mail, CreditCard, Paperclip,
-  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell,
+  StickyNote, History, Activity, ShieldAlert, MoreHorizontal, Bell, Pencil,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -27,8 +27,7 @@ import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
 import { computeDiscount, DiscountType } from '@/lib/discounts';
-
-const VAT_RATE = 0; // Display-only; kept at 0 so persisted price matches existing invoice logic.
+import { useSettings } from '@/hooks/useSettings';
 
 interface LineRow {
   service: any;
