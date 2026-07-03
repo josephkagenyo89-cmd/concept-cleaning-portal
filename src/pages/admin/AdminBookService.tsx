@@ -249,14 +249,26 @@ export default function AdminBookService() {
           <Button variant="outline" size="sm" onClick={() => { setRows([]); setSelectedClient(null); setDate(undefined); setDiscType(''); setDiscValue(0); setDiscReason(''); }}>
             <Plus className="h-4 w-4" /> New Booking
           </Button>
+          <Button variant="outline" size="sm" onClick={handleSave} disabled={loading}>
+            <Save className="h-4 w-4" /> Save Draft
+          </Button>
           <Button size="sm" onClick={handleSave} disabled={loading}>
-            <Save className="h-4 w-4" /> {loading ? 'Saving…' : 'Save'}
+            <Save className="h-4 w-4" /> {loading ? 'Saving…' : 'Save Booking'}
           </Button>
           <Button variant="outline" size="sm" onClick={() => notImplemented('Generate Quotation')}>
             <FileText className="h-4 w-4" /> Generate Quotation
           </Button>
           <Button variant="outline" size="sm" className="text-primary" onClick={handleSave} disabled={loading}>
             <CheckCircle2 className="h-4 w-4" /> Confirm Booking
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Print')}>
+            <Printer className="h-4 w-4" /> Print
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Generate PDF')}>
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => notImplemented('Send WhatsApp')}>
+            <MessageCircle className="h-4 w-4" /> WhatsApp
           </Button>
           <Button variant="outline" size="icon" onClick={() => notImplemented('More actions')}>
             <MoreHorizontal className="h-4 w-4" />
