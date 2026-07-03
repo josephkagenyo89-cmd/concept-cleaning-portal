@@ -540,12 +540,18 @@ export default function AdminBookService() {
                           onChange={e => updateRow(idx, { discountPct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
                         />
                       </td>
+                      <td className="p-2 border text-right text-destructive">{lineDisc.toFixed(2)}</td>
                       <td className="p-2 border text-right text-muted-foreground">{lineVat.toFixed(2)}</td>
                       <td className="p-2 border text-right font-semibold">{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="p-2 border text-center">
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeRow(idx)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => toast({ title: 'Edit inline', description: 'Update quantity, price or discount directly in the row.' })}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeRow(idx)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
