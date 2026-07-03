@@ -806,6 +806,8 @@ export default function AdminBookService() {
           />
         </DialogContent>
       </Dialog>
+
+      <BookingSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
