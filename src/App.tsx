@@ -18,6 +18,7 @@ import ClientSignature from "@/pages/ClientSignature";
 import InstallPrompt from "@/components/InstallPrompt";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import OAuthConsent from "@/pages/OAuthConsent";
 
 // Lazy-loaded dashboard pages
 const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
@@ -87,6 +88,7 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/sign" element={<ClientSignature />} />
+        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -174,6 +176,7 @@ function AppRoutes() {
 
         {/* Public routes */}
         <Route path="/sign" element={<ClientSignature />} />
+        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />
