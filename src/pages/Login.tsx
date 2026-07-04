@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,27 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
 
+function safeNext(next: string | null): string | null {
+  if (!next) return null;
+  if (!next.startsWith('/') || next.startsWith('//')) return null;
+  return next;
+}
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
+
+  // If a session already exists (e.g. user returned here mid-OAuth), honour ?next.
+  useEffect(() => {
+    if (!next) return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) window.location.href = next;
+    });
+  }, [next]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +37,15 @@ export default function Login() {
     if (error) {
       setLoading(false);
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
+      return;
     }
-    // On success, don't navigate manually — AuthContext will detect the session
-    // change and AppRoutes will render the correct dashboard automatically.
+    if (next) {
+      window.location.href = next;
+      return;
+    }
+    // On success without ?next, AuthContext-driven routing renders the dashboard.
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
