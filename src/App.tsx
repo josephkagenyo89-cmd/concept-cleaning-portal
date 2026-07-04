@@ -18,6 +18,7 @@ import ClientSignature from "@/pages/ClientSignature";
 import InstallPrompt from "@/components/InstallPrompt";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import OAuthConsent from "@/pages/OAuthConsent";
 
 // Lazy-loaded dashboard pages
 const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
