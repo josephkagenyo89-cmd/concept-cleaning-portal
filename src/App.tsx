@@ -176,9 +176,6 @@ function AppRoutes() {
 
         {/* Public routes */}
         <Route path="/sign" element={<ClientSignature />} />
-
-        {/* Public routes */}
-        <Route path="/sign" element={<ClientSignature />} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
         {/* Default redirect */}
