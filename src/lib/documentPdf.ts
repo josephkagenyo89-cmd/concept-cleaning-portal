@@ -777,8 +777,8 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
   y = drawTerms(doc, w, y, data);
   y = drawAcceptance(doc, w, y, data);
 
-  // Gold "Certified & Verified" seal for receipts/certificates
-  if (['receipt', 'service_certificate', 'pest_certificate'].includes(data.documentType)) {
+  // Gold premium seal — quotations, invoices, receipts, certificates
+  if (['quotation', 'invoice', 'receipt', 'service_certificate', 'pest_certificate'].includes(data.documentType)) {
     drawGoldCertifiedSeal(doc, w - 30, h - 70, 15);
   }
 
