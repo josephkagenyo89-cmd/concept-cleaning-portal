@@ -280,37 +280,41 @@ function drawHeader(doc: jsPDF, w: number, data: DocumentData): number {
   return bottom + 4;
 }
 
-// ---------- Meta strip (salesperson etc) ----------
+// ---------- Meta strip (Date / Service Date / Salesperson / etc.) ----------
 function drawMetaStrip(doc: jsPDF, w: number, y: number, data: DocumentData): number {
+  const brand = primary();
   const sales = data.salespersonName || data.createdBy;
-  const h = 10;
-  doc.setFillColor(...SOFT_BG);
-  doc.rect(MARGIN_X, y, w - MARGIN_X * 2, h, 'F');
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(0.2);
-  doc.rect(MARGIN_X, y, w - MARGIN_X * 2, h, 'S');
-
-  doc.setFontSize(7.5);
-  doc.setTextColor(...MUTED);
-  doc.setFont('helvetica', 'normal');
+  const isQuote = data.documentType === 'quotation';
+  const isInvoice = data.documentType === 'invoice';
 
   const cells: [string, string][] = [
-    ['Salesperson', sales || '-'],
-    ['Reference', data.documentNumber],
+    ['Date', data.dateCreated || '-'],
     ['Service Date', data.serviceDate || '-'],
+    ['Salesperson', sales || '-'],
   ];
+  if (isQuote) cells.push(['Valid Until', data.validUntil || '30 days from issue']);
+  if (isInvoice) cells.push(['Payment Status', (data.paymentStatus || 'Unpaid').toUpperCase()]);
+
+  const h = 14;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.setFillColor(...WHITE);
+  doc.rect(MARGIN_X, y, w - MARGIN_X * 2, h, 'FD');
+
   const colW = (w - MARGIN_X * 2) / cells.length;
   cells.forEach(([label, value], i) => {
     const cx = MARGIN_X + colW * i + 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...MUTED);
-    doc.text(label.toUpperCase(), cx, y + 4);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...EMERALD);
+    doc.text(label, cx, y + 5);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
     doc.setTextColor(...INK);
-    doc.text(value, cx, y + 8.2);
+    doc.text(value, cx, y + 10.5);
     if (i > 0) {
       doc.setDrawColor(...BORDER);
-      doc.line(MARGIN_X + colW * i, y + 1.5, MARGIN_X + colW * i, y + h - 1.5);
+      doc.line(MARGIN_X + colW * i, y + 2, MARGIN_X + colW * i, y + h - 2);
     }
   });
 
