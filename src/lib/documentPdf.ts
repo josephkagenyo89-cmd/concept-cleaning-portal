@@ -175,81 +175,109 @@ function amountInWords(amount: number, currency = 'Kenya Shillings'): string {
   return s + ' Only';
 }
 
-// ---------- Header ----------
+// ---------- Header (minimalist, white background) ----------
 function drawHeader(doc: jsPDF, w: number, data: DocumentData): number {
   const brand = primary();
   const g = pdfSettings.general;
-  const headerH = 42;
 
-  // Navy band
-  doc.setFillColor(...brand);
-  doc.rect(0, 0, w, headerH, 'F');
+  // Soft brand corner wash (very subtle) — echoes reference top-left tint
+  doc.setFillColor(235, 244, 241);
+  doc.triangle(0, 0, 90, 0, 0, 36, 'F');
 
-  // Gold accent stripe
-  doc.setFillColor(...GOLD);
-  doc.rect(0, headerH, w, 1.6, 'F');
-
-  // Logo (if present) or monogram badge
+  // Logo top-left
   const logo = g.logo_url;
-  const logoSize = 20;
+  const logoSize = 22;
   const logoX = MARGIN_X;
-  const logoY = 8;
+  const logoY = 12;
   if (logo) {
     try {
       const ext = logo.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
       doc.addImage(logo, ext, logoX, logoY, logoSize, logoSize);
     } catch { /* ignore */ }
   } else {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 2, 2, 'F');
+    doc.setDrawColor(...brand);
+    doc.setLineWidth(0.6);
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 2, 2, 'S');
     doc.setTextColor(...brand);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('CCS', logoX + logoSize / 2, logoY + logoSize / 2 + 3.5, { align: 'center' });
   }
 
-  // Company block
-  const cx = logoX + logoSize + 5;
-  doc.setTextColor(255, 255, 255);
+  // Company name beside logo
+  const cx = logoX + logoSize + 6;
+  doc.setTextColor(...brand);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), cx, 15);
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), cx, logoY + 8);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...MUTED);
+  doc.text('Spotless Spaces. Healthier Living.', cx, logoY + 13);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
-  const lines: string[] = [];
-  if (g.address) lines.push(g.address);
-  const contact = [g.phone, g.email].filter(Boolean).join('  ·  ');
-  if (contact) lines.push(contact);
-  if (g.website) lines.push(g.website);
-  lines.forEach((l, i) => doc.text(l, cx, 21 + i * 4));
-
-  // Document title right side
-  const title = DOC_TITLES[data.documentType].toUpperCase();
+  // Right-side company contact block
+  const rx = w - MARGIN_X;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text(title, w - MARGIN_X, 18, { align: 'right' });
+  doc.setFontSize(10);
+  doc.setTextColor(...brand);
+  doc.text((g.company_name || 'Concept Cleaning Services').toUpperCase(), rx, logoY + 2, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...GOLD);
-  doc.text(`No. ${data.documentNumber}`, w - MARGIN_X, 24, { align: 'right' });
+  doc.setTextColor(...INK);
+  const contactLines: string[] = [];
+  if (g.address) contactLines.push(g.address);
+  if (g.phone) contactLines.push(g.phone);
+  if (g.email) contactLines.push(g.email);
+  if (g.website) contactLines.push(g.website);
+  contactLines.forEach((l, i) => doc.text(l, rx, logoY + 8 + i * 4, { align: 'right' }));
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7.5);
-  doc.text(`Date Issued: ${data.dateCreated}`, w - MARGIN_X, 30, { align: 'right' });
-  const isQuote = data.documentType === 'quotation';
-  const validity = data.validUntil || (isQuote ? '30 days from issue' : undefined);
-  if (isQuote && validity) doc.text(`Valid Until: ${validity}`, w - MARGIN_X, 34, { align: 'right' });
+  // Divider hairline
+  let y = Math.max(logoY + logoSize, logoY + 8 + contactLines.length * 4) + 6;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN_X, y, w - MARGIN_X, y);
+  y += 8;
 
-  const prepared = data.preparedBy || data.createdBy;
-  const sales = data.salespersonName || data.createdBy;
-  doc.text(`Prepared By: ${prepared}`, w - MARGIN_X, 38, { align: 'right' });
-  if (sales && sales !== prepared) {
-    // extended row will show below header in meta strip
+  // Bill To (left) + Document title (right)
+  const isStaff = data.documentType.includes('voucher');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...EMERALD);
+  doc.text(isStaff ? 'PAY TO' : 'BILL TO', MARGIN_X, y);
+
+  const billLines: string[] = [];
+  if (isStaff) {
+    if (data.staffName) billLines.push(data.staffName.toUpperCase());
+    if (data.department) billLines.push(data.department);
+    if (data.paymentReason) billLines.push(data.paymentReason);
+  } else {
+    if (data.clientName) billLines.push(data.clientName.toUpperCase());
+    if (data.contactPerson && data.contactPerson !== data.clientName) billLines.push(data.contactPerson);
+    if (data.companyName) billLines.push(data.companyName);
+    if (data.clientPhone) billLines.push(data.clientPhone);
+    if (data.clientEmail) billLines.push(data.clientEmail);
+    if (data.clientLocation) billLines.push(data.clientLocation);
+    if (data.clientId) billLines.push(`Client ID: ${data.clientId}`);
   }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...INK);
+  billLines.slice(0, 5).forEach((l, i) => {
+    if (i === 0) { doc.setFont('helvetica', 'bold'); doc.setFontSize(10); }
+    else { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...INK); }
+    doc.text(l, MARGIN_X, y + 5 + i * 4.2);
+  });
 
-  return headerH + 6;
+  // Right: document title
+  const title = DOC_TITLES[data.documentType];
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...brand);
+  doc.text(`${title} # ${data.documentNumber}`, w - MARGIN_X, y + 6, { align: 'right' });
+
+  const bottom = y + Math.max(24, 5 + Math.min(billLines.length, 5) * 4.2 + 4);
+  return bottom + 4;
 }
 
 // ---------- Meta strip (salesperson etc) ----------
