@@ -762,15 +762,15 @@ export function generateDocumentPdf(data: DocumentData): jsPDF {
 
   // Security layer (drawn first so all content sits on top)
   drawDiagonalWatermark(doc, w, h, getWatermarkText(data.documentType));
-  drawCompanySeal(doc, w / 2, h / 2 + 30, {
-    companyName: g.company_name,
-    year: new Date().getFullYear(),
-  });
 
   // Content
   let y = drawHeader(doc, w, data);
   y = drawMetaStrip(doc, w, y, data);
-  y = drawClientCard(doc, w, y, data);
+  // Client card is only needed for vouchers (staff recipients);
+  // for quotations/invoices/etc. the header "Bill To" already covers client details.
+  if (data.documentType.includes('voucher')) {
+    y = drawClientCard(doc, w, y, data);
+  }
   y = drawTable(doc, data, y, w);
   y = drawSummary(doc, w, y, data);
   y = drawPaymentInfo(doc, w, y, data);
