@@ -51,6 +51,9 @@
     --info: 210 100% 56%;
     --info-foreground: 0 0% 100%;
 
+    --market: 160 84% 32%;
+    --market-foreground: 0 0% 100%;
+    --market-soft: 160 60% 95%;
     --tier-bronze: 30 60% 50%;
     --tier-silver: 210 10% 60%;
     --tier-gold: 45 93% 47%;
@@ -101,6 +104,9 @@
     --info: 210 100% 56%;
     --info-foreground: 0 0% 100%;
 
+    --market: 160 84% 32%;
+    --market-foreground: 0 0% 100%;
+    --market-soft: 160 60% 95%;
     --tier-bronze: 30 60% 50%;
     --tier-silver: 210 10% 60%;
     --tier-gold: 45 93% 47%;
