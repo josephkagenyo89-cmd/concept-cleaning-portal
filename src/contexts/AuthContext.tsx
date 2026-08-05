@@ -17,10 +17,24 @@ interface Profile {
   status: AgentStatus;
 }
 
+export interface CustomerClient {
+  id: string;
+  full_name: string;
+  phone: string;
+  whatsapp_number: string | null;
+  location: string | null;
+  status: string;
+  total_spend: number;
+  booking_count: number;
+  client_code: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  customerClient: CustomerClient | null;
+  isCustomer: boolean;
   roles: AppRole[];
   loading: boolean;
   isAgent: boolean;
@@ -39,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [customerClient, setCustomerClient] = useState<CustomerClient | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -58,9 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoles((data || []).map((r: any) => r.role as AppRole));
   };
 
+  const fetchCustomerClient = async (userId: string) => {
+    const { data } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    setCustomerClient((data as CustomerClient | null) ?? null);
+  };
+
   const refreshProfile = async () => {
     if (user) {
-      await Promise.all([fetchProfile(user.id), fetchRoles(user.id)]);
+      await Promise.all([fetchProfile(user.id), fetchRoles(user.id), fetchCustomerClient(user.id)]);
     }
   };
 
@@ -79,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             Promise.all([
               fetchProfile(session.user.id),
               fetchRoles(session.user.id),
+              fetchCustomerClient(session.user.id),
             ]).then(() => {
               if (isMounted) setLoading(false);
             });
@@ -86,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setRoles([]);
+          setCustomerClient(null);
           if (isMounted) setLoading(false);
         }
       }
@@ -102,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await Promise.all([
             fetchProfile(session.user.id),
             fetchRoles(session.user.id),
+            fetchCustomerClient(session.user.id),
           ]);
         }
       } finally {
@@ -123,15 +150,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setProfile(null);
     setRoles([]);
+    setCustomerClient(null);
   };
 
   const isAgent = roles.includes('agent');
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isSuperAdmin = roles.includes('super_admin');
+  // Marketplace customers have no staff roles at all.
+  const isCustomer = !!user && roles.length === 0;
 
   return (
     <AuthContext.Provider value={{
       user, session, profile, roles, loading,
+      customerClient, isCustomer,
       isAgent, isAdmin, isSuperAdmin,
       signOut, refreshProfile,
     }}>

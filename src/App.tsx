@@ -56,10 +56,34 @@ const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
 const AdminDiscountApprovals = lazy(() => import("@/pages/admin/AdminDiscountApprovals"));
 const AdminDiscountReports = lazy(() => import("@/pages/admin/AdminDiscountReports"));
 
+// Marketplace + customer portal
+const MarketplaceLayout = lazy(() => import("@/components/marketplace/MarketplaceLayout"));
+const MarketHome = lazy(() => import("@/pages/marketplace/MarketHome"));
+const MarketCategories = lazy(() => import("@/pages/marketplace/MarketCategories"));
+const MarketServiceDetail = lazy(() => import("@/pages/marketplace/MarketServiceDetail"));
+const CustomerAuth = lazy(() => import("@/pages/marketplace/CustomerAuth"));
+const CustomerBookings = lazy(() => import("@/pages/marketplace/CustomerBookings"));
+const CustomerDocuments = lazy(() => import("@/pages/marketplace/CustomerDocuments"));
+const CustomerMessages = lazy(() => import("@/pages/marketplace/CustomerMessages"));
+const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount"));
+
+const marketplaceRoutes = (
+  <Route element={<MarketplaceLayout />}>
+    <Route path="/" element={<MarketHome />} />
+    <Route path="/categories" element={<MarketCategories />} />
+    <Route path="/service/:id" element={<MarketServiceDetail />} />
+    <Route path="/customer-auth" element={<CustomerAuth />} />
+    <Route path="/my/bookings" element={<CustomerBookings />} />
+    <Route path="/my/documents" element={<CustomerDocuments />} />
+    <Route path="/my/messages" element={<CustomerMessages />} />
+    <Route path="/my/account" element={<CustomerAccount />} />
+  </Route>
+);
+
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { user, loading, isAdmin, isAgent, profile } = useAuth();
+  const { user, loading, isAdmin, isAgent, isCustomer, profile } = useAuth();
   useOfflineSync();
 
   if (loading) {
@@ -82,15 +106,18 @@ function AppRoutes() {
 
   if (!user) {
     return (
+      <Suspense fallback={null}>
       <Routes>
+        {marketplaceRoutes}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/sign" element={<ClientSignature />} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     );
   }
 
@@ -128,6 +155,9 @@ function AppRoutes() {
   return (
     <Suspense fallback={suspenseFallback}>
       <Routes>
+        {/* Public marketplace + customer portal */}
+        {marketplaceRoutes}
+
         {/* Admin routes */}
         {isAdmin && (
           <Route path="/admin" element={<AdminLayout />}>
@@ -179,7 +209,7 @@ function AppRoutes() {
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
         {/* Default redirect */}
-        <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />
+        {!isCustomer && <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

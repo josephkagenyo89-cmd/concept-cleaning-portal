@@ -1,0 +1,254 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { ArrowLeft, Star, Clock, CheckCircle2, MapPin, Phone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+
+export default function MarketServiceDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const quoteMode = params.get('mode') === 'quote';
+  const { user, isCustomer, customerClient, refreshProfile } = useAuth();
+
+  const [service, setService] = useState<MarketService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    service_date: '',
+    location: '',
+    phone: '',
+    notes: '',
+  });
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from('services')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setService(data ? ({ ...(data as any), service_features: Array.isArray((data as any).service_features) ? (data as any).service_features : [] } as MarketService) : null);
+        setLoading(false);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    if (customerClient) {
+      setForm((f) => ({
+        ...f,
+        location: f.location || customerClient.location || '',
+        phone: f.phone || customerClient.phone || '',
+      }));
+    }
+  }, [customerClient]);
+
+  const requireLogin = () => {
+    navigate(`/customer-auth?next=${encodeURIComponent(`/service/${id}${quoteMode ? '?mode=quote' : ''}`)}`);
+  };
+
+  const submit = async (mode: 'booking' | 'quotation') => {
+    if (!service) return;
+    if (!user || !isCustomer || !customerClient) return requireLogin();
+    if (mode === 'booking' && !form.service_date) {
+      toast({ title: 'Select a service date', variant: 'destructive' });
+      return;
+    }
+    if (!form.location.trim() || !form.phone.trim()) {
+      toast({ title: 'Location and phone are required', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    const price = startingPrice(service);
+    const lineItems = [{
+      service_id: service.id,
+      service_name: service.name,
+      quantity: 1,
+      unit_price: price,
+      total: price,
+      notes: form.notes || null,
+    }];
+
+    try {
+      if (mode === 'booking') {
+        const { error } = await supabase.from('bookings').insert({
+          agent_id: user.id,
+          client_id: customerClient.id,
+          client_name: customerClient.full_name,
+          client_phone: form.phone.trim(),
+          location: form.location.trim(),
+          service_id: service.id,
+          service_date: form.service_date,
+          price,
+          system_price: price,
+          status: 'pending',
+          created_by_name: customerClient.full_name,
+          created_by_role: 'customer',
+          line_items: lineItems as any,
+        } as any);
+        if (error) throw error;
+        toast({ title: 'Booking request sent', description: 'Our team will confirm shortly.' });
+      } else {
+        let quotationNumber = '';
+        const { data: num } = await supabase.rpc('next_quotation_number' as any);
+        quotationNumber = (num as string) || `QT-${Date.now()}`;
+        const { error } = await supabase.from('quotations').insert({
+          quotation_number: quotationNumber,
+          client_name: customerClient.full_name,
+          client_phone: form.phone.trim(),
+          service_name: service.name,
+          service_date: form.service_date || null,
+          price,
+          created_by: user.id,
+          created_by_name: customerClient.full_name,
+          created_by_role: 'customer',
+          line_items: lineItems as any,
+        } as any);
+        if (error) throw error;
+        toast({ title: 'Quotation requested', description: `Reference ${quotationNumber}` });
+      }
+      await refreshProfile();
+      navigate('/my/bookings');
+    } catch (e: any) {
+      toast({ title: 'Could not submit request', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading service…</div>;
+  if (!service) return <div className="p-6 text-sm text-muted-foreground">Service not found.</div>;
+
+  const price = startingPrice(service);
+
+  return (
+    <div className="pb-6">
+      <div className="relative">
+        <img
+          src={serviceImage(service)}
+          alt={service.name}
+          width={800}
+          height={600}
+          className="h-52 w-full object-cover"
+        />
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute left-3 top-3 rounded-full bg-card/90 p-2 shadow"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="space-y-4 p-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-market">{service.category}</p>
+          <h1 className="text-lg font-bold leading-snug">{service.name}</h1>
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 font-medium text-foreground">
+              <Star className="h-3.5 w-3.5 fill-warning text-warning" /> {displayRating(service.id).toFixed(1)}
+            </span>
+            {service.estimated_duration && (
+              <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {service.estimated_duration}</span>
+            )}
+          </div>
+          <p className="mt-2 text-xl font-bold text-market">
+            {price > 0 ? <>From {formatKes(price)} <span className="text-xs font-medium text-muted-foreground">/{service.pricing_unit}</span></> : 'Price on quotation'}
+          </p>
+        </div>
+
+        {(service.description || service.short_description) && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {service.description || service.short_description}
+          </p>
+        )}
+
+        {service.service_features.length > 0 && (
+          <ul className="space-y-1.5">
+            {service.service_features.map((f, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-market" /> {f}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">{quoteMode ? 'Request a quotation' : 'Book this service'}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="service_date">Preferred date {quoteMode && <span className="text-muted-foreground">(optional)</span>}</Label>
+              <Input
+                id="service_date"
+                type="date"
+                value={form.service_date}
+                onChange={(e) => setForm((f) => ({ ...f, service_date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="location"><MapPin className="mr-1 inline h-3.5 w-3.5" />Service location</Label>
+              <Input
+                id="location"
+                value={form.location}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                placeholder="Estate, town"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone"><Phone className="mr-1 inline h-3.5 w-3.5" />Phone number</Label>
+              <Input
+                id="phone"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="07xx xxx xxx"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes for our team</Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Size of house, number of seats, access details…"
+              />
+            </div>
+
+            {!isCustomer && (
+              <p className="rounded-lg bg-market-soft p-2 text-xs text-foreground">
+                Sign in or create a customer account to complete your request.
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-market text-market-foreground hover:bg-market/90"
+                disabled={saving}
+                onClick={() => submit(quoteMode ? 'quotation' : 'booking')}
+              >
+                {saving ? 'Submitting…' : quoteMode ? 'Request Quotation' : 'Book Now'}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={saving}
+                onClick={() => submit(quoteMode ? 'booking' : 'quotation')}
+              >
+                {quoteMode ? 'Book instead' : 'Get quotation'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

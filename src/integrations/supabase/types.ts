@@ -232,6 +232,7 @@ export type Database = {
           status: string
           total_spend: number
           updated_at: string
+          user_id: string | null
           whatsapp_number: string | null
         }
         Insert: {
@@ -250,6 +251,7 @@ export type Database = {
           status?: string
           total_spend?: number
           updated_at?: string
+          user_id?: string | null
           whatsapp_number?: string | null
         }
         Update: {
@@ -268,6 +270,7 @@ export type Database = {
           status?: string
           total_spend?: number
           updated_at?: string
+          user_id?: string | null
           whatsapp_number?: string | null
         }
         Relationships: []
@@ -1676,7 +1679,10 @@ export type Database = {
           created_at: string
           description: string | null
           dropdown_options: Json | null
+          estimated_duration: string | null
+          gallery_images: Json
           id: string
+          image_url: string | null
           input_type: string
           is_active: boolean
           name: string
@@ -1684,6 +1690,8 @@ export type Database = {
           pricing_model: string
           pricing_unit: string
           requires_size_input: boolean
+          service_features: Json
+          short_description: string | null
           updated_at: string
         }
         Insert: {
@@ -1693,7 +1701,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           dropdown_options?: Json | null
+          estimated_duration?: string | null
+          gallery_images?: Json
           id?: string
+          image_url?: string | null
           input_type?: string
           is_active?: boolean
           name: string
@@ -1701,6 +1712,8 @@ export type Database = {
           pricing_model?: string
           pricing_unit?: string
           requires_size_input?: boolean
+          service_features?: Json
+          short_description?: string | null
           updated_at?: string
         }
         Update: {
@@ -1710,7 +1723,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           dropdown_options?: Json | null
+          estimated_duration?: string | null
+          gallery_images?: Json
           id?: string
+          image_url?: string | null
           input_type?: string
           is_active?: boolean
           name?: string
@@ -1718,6 +1734,8 @@ export type Database = {
           pricing_model?: string
           pricing_unit?: string
           requires_size_input?: boolean
+          service_features?: Json
+          short_description?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1887,6 +1905,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
       next_booking_code: { Args: never; Returns: string }
       next_certificate_number: { Args: never; Returns: string }
       next_client_code: { Args: never; Returns: string }
@@ -1897,6 +1916,10 @@ export type Database = {
       next_quotation_number: { Args: never; Returns: string }
       next_receipt_number: { Args: never; Returns: string }
       next_salary_voucher_number: { Args: never; Returns: string }
+      owns_client: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       agent_status: "pending" | "approved" | "suspended"
