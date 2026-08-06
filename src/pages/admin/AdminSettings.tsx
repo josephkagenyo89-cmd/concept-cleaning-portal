@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, RotateCcw, Lock, Settings as SettingsIcon, History } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Lock, Settings as SettingsIcon, History, Info } from 'lucide-react';
+import AboutSettings from '@/components/admin/AboutSettings';
 
 type AuditEntry = {
   id: string;
@@ -117,6 +118,7 @@ export default function AdminSettings() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="audit"><History className="h-3.5 w-3.5 mr-1" /> Audit</TabsTrigger>
+          <TabsTrigger value="about"><Info className="h-3.5 w-3.5 mr-1" /> About</TabsTrigger>
         </TabsList>
 
         {/* GENERAL */}
@@ -418,6 +420,9 @@ export default function AdminSettings() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="about">
+          <AboutSettings />
         </TabsContent>
       </Tabs>
     </div>

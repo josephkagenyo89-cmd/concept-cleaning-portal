@@ -1,0 +1,32 @@
+{
+  "id": "/admin",
+  "name": "Concept Cleaning ERP",
+  "short_name": "CCS ERP",
+  "description": "Staff ERP for Concept Cleaning Services — bookings, invoices, CRM and reports",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0B3D91",
+  "background_color": "#FFFFFF",
+  "icons": [
+    {
+      "src": "/erp-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/erp-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/erp-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

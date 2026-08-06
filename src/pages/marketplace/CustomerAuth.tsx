@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
+import { friendlyAuthError, isValidPhone, localPhone, phoneToAuthEmail } from '@/lib/customerAuth';
 
 function safeNext(next: string | null) {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/';
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/my';
   return next;
 }
 
@@ -18,44 +21,102 @@ export default function CustomerAuth() {
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
   const navigate = useNavigate();
+  const { isCustomer } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [login, setLogin] = useState({ email: '', password: '' });
-  const [reg, setReg] = useState({ full_name: '', email: '', phone: '', location: '', password: '' });
+  const [login, setLogin] = useState({ phone: '', password: '' });
+  const [reg, setReg] = useState({
+    full_name: '',
+    phone: '',
+    whatsapp_number: '',
+    location: '',
+    notes: '',
+    password: '',
+    confirm: '',
+  });
+
+  // Authenticated customers never see login/registration prompts.
+  useEffect(() => {
+    if (isCustomer) navigate(next, { replace: true });
+  }, [isCustomer, next, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: login.email, password: login.password });
-    setLoading(false);
-    if (error) {
-      toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
+    if (!isValidPhone(login.phone)) {
+      toast({ title: 'Invalid phone number', description: 'Enter the phone number you registered with.', variant: 'destructive' });
       return;
     }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: phoneToAuthEmail(login.phone),
+      password: login.password,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: 'Login failed', description: friendlyAuthError(error.message), variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Welcome back' });
     navigate(next, { replace: true });
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const name = reg.full_name.trim();
+    if (!name) {
+      toast({ title: 'Full name required', variant: 'destructive' });
+      return;
+    }
+    if (!isValidPhone(reg.phone)) {
+      toast({ title: 'Invalid phone number', description: 'Use a valid number, e.g. 0712345678.', variant: 'destructive' });
+      return;
+    }
+    if (reg.password.length < 6) {
+      toast({ title: 'Password too short', description: 'Use at least 6 characters.', variant: 'destructive' });
+      return;
+    }
+    if (reg.password !== reg.confirm) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: reg.email,
+    const { data, error } = await supabase.auth.signUp({
+      email: phoneToAuthEmail(reg.phone),
       password: reg.password,
       options: {
-        emailRedirectTo: window.location.origin,
         data: {
           account_type: 'customer',
-          full_name: reg.full_name,
-          phone: reg.phone,
-          location: reg.location,
+          full_name: name,
+          phone: localPhone(reg.phone),
+          whatsapp_number: reg.whatsapp_number.trim() ? localPhone(reg.whatsapp_number) : localPhone(reg.phone),
+          location: reg.location.trim(),
+          notes: reg.notes.trim(),
         },
       },
     });
-    setLoading(false);
+
     if (error) {
-      toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
+      setLoading(false);
+      toast({ title: 'Registration failed', description: friendlyAuthError(error.message), variant: 'destructive' });
       return;
     }
-    toast({ title: 'Account created', description: 'Check your email to verify, then sign in.' });
+
+    // Auto sign-in when the signup did not already return a session.
+    if (!data.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: phoneToAuthEmail(reg.phone),
+        password: reg.password,
+      });
+      if (signInError) {
+        setLoading(false);
+        toast({ title: 'Account created', description: 'Please sign in with your phone number and password.' });
+        return;
+      }
+    }
+
+    setLoading(false);
+    toast({ title: 'Account created', description: 'Your customer profile is ready.' });
+    navigate(next === '/my' ? '/my' : next, { replace: true });
   };
 
   return (
@@ -66,10 +127,10 @@ export default function CustomerAuth() {
             <Sparkles className="h-6 w-6 text-market-foreground" />
           </div>
           <CardTitle className="text-xl">Customer account</CardTitle>
-          <CardDescription>Book services and track your history</CardDescription>
+          <CardDescription>Book services and track your history — no email needed</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login">
+          <Tabs defaultValue={params.get('tab') === 'register' ? 'register' : 'login'}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
@@ -78,18 +139,21 @@ export default function CustomerAuth() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-3 pt-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="l_email">Email</Label>
-                  <Input id="l_email" type="email" required value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} />
+                  <Label htmlFor="l_phone">Phone number</Label>
+                  <Input id="l_phone" inputMode="tel" required placeholder="0712345678"
+                    value={login.phone} onChange={(e) => setLogin({ ...login, phone: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="l_pass">Password</Label>
-                  <Input id="l_pass" type="password" required value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
+                  <Input id="l_pass" type="password" required value={login.password}
+                    onChange={(e) => setLogin({ ...login, password: e.target.value })} />
                 </div>
                 <Button type="submit" disabled={loading} className="w-full bg-market text-market-foreground hover:bg-market/90">
                   {loading ? 'Signing in…' : 'Sign In'}
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
-                  <Link to="/forgot-password" className="font-medium text-market hover:underline">Forgot password?</Link>
+                  Forgot your password? Contact our team from the{' '}
+                  <Link to="/my/support" className="font-medium text-market hover:underline">support page</Link>.
                 </p>
               </form>
             </TabsContent>
@@ -97,24 +161,40 @@ export default function CustomerAuth() {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-3 pt-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="r_name">Full name</Label>
-                  <Input id="r_name" required value={reg.full_name} onChange={(e) => setReg({ ...reg, full_name: e.target.value })} />
+                  <Label htmlFor="r_name">Full name *</Label>
+                  <Input id="r_name" required placeholder="Jane Wanjiku"
+                    value={reg.full_name} onChange={(e) => setReg({ ...reg, full_name: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="r_email">Email</Label>
-                  <Input id="r_email" type="email" required value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} />
+                  <Label htmlFor="r_phone">Phone number *</Label>
+                  <Input id="r_phone" inputMode="tel" required placeholder="0712345678"
+                    value={reg.phone} onChange={(e) => setReg({ ...reg, phone: e.target.value })} />
+                  <p className="text-[10px] text-muted-foreground">This is your login. One account per phone number.</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="r_phone">Phone</Label>
-                  <Input id="r_phone" required value={reg.phone} onChange={(e) => setReg({ ...reg, phone: e.target.value })} placeholder="07xx xxx xxx" />
+                  <Label htmlFor="r_wa">WhatsApp number</Label>
+                  <Input id="r_wa" inputMode="tel" placeholder="Same as phone if blank"
+                    value={reg.whatsapp_number} onChange={(e) => setReg({ ...reg, whatsapp_number: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="r_loc">Location</Label>
-                  <Input id="r_loc" value={reg.location} onChange={(e) => setReg({ ...reg, location: e.target.value })} placeholder="Estate, town" />
+                  <Input id="r_loc" placeholder="Kilimani, Nairobi"
+                    value={reg.location} onChange={(e) => setReg({ ...reg, location: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="r_pass">Password</Label>
-                  <Input id="r_pass" type="password" required minLength={6} value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} />
+                  <Label htmlFor="r_notes">Notes</Label>
+                  <Textarea id="r_notes" rows={2} placeholder="Anything we should know (optional)"
+                    value={reg.notes} onChange={(e) => setReg({ ...reg, notes: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="r_pass">Password *</Label>
+                  <Input id="r_pass" type="password" required minLength={6}
+                    value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="r_conf">Confirm password *</Label>
+                  <Input id="r_conf" type="password" required minLength={6}
+                    value={reg.confirm} onChange={(e) => setReg({ ...reg, confirm: e.target.value })} />
                 </div>
                 <Button type="submit" disabled={loading} className="w-full bg-market text-market-foreground hover:bg-market/90">
                   {loading ? 'Creating account…' : 'Create Customer Account'}

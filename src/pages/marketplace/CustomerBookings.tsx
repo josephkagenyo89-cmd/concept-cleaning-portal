@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,8 @@ import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
 
 export default function CustomerBookings() {
   const { user, isCustomer, customerClient } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'quotations' ? 'quotations' : 'bookings';
   const [bookings, setBookings] = useState<any[]>([]);
   const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function CustomerBookings() {
       <h1 className="text-base font-bold">My bookings</h1>
       <p className="mb-4 text-xs text-muted-foreground">Requests you have made with us.</p>
 
-      <Tabs defaultValue="bookings">
+      <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="bookings">Bookings ({bookings.length})</TabsTrigger>
           <TabsTrigger value="quotations">Quotations ({quotations.length})</TabsTrigger>

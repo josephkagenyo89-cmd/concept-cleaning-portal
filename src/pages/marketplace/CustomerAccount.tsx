@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { CalendarCheck, FileText, Star, LogOut, Wallet } from 'lucide-react';
+import { CalendarCheck, FileText, LogOut, Wallet, Bell, LifeBuoy, LayoutDashboard } from 'lucide-react';
 import { formatKes } from '@/lib/marketplace';
 import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
 
@@ -101,7 +101,9 @@ export default function CustomerAccount() {
       <div className="grid grid-cols-2 gap-3">
         <Button asChild variant="outline"><Link to="/my/bookings"><CalendarCheck className="mr-2 h-4 w-4" />My bookings</Link></Button>
         <Button asChild variant="outline"><Link to="/my/documents"><FileText className="mr-2 h-4 w-4" />My documents</Link></Button>
-        <Button asChild variant="outline"><Link to="/my/messages"><Star className="mr-2 h-4 w-4" />Notifications</Link></Button>
+        <Button asChild variant="outline"><Link to="/my/messages"><Bell className="mr-2 h-4 w-4" />Notifications</Link></Button>
+        <Button asChild variant="outline"><Link to="/my/support"><LifeBuoy className="mr-2 h-4 w-4" />Support</Link></Button>
+        <Button asChild variant="outline"><Link to="/my"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link></Button>
         <Button variant="outline" onClick={async () => { await signOut(); navigate('/'); }}>
           <LogOut className="mr-2 h-4 w-4" />Sign out
         </Button>

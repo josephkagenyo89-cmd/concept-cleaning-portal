@@ -1,18 +1,38 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, ShieldCheck, Star, Sparkles } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, Star, Sparkles, ArrowDownUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import ServiceCard from '@/components/marketplace/ServiceCard';
-import { MarketService, categoryImage, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
+import {
+  MarketService, buildRecommendations, categoryImage, fetchMarketServices, groupByCategory, startingPrice,
+} from '@/lib/marketplace';
 import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+
+type SortKey = 'recommended' | 'price_asc' | 'price_desc' | 'name';
+
+function sortServices(list: MarketService[], key: SortKey) {
+  const copy = [...list];
+  if (key === 'price_asc') copy.sort((a, b) => startingPrice(a) - startingPrice(b));
+  if (key === 'price_desc') copy.sort((a, b) => startingPrice(b) - startingPrice(a));
+  if (key === 'name') copy.sort((a, b) => a.name.localeCompare(b.name));
+  return copy;
+}
 
 export default function MarketHome() {
   const [services, setServices] = useState<MarketService[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortKey>('recommended');
+  const [history, setHistory] = useState<{ categories: string[]; names: string[] }>({ categories: [], names: [] });
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { isCustomer } = useAuth();
 
   useEffect(() => {
     fetchMarketServices()
@@ -21,16 +41,42 @@ export default function MarketHome() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Booking history powers the cross-sell recommendations.
+  useEffect(() => {
+    if (!isCustomer) { setHistory({ categories: [], names: [] }); return; }
+    (async () => {
+      const { data } = await supabase
+        .from('bookings')
+        .select('services(name, category)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      const categories: string[] = [];
+      const names: string[] = [];
+      (data || []).forEach((b: any) => {
+        if (b.services?.category) categories.push(b.services.category);
+        if (b.services?.name) names.push(b.services.name);
+      });
+      setHistory({ categories: Array.from(new Set(categories)), names: Array.from(new Set(names)) });
+    })();
+  }, [isCustomer]);
+
   const grouped = useMemo(() => groupByCategory(services), [services]);
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return services.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+    const found = services.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.category.toLowerCase().includes(q) ||
+        (s.short_description || s.description || '').toLowerCase().includes(q)
     );
-  }, [query, services]);
+    return sortServices(found, sort);
+  }, [query, services, sort]);
 
-  const recommended = services.slice(0, 8);
+  const recommendation = useMemo(
+    () => buildRecommendations(services, history.categories, history.names),
+    [services, history]
+  );
 
   return (
     <div>
@@ -61,9 +107,26 @@ export default function MarketHome() {
       {/* Search results */}
       {query.trim() && (
         <section className="p-4">
-          <h2 className="mb-3 text-sm font-bold">Results for “{query.trim()}”</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold">Results for “{query.trim()}”</h2>
+            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+              <SelectTrigger className="h-8 w-[150px] text-xs">
+                <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recommended">Best match</SelectItem>
+                <SelectItem value="price_asc">Price: low to high</SelectItem>
+                <SelectItem value="price_desc">Price: high to low</SelectItem>
+                <SelectItem value="name">Name A–Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {results.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No services matched your search.</p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">No services matched your search.</p>
+              <Button variant="outline" size="sm" onClick={() => setQuery('')}>Clear search</Button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {results.map((s) => <ServiceCard key={s.id} service={s} />)}
@@ -99,12 +162,20 @@ export default function MarketHome() {
             </div>
           </section>
 
-          {/* Recommended */}
+          {/* Recommended (cross-sell / rotating featured) */}
           <section className="pt-6">
-            <h2 className="px-4 pb-3 text-sm font-bold">Recommended for you</h2>
+            <div className="flex items-end justify-between px-4 pb-3">
+              <div>
+                <h2 className="text-sm font-bold">Recommended for you</h2>
+                <p className="text-[11px] text-muted-foreground">{recommendation.reason}</p>
+              </div>
+            </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-2">
               {loading && <p className="text-sm text-muted-foreground">Loading services…</p>}
-              {recommended.map((s) => <ServiceCard key={s.id} service={s} variant="carousel" />)}
+              {!loading && recommendation.services.length === 0 && (
+                <p className="text-sm text-muted-foreground">No services published yet.</p>
+              )}
+              {recommendation.services.map((s) => <ServiceCard key={s.id} service={s} variant="carousel" />)}
             </div>
           </section>
 

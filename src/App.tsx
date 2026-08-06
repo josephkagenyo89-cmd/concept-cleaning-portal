@@ -15,8 +15,8 @@ import AgentLayout from "@/layouts/AgentLayout";
 import AdminLayout from "@/layouts/AdminLayout";
 import NotFound from "@/pages/NotFound";
 import ClientSignature from "@/pages/ClientSignature";
-import InstallPrompt from "@/components/InstallPrompt";
 import NetworkStatus from "@/components/NetworkStatus";
+import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
 
@@ -66,6 +66,8 @@ const CustomerBookings = lazy(() => import("@/pages/marketplace/CustomerBookings
 const CustomerDocuments = lazy(() => import("@/pages/marketplace/CustomerDocuments"));
 const CustomerMessages = lazy(() => import("@/pages/marketplace/CustomerMessages"));
 const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount"));
+const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
+const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
 
 const marketplaceRoutes = (
   <Route element={<MarketplaceLayout />}>
@@ -73,10 +75,12 @@ const marketplaceRoutes = (
     <Route path="/categories" element={<MarketCategories />} />
     <Route path="/service/:id" element={<MarketServiceDetail />} />
     <Route path="/customer-auth" element={<CustomerAuth />} />
+    <Route path="/my" element={<CustomerDashboard />} />
     <Route path="/my/bookings" element={<CustomerBookings />} />
     <Route path="/my/documents" element={<CustomerDocuments />} />
     <Route path="/my/messages" element={<CustomerMessages />} />
     <Route path="/my/account" element={<CustomerAccount />} />
+    <Route path="/my/support" element={<CustomerSupport />} />
   </Route>
 );
 
@@ -115,6 +119,8 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/sign" element={<ClientSignature />} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+        <Route path="/admin/*" element={<Navigate to="/login" replace />} />
+        <Route path="/agent/*" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
@@ -221,10 +227,10 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <InstallPrompt />
       <NetworkStatus />
       <BrowserRouter>
         <AuthProvider>
+          <ErpPwaManager />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>

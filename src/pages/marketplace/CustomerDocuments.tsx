@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +11,8 @@ import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
 
 export default function CustomerDocuments() {
   const { user, isCustomer } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const tab = ['invoices', 'receipts', 'certificates'].includes(params.get('tab') || '') ? (params.get('tab') as string) : 'invoices';
   const [invoices, setInvoices] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
@@ -37,11 +40,11 @@ export default function CustomerDocuments() {
       <h1 className="text-base font-bold">My documents</h1>
       <p className="mb-4 text-xs text-muted-foreground">Invoices, receipts and service certificates.</p>
 
-      <Tabs defaultValue="invoices">
+      <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
-          <TabsTrigger value="certs">Certificates</TabsTrigger>
+          <TabsTrigger value="certificates">Certificates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-3 pt-3">
@@ -78,7 +81,7 @@ export default function CustomerDocuments() {
           ))}
         </TabsContent>
 
-        <TabsContent value="certs" className="space-y-3 pt-3">
+        <TabsContent value="certificates" className="space-y-3 pt-3">
           {!loading && certificates.length === 0 && <p className="text-sm text-muted-foreground">No certificates yet.</p>}
           {certificates.map((c) => (
             <Card key={c.id}><CardContent className="flex items-center gap-3 p-4">

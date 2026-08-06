@@ -91,3 +91,84 @@ export function displayRating(id: string): number {
 export function startingPrice(s: MarketService): number {
   return s.base_price > 0 ? s.base_price : s.price_per_sqm;
 }
+
+/* ------------------------------------------------------------------ *
+ * Intelligent cross-sell recommendations
+ * ------------------------------------------------------------------ */
+
+/** Category → categories that pair well with it (cross-selling). */
+const CROSS_SELL: Record<string, string[]> = {
+  'Fumigation & Pest Control': ['Upholstery Cleaning', 'Residential Cleaning'],
+  'Upholstery Cleaning': ['Carpet & Rug Cleaning', 'Residential Cleaning'],
+  'Carpet & Rug Cleaning': ['Upholstery Cleaning', 'Residential Cleaning'],
+  'Commercial Cleaning': ['Carpet & Rug Cleaning', 'Residential Cleaning'],
+  'Residential Cleaning': ['Fumigation & Pest Control', 'Upholstery Cleaning'],
+  'Car Interior Cleaning': ['Upholstery Cleaning', 'Carpet & Rug Cleaning'],
+};
+
+/** Keyword fallback so cross-selling still works for custom categories. */
+const KEYWORD_CROSS_SELL: [RegExp, string[]][] = [
+  [/fumigat|pest/i, ['sofa', 'upholster', 'deep']],
+  [/sofa|upholster/i, ['carpet', 'mattress']],
+  [/office|commercial/i, ['window', 'carpet']],
+  [/deep|residential|house/i, ['pest', 'fumigat']],
+  [/car|vehicle/i, ['upholster', 'carpet']],
+];
+
+function matchesKeywords(s: MarketService, keywords: string[]) {
+  const hay = `${s.name} ${s.category}`.toLowerCase();
+  return keywords.some((k) => hay.includes(k.toLowerCase()));
+}
+
+/** A featured category that rotates daily, used when there is no history. */
+export function rotatingFeaturedCategory(available: string[]): string | null {
+  const list = available.length ? available : CATEGORY_ORDER;
+  if (!list.length) return null;
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return list[dayIndex % list.length];
+}
+
+export interface Recommendation {
+  reason: string;
+  services: MarketService[];
+}
+
+/**
+ * Cross-sell based on the categories/names of services the customer has
+ * already booked. Falls back to a rotating featured category.
+ */
+export function buildRecommendations(
+  services: MarketService[],
+  historyCategories: string[],
+  historyNames: string[] = []
+): Recommendation {
+  const available = Array.from(new Set(services.map((s) => s.category)));
+
+  if (historyCategories.length || historyNames.length) {
+    const wanted = new Set<string>();
+    historyCategories.forEach((c) => (CROSS_SELL[c] || []).forEach((x) => wanted.add(x)));
+
+    const keywordTargets: string[] = [];
+    [...historyCategories, ...historyNames].forEach((label) => {
+      KEYWORD_CROSS_SELL.forEach(([re, targets]) => {
+        if (re.test(label)) keywordTargets.push(...targets);
+      });
+    });
+
+    const booked = new Set(historyCategories);
+    const picks = services.filter(
+      (s) => !booked.has(s.category) && (wanted.has(s.category) || matchesKeywords(s, keywordTargets))
+    );
+
+    if (picks.length) {
+      return { reason: 'Goes well with what you have booked before', services: picks.slice(0, 8) };
+    }
+  }
+
+  const featured = rotatingFeaturedCategory(available);
+  const list = featured ? services.filter((s) => s.category === featured) : [];
+  return {
+    reason: featured ? `Featured today: ${featured}` : 'Popular services',
+    services: (list.length ? list : services).slice(0, 8),
+  };
+}
