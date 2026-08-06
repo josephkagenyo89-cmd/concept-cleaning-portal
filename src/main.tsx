@@ -16,14 +16,14 @@ const isPreviewHost =
   window.location.hostname.includes("lovable.app") ||
   window.location.hostname.includes("lovableproject.com");
 
+// The ERP is installable via its own manifest (see src/lib/erpPwa.ts).
+// No app-shell service worker is used, so clear any stale registrations.
+void isInIframe;
+void isPreviewHost;
 if ("serviceWorker" in navigator) {
-  if (import.meta.env.PROD && !isInIframe && !isPreviewHost) {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  } else {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => registration.unregister());
-    }).catch(() => {});
-  }
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister());
+  }).catch(() => {});
 }
 
 createRoot(document.getElementById("root")!).render(
