@@ -11,7 +11,7 @@ import { isInstallAvailable, isStandalone, onInstallAvailabilityChange, promptEr
 /** Settings → About: ERP information and the staff-only PWA install action. */
 export default function AboutSettings() {
   const { settings } = useSettings();
-  const [available, setAvailable] = useState(isInstallAvailable());
+  const [, setAvailable] = useState(isInstallAvailable());
   const [installed, setInstalled] = useState(isStandalone());
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function AboutSettings() {
               <CheckCircle2 className="h-4 w-4" /> The ERP app is already installed on this device.
             </p>
           ) : (
-            <Button onClick={install} disabled={!available && false}>
+            <Button onClick={install}>
               <Download className="mr-2 h-4 w-4" /> Install ERP App
             </Button>
           )}
