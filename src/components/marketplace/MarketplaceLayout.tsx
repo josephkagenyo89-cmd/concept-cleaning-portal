@@ -21,7 +21,7 @@ const NAV = [
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
   { to: '/my/bookings', label: 'Bookings', icon: CalendarCheck },
   { to: '/my/messages', label: 'Messages', icon: MessageCircle },
-  { to: '/my/account', label: 'Profile', icon: User },
+  { to: '/my', label: 'Profile', icon: User },
 ];
 
 export default function MarketplaceLayout() {
@@ -79,7 +79,7 @@ export default function MarketplaceLayout() {
                 variant="ghost"
                 size="sm"
                 className="h-9 gap-1 px-2 text-market-foreground hover:bg-white/15"
-                onClick={() => navigate('/my/account')}
+                onClick={() => navigate('/my')}
               >
                 <User className="h-4 w-4" />
                 <span className="max-w-[80px] truncate text-xs font-medium">
