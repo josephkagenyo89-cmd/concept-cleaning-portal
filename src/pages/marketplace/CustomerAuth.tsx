@@ -120,6 +120,17 @@ export default function CustomerAuth() {
       }
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await pushNotification({
+        user_id: user.id,
+        type: 'account',
+        title: 'Account created successfully',
+        body: `Welcome ${name}! Your customer account is ready. You can now book services and track everything here.`,
+        link: '/my',
+      });
+    }
+
     setLoading(false);
     toast({ title: 'Account created', description: 'Your customer profile is ready.' });
     navigate('/my', { replace: true });
