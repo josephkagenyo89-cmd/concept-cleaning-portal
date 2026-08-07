@@ -144,6 +144,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const isAgent = roles.includes('agent');
+  const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+  const isSuperAdmin = roles.includes('super_admin');
+  // Marketplace customers have no staff roles at all.
+  const isCustomer = !!user && roles.length === 0;
+
+  // Self-heal: make sure every customer account is linked to a CRM client record.
+  useEffect(() => {
+    if (loading || !user || roles.length > 0 || customerClient) return;
+    let cancelled = false;
+    (async () => {
+      const meta = (user.user_metadata || {}) as Record<string, string>;
+      const phone = meta.phone || '';
+      await supabase.from('clients').insert({
+        full_name: meta.full_name || user.email || 'Customer',
+        phone,
+        whatsapp_number: meta.whatsapp_number || phone,
+        location: meta.location || '',
+        notes: meta.notes || null,
+        status: 'new',
+        created_by: user.id,
+        created_by_role: 'customer',
+        user_id: user.id,
+      });
+      if (!cancelled) await fetchCustomerClient(user.id);
+    })();
+    return () => { cancelled = true; };
+  }, [loading, user, roles.length, customerClient]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -153,11 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCustomerClient(null);
   };
 
-  const isAgent = roles.includes('agent');
-  const isAdmin = roles.includes('admin') || roles.includes('super_admin');
-  const isSuperAdmin = roles.includes('super_admin');
-  // Marketplace customers have no staff roles at all.
-  const isCustomer = !!user && roles.length === 0;
 
   return (
     <AuthContext.Provider value={{

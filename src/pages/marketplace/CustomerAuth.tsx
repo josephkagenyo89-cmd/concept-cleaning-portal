@@ -10,12 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
-import { friendlyAuthError, isValidPhone, localPhone, phoneToAuthEmail } from '@/lib/customerAuth';
+import { friendlyAuthError, isValidPhone, localPhone } from '@/lib/customerAuth';
+import { pushNotification } from '@/lib/customerNotifications';
 
 function safeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) return '/my';
   return next;
 }
+
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 
 export default function CustomerAuth() {
   const [params] = useSearchParams();
@@ -23,9 +26,10 @@ export default function CustomerAuth() {
   const navigate = useNavigate();
   const { isCustomer } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [login, setLogin] = useState({ phone: '', password: '' });
+  const [login, setLogin] = useState({ email: '', password: '' });
   const [reg, setReg] = useState({
     full_name: '',
+    email: '',
     phone: '',
     whatsapp_number: '',
     location: '',
@@ -41,13 +45,13 @@ export default function CustomerAuth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValidPhone(login.phone)) {
-      toast({ title: 'Invalid phone number', description: 'Enter the phone number you registered with.', variant: 'destructive' });
+    if (!isValidEmail(login.email)) {
+      toast({ title: 'Invalid email', description: 'Enter the email you registered with.', variant: 'destructive' });
       return;
     }
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: phoneToAuthEmail(login.phone),
+      email: login.email.trim().toLowerCase(),
       password: login.password,
     });
     setLoading(false);
@@ -66,6 +70,10 @@ export default function CustomerAuth() {
       toast({ title: 'Full name required', variant: 'destructive' });
       return;
     }
+    if (!isValidEmail(reg.email)) {
+      toast({ title: 'Valid email required', description: 'Your email is your login.', variant: 'destructive' });
+      return;
+    }
     if (!isValidPhone(reg.phone)) {
       toast({ title: 'Invalid phone number', description: 'Use a valid number, e.g. 0712345678.', variant: 'destructive' });
       return;
@@ -79,14 +87,16 @@ export default function CustomerAuth() {
       return;
     }
 
+    const email = reg.email.trim().toLowerCase();
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email: phoneToAuthEmail(reg.phone),
+      email,
       password: reg.password,
       options: {
         data: {
           account_type: 'customer',
           full_name: name,
+          email,
           phone: localPhone(reg.phone),
           whatsapp_number: reg.whatsapp_number.trim() ? localPhone(reg.whatsapp_number) : localPhone(reg.phone),
           location: reg.location.trim(),
@@ -103,20 +113,28 @@ export default function CustomerAuth() {
 
     // Auto sign-in when the signup did not already return a session.
     if (!data.session) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: phoneToAuthEmail(reg.phone),
-        password: reg.password,
-      });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: reg.password });
       if (signInError) {
         setLoading(false);
-        toast({ title: 'Account created', description: 'Please sign in with your phone number and password.' });
+        toast({ title: 'Account created', description: 'Please sign in with your email and password.' });
         return;
       }
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await pushNotification({
+        user_id: user.id,
+        type: 'account',
+        title: 'Account created successfully',
+        body: `Welcome ${name}! Your customer account is ready. You can now book services and track everything here.`,
+        link: '/my',
+      });
+    }
+
     setLoading(false);
     toast({ title: 'Account created', description: 'Your customer profile is ready.' });
-    navigate(next === '/my' ? '/my' : next, { replace: true });
+    navigate('/my', { replace: true });
   };
 
   return (
@@ -127,7 +145,7 @@ export default function CustomerAuth() {
             <Sparkles className="h-6 w-6 text-market-foreground" />
           </div>
           <CardTitle className="text-xl">Customer account</CardTitle>
-          <CardDescription>Book services and track your history — no email needed</CardDescription>
+          <CardDescription>Book services and track your history — no email verification needed</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={params.get('tab') === 'register' ? 'register' : 'login'}>
@@ -139,9 +157,9 @@ export default function CustomerAuth() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-3 pt-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="l_phone">Phone number</Label>
-                  <Input id="l_phone" inputMode="tel" required placeholder="0712345678"
-                    value={login.phone} onChange={(e) => setLogin({ ...login, phone: e.target.value })} />
+                  <Label htmlFor="l_email">Email</Label>
+                  <Input id="l_email" type="email" required placeholder="you@example.com"
+                    value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="l_pass">Password</Label>
@@ -166,10 +184,15 @@ export default function CustomerAuth() {
                     value={reg.full_name} onChange={(e) => setReg({ ...reg, full_name: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
+                  <Label htmlFor="r_email">Email *</Label>
+                  <Input id="r_email" type="email" required placeholder="you@example.com"
+                    value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} />
+                  <p className="text-[10px] text-muted-foreground">This is your login. No verification email is sent.</p>
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="r_phone">Phone number *</Label>
                   <Input id="r_phone" inputMode="tel" required placeholder="0712345678"
                     value={reg.phone} onChange={(e) => setReg({ ...reg, phone: e.target.value })} />
-                  <p className="text-[10px] text-muted-foreground">This is your login. One account per phone number.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="r_wa">WhatsApp number</Label>
