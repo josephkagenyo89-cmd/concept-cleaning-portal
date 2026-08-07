@@ -122,6 +122,8 @@ export default function MarketplaceLayout() {
         <Outlet />
       </main>
 
+      <CustomerCareButton />
+
       {/* Bottom navigation + staff login */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card">
         <nav className="mx-auto flex max-w-3xl items-stretch">
@@ -131,16 +133,24 @@ export default function MarketplaceLayout() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
+                `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
                   isActive ? 'text-market' : 'text-muted-foreground'
                 }`
               }
             >
-              <item.icon className="h-5 w-5" />
+              <span className="relative">
+                <item.icon className="h-5 w-5" />
+                {item.badge && unread > 0 && (
+                  <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </span>
               {item.label}
             </NavLink>
           ))}
         </nav>
+
         <div className="mx-auto max-w-3xl border-t bg-muted/40 px-4 py-2">
           <Link
             to="/login"
