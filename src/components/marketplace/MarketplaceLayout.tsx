@@ -33,10 +33,26 @@ export default function MarketplaceLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [lang, setLang] = useState(() => localStorage.getItem('ccs_market_lang') || 'en');
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     localStorage.setItem('ccs_market_lang', lang);
   }, [lang]);
+
+  useEffect(() => {
+    if (!isCustomer) { setUnread(0); return; }
+    let active = true;
+    const refresh = () => { countUnread().then((n) => { if (active) setUnread(n); }); };
+    refresh();
+    const id = window.setInterval(refresh, 60000);
+    window.addEventListener('ccs-notifications-changed', refresh);
+    return () => {
+      active = false;
+      window.clearInterval(id);
+      window.removeEventListener('ccs-notifications-changed', refresh);
+    };
+  }, [isCustomer, location.pathname]);
+
 
   const company = settings.general.company_name || 'Concept Cleaning Services';
   const activeLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
