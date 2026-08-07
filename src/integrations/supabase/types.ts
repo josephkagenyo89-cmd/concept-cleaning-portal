@@ -385,6 +385,50 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_notifications: {
+        Row: {
+          body: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           amount: number
@@ -1916,6 +1960,16 @@ export type Database = {
       next_quotation_number: { Args: never; Returns: string }
       next_receipt_number: { Args: never; Returns: string }
       next_salary_voucher_number: { Args: never; Returns: string }
+      notify_customer: {
+        Args: {
+          _body: string
+          _client_id: string
+          _link: string
+          _title: string
+          _type: string
+        }
+        Returns: undefined
+      }
       owns_client: {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
