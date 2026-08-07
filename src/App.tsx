@@ -68,6 +68,7 @@ const CustomerMessages = lazy(() => import("@/pages/marketplace/CustomerMessages
 const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount"));
 const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
 const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
+const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
 
 const marketplaceRoutes = (
   <Route element={<MarketplaceLayout />}>
@@ -79,6 +80,7 @@ const marketplaceRoutes = (
     <Route path="/my/bookings" element={<CustomerBookings />} />
     <Route path="/my/documents" element={<CustomerDocuments />} />
     <Route path="/my/messages" element={<CustomerMessages />} />
+    <Route path="/my/notifications" element={<CustomerNotifications />} />
     <Route path="/my/account" element={<CustomerAccount />} />
     <Route path="/my/support" element={<CustomerSupport />} />
   </Route>

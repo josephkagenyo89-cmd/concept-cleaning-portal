@@ -18,7 +18,7 @@ const SHORTCUTS = [
   { to: '/my/documents?tab=invoices', label: 'My Invoices', icon: FileText, hint: 'Amounts due' },
   { to: '/my/documents?tab=receipts', label: 'My Receipts', icon: ReceiptText, hint: 'Payment proof' },
   { to: '/my/documents?tab=certificates', label: 'Certificates', icon: Award, hint: 'Service completion' },
-  { to: '/my/messages', label: 'Notifications', icon: Bell, hint: 'Updates from us' },
+  { to: '/my/notifications', label: 'Notifications', icon: Bell, hint: 'Updates from us' },
   { to: '/my/messages', label: 'Messages', icon: MessageCircle, hint: 'Talk to our team' },
   { to: '/my/support', label: 'Customer Support', icon: LifeBuoy, hint: 'Call or WhatsApp' },
   { to: '/my/bookings', label: 'Feedback', icon: Star, hint: 'Rate a service' },
