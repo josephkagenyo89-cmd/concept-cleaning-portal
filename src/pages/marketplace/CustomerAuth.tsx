@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
 import { friendlyAuthError, isValidPhone, localPhone } from '@/lib/customerAuth';
+import { pushNotification } from '@/lib/customerNotifications';
 
 function safeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) return '/my';
