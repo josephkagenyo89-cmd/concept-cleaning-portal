@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, CalendarCheck, MessageCircle, User, Sparkles, Globe, LogIn, Building2 } from 'lucide-react';
+import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import CustomerCareButton from '@/components/marketplace/CustomerCareButton';
+import { countUnread } from '@/lib/customerNotifications';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -20,9 +22,10 @@ const NAV = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
   { to: '/my/bookings', label: 'Bookings', icon: CalendarCheck },
-  { to: '/my/messages', label: 'Messages', icon: MessageCircle },
+  { to: '/my/notifications', label: 'Alerts', icon: Bell, badge: true },
   { to: '/my', label: 'Profile', icon: User },
 ];
+
 
 export default function MarketplaceLayout() {
   const { settings } = useSettings();
