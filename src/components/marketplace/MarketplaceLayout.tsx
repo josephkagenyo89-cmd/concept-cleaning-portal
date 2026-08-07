@@ -18,7 +18,7 @@ const LANGUAGES = [
   { code: 'sw', label: 'Kiswahili' },
 ];
 
-const NAV = [
+const NAV: { to: string; label: string; icon: typeof Home; end?: boolean; badge?: boolean }[] = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
   { to: '/my/bookings', label: 'Bookings', icon: CalendarCheck },
