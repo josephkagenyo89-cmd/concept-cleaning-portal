@@ -54,6 +54,14 @@ export interface IntegrationsSettings {
   google_review_url: string;
 }
 
+export interface DiscountSettings {
+  global_enabled: boolean;
+  global_percentage: number;
+  start_date: string;
+  end_date: string;
+  label: string;
+}
+
 export interface AllSettings {
   general: GeneralSettings;
   document: DocumentSettings;
@@ -64,7 +72,9 @@ export interface AllSettings {
   system: SystemSettings;
   notifications: NotificationSettings;
   integrations: IntegrationsSettings;
+  discount: DiscountSettings;
 }
+
 
 export const DEFAULT_SETTINGS: AllSettings = {
   general: {
