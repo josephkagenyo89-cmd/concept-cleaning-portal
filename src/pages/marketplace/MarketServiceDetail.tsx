@@ -190,6 +190,14 @@ export default function MarketServiceDetail() {
           <p className="mt-2 text-xl font-bold text-market">
             {price > 0 ? <>From {formatKes(price)} <span className="text-xs font-medium text-muted-foreground">/{service.pricing_unit}</span></> : 'Price on quotation'}
           </p>
+          {pricing.active && (
+            <p className="text-xs text-muted-foreground">
+              <span className="line-through">{formatKes(pricing.original)}</span>{' '}
+              <span className="font-semibold text-destructive">-{pricing.percentage}% ({globalDiscount.label})</span>{' '}
+              · you save {formatKes(pricing.discountAmount)}
+            </p>
+          )}
+
         </div>
 
         {(service.description || service.short_description) && (
