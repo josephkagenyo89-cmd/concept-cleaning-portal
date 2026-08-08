@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
+import { applyGlobalDiscount } from '@/lib/globalDiscount';
 
 interface Props {
   service: MarketService;
@@ -9,8 +11,12 @@ interface Props {
 }
 
 export default function ServiceCard({ service, variant = 'grid' }: Props) {
-  const price = startingPrice(service);
+  const basePrice = startingPrice(service);
+  const discount = useGlobalDiscount();
+  const pricing = applyGlobalDiscount(basePrice, discount);
+  const price = pricing.final;
   const rating = displayRating(service.id);
+
 
   return (
     <div
