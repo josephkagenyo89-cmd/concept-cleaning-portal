@@ -53,7 +53,7 @@ export default function AdminOverview() {
     load();
   }, []);
 
-  const roleLabel = role === 'super_admin' ? 'Super Admin' : role === 'admin' ? 'Admin' : 'Agent';
+  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Agent';
 
   const cards: StatCard[] = [
     { label: "Today's Bookings (24h)", value: stats.todayBookings, icon: CalendarClock, color: 'text-primary', to: '/admin/bookings' },
