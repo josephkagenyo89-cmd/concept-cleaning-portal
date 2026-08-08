@@ -6,13 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, MapPin, Star } from 'lucide-react';
+import { CalendarDays, MapPin, Star, Download } from 'lucide-react';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { formatKes } from '@/lib/marketplace';
 import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
+import { useSettings } from '@/hooks/useSettings';
+import { downloadCustomerQuotation, primePdfSettings } from '@/lib/customerDownloads';
 
 export default function CustomerBookings() {
   const { user, isCustomer, customerClient } = useAuth();
+  const { settings } = useSettings();
+
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') === 'quotations' ? 'quotations' : 'bookings';
   const [bookings, setBookings] = useState<any[]>([]);
@@ -93,10 +97,16 @@ export default function CustomerBookings() {
                   <Badge variant="outline">{q.quotation_number}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</p>
-                <p className="text-sm font-bold text-market">{formatKes(Number(q.price))}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-market">{formatKes(Number(q.price))}</p>
+                  <Button size="sm" variant="outline" onClick={() => { primePdfSettings(settings); downloadCustomerQuotation(q); }}>
+                    <Download className="mr-1 h-3.5 w-3.5" /> Download PDF
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
+
         </TabsContent>
       </Tabs>
 
