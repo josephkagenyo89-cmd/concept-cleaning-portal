@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
+import { applyGlobalDiscount } from '@/lib/globalDiscount';
+
 
 export default function MarketServiceDetail() {
   const { id } = useParams();
