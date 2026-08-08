@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
+import { applyGlobalDiscount } from '@/lib/globalDiscount';
 
 interface Props {
   service: MarketService;
@@ -9,8 +11,12 @@ interface Props {
 }
 
 export default function ServiceCard({ service, variant = 'grid' }: Props) {
-  const price = startingPrice(service);
+  const basePrice = startingPrice(service);
+  const discount = useGlobalDiscount();
+  const pricing = applyGlobalDiscount(basePrice, discount);
+  const price = pricing.final;
   const rating = displayRating(service.id);
+
 
   return (
     <div
@@ -46,16 +52,25 @@ export default function ServiceCard({ service, variant = 'grid' }: Props) {
             </span>
           )}
         </div>
-        <p className="pt-0.5 text-sm font-bold text-market">
+        <div className="pt-0.5">
           {price > 0 ? (
             <>
-              From {formatKes(price)}
-              <span className="text-[10px] font-medium text-muted-foreground"> /{service.pricing_unit}</span>
+              <p className="text-sm font-bold text-market">
+                From {formatKes(price)}
+                <span className="text-[10px] font-medium text-muted-foreground"> /{service.pricing_unit}</span>
+              </p>
+              {pricing.active && (
+                <p className="text-[11px] text-muted-foreground">
+                  <span className="line-through">{formatKes(pricing.original)}</span>{' '}
+                  <span className="font-semibold text-destructive">-{pricing.percentage}%</span>
+                </p>
+              )}
             </>
           ) : (
-            'On quotation'
+            <p className="text-sm font-bold text-market">On quotation</p>
           )}
-        </p>
+        </div>
+
         <div className="flex gap-1.5 pt-1">
           <Button asChild size="sm" className="h-8 flex-1 bg-market text-market-foreground hover:bg-market/90">
             <Link to={`/service/${service.id}`}>Book Now</Link>

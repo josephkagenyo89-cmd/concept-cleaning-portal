@@ -112,6 +112,8 @@ export default function AdminSettings() {
           <TabsTrigger value="document">Documents</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="tax">Tax</TabsTrigger>
+          <TabsTrigger value="discount">Discount</TabsTrigger>
+
           <TabsTrigger value="commission">Commission</TabsTrigger>
           <TabsTrigger value="crm">CRM</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
@@ -230,6 +232,56 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* GLOBAL DISCOUNT */}
+        <TabsContent value="discount">
+          <Card>
+            <CardHeader><CardTitle>Global Discount</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Enable global discount</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Applies dynamically to all services. Base service prices are never modified.
+                  </p>
+                </div>
+                <Switch checked={s.discount.global_enabled} disabled={!canEdit}
+                  onCheckedChange={v => setS({ ...s, discount: { ...s.discount, global_enabled: v } })} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <Label>Discount Percentage (%)</Label>
+                  <Input type="number" min={0} max={100} step="0.01" value={s.discount.global_percentage}
+                    disabled={!canEdit || !s.discount.global_enabled}
+                    onChange={e => setS({ ...s, discount: { ...s.discount, global_percentage: Number(e.target.value) } })} />
+                </div>
+                <div>
+                  <Label>Start Date</Label>
+                  <Input type="date" value={s.discount.start_date} disabled={!canEdit || !s.discount.global_enabled}
+                    onChange={e => setS({ ...s, discount: { ...s.discount, start_date: e.target.value } })} />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input type="date" value={s.discount.end_date} disabled={!canEdit || !s.discount.global_enabled}
+                    onChange={e => setS({ ...s, discount: { ...s.discount, end_date: e.target.value } })} />
+                </div>
+              </div>
+              <div>
+                <Label>Promotion Label</Label>
+                <Input value={s.discount.label} placeholder="e.g. Festive Season Offer"
+                  disabled={!canEdit || !s.discount.global_enabled}
+                  onChange={e => setS({ ...s, discount: { ...s.discount, label: e.target.value } })} />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Shown to customers and used as the discount reason on quotations and invoices.
+                </p>
+              </div>
+              <SaveBar disabled={!canEdit} saving={saving === 'discount'}
+                onSave={() => persist('discount', s.discount)} onReset={() => resetCategory('discount')} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
 
         {/* COMMISSION */}
         <TabsContent value="commission">

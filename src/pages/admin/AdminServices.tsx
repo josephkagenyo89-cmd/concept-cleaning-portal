@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, BadgeCheck } from 'lucide-react';
+import { Plus, Pencil, BadgeCheck, Upload, Download, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { downloadServicesCsv, downloadServicesPdf, importServicesCsv } from '@/lib/servicesIo';
+
 
 const CATEGORIES = [
   'Residential Cleaning',
@@ -97,13 +99,54 @@ export default function AdminServices() {
     load();
   };
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImportFile = async (file: File | null) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const res = await importServicesCsv(text, services as any);
+      toast({
+        title: 'Import complete',
+        description: `${res.created} created · ${res.updated} updated · ${res.skipped} skipped${res.errors.length ? ` · ${res.errors.length} error(s)` : ''}`,
+        variant: res.errors.length ? 'destructive' : 'default',
+      });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Import failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   const filtered = services.filter(s => s.category === activeTab);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold">Services</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={e => handleImportFile(e.target.files?.[0] || null)}
+          />
+          <Button variant="outline" size="sm" disabled={importing} onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> {importing ? 'Importing…' : 'Import CSV'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => downloadServicesCsv(services as any)}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => downloadServicesPdf(services as any)}>
+            <FileText className="mr-2 h-4 w-4" /> Export PDF
+          </Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+
           <DialogTrigger asChild>
             <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Service</Button>
           </DialogTrigger>
@@ -129,7 +172,9 @@ export default function AdminServices() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full mb-4">

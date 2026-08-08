@@ -10,7 +10,9 @@ export type SettingsCategory =
   | 'crm'
   | 'system'
   | 'notifications'
-  | 'integrations';
+  | 'integrations'
+  | 'discount';
+
 
 export interface GeneralSettings {
   company_name: string;
@@ -52,6 +54,14 @@ export interface IntegrationsSettings {
   google_review_url: string;
 }
 
+export interface DiscountSettings {
+  global_enabled: boolean;
+  global_percentage: number;
+  start_date: string;
+  end_date: string;
+  label: string;
+}
+
 export interface AllSettings {
   general: GeneralSettings;
   document: DocumentSettings;
@@ -62,7 +72,9 @@ export interface AllSettings {
   system: SystemSettings;
   notifications: NotificationSettings;
   integrations: IntegrationsSettings;
+  discount: DiscountSettings;
 }
+
 
 export const DEFAULT_SETTINGS: AllSettings = {
   general: {
@@ -89,6 +101,13 @@ export const DEFAULT_SETTINGS: AllSettings = {
     whatsapp_quotation_template: 'Hello {client_name}, here is your quotation {quotation_number} for Ksh {amount}.',
   },
   integrations: { google_review_url: '' },
+  discount: {
+    global_enabled: false,
+    global_percentage: 0,
+    start_date: '',
+    end_date: '',
+    label: '',
+  },
 };
 
 let cache: AllSettings | null = null;

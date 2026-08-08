@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
+import { applyGlobalDiscount } from '@/lib/globalDiscount';
+
 
 export default function MarketServiceDetail() {
   const { id } = useParams();
@@ -17,10 +20,12 @@ export default function MarketServiceDetail() {
   const [params] = useSearchParams();
   const quoteMode = params.get('mode') === 'quote';
   const { user, isCustomer, customerClient, refreshProfile } = useAuth();
+  const globalDiscount = useGlobalDiscount();
 
   const [service, setService] = useState<MarketService | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [form, setForm] = useState({
     service_date: '',
     location: '',
@@ -67,15 +72,25 @@ export default function MarketServiceDetail() {
       return;
     }
     setSaving(true);
-    const price = startingPrice(service);
+    const pricing = applyGlobalDiscount(startingPrice(service), globalDiscount);
+    const price = pricing.final;
     const lineItems = [{
       service_id: service.id,
       service_name: service.name,
       quantity: 1,
-      unit_price: price,
+      unit_price: pricing.original,
+      discount_percent: pricing.percentage,
+      discount_amount: pricing.discountAmount,
       total: price,
       notes: form.notes || null,
     }];
+    const discountFields = pricing.active
+      ? {
+          subtotal: pricing.original,
+          discount_amount: pricing.discountAmount,
+          discount_reason: globalDiscount.label,
+        }
+      : { subtotal: pricing.original, discount_amount: 0 };
 
     try {
       if (mode === 'booking') {
@@ -88,11 +103,19 @@ export default function MarketServiceDetail() {
           service_id: service.id,
           service_date: form.service_date,
           price,
-          system_price: price,
+          system_price: pricing.original,
           status: 'pending',
           created_by_name: customerClient.full_name,
           created_by_role: 'customer',
           line_items: lineItems as any,
+          ...discountFields,
+          ...(pricing.active
+            ? {
+                discount_type: 'percent',
+                discount_value: pricing.percentage,
+                discount_approval_status: 'approved',
+              }
+            : {}),
         } as any);
         if (error) throw error;
         toast({ title: 'Booking request sent', description: 'Our team will confirm shortly.' });
@@ -111,10 +134,12 @@ export default function MarketServiceDetail() {
           created_by_name: customerClient.full_name,
           created_by_role: 'customer',
           line_items: lineItems as any,
+          ...discountFields,
         } as any);
         if (error) throw error;
         toast({ title: 'Quotation requested', description: `Reference ${quotationNumber}` });
       }
+
       await refreshProfile();
       navigate('/my/bookings');
     } catch (e: any) {
@@ -127,7 +152,9 @@ export default function MarketServiceDetail() {
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading service…</div>;
   if (!service) return <div className="p-6 text-sm text-muted-foreground">Service not found.</div>;
 
-  const price = startingPrice(service);
+  const pricing = applyGlobalDiscount(startingPrice(service), globalDiscount);
+  const price = pricing.final;
+
 
   return (
     <div className="pb-6">
@@ -163,6 +190,14 @@ export default function MarketServiceDetail() {
           <p className="mt-2 text-xl font-bold text-market">
             {price > 0 ? <>From {formatKes(price)} <span className="text-xs font-medium text-muted-foreground">/{service.pricing_unit}</span></> : 'Price on quotation'}
           </p>
+          {pricing.active && (
+            <p className="text-xs text-muted-foreground">
+              <span className="line-through">{formatKes(pricing.original)}</span>{' '}
+              <span className="font-semibold text-destructive">-{pricing.percentage}% ({globalDiscount.label})</span>{' '}
+              · you save {formatKes(pricing.discountAmount)}
+            </p>
+          )}
+
         </div>
 
         {(service.description || service.short_description) && (
