@@ -172,7 +172,9 @@ export default function AdminServices() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full mb-4">
