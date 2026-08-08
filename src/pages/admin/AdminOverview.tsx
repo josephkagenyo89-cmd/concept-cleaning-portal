@@ -19,7 +19,7 @@ interface StatCard {
 }
 
 export default function AdminOverview() {
-  const { profile, role } = useAuth();
+  const { profile, isSuperAdmin, isAdmin } = useAuth();
   const [stats, setStats] = useState({
     bookings: 0, revenue: 0, agents: 0, pendingApprovals: 0, pendingPayouts: 0,
     completedBookings: 0, todayBookings: 0, newQuotations: 0,
