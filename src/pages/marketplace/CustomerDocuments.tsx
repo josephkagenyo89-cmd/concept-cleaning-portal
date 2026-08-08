@@ -4,19 +4,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, ReceiptText, Award } from 'lucide-react';
+import { FileText, ReceiptText, Award, Download, FileSignature } from 'lucide-react';
 import { formatKes } from '@/lib/marketplace';
 import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
+import { useSettings } from '@/hooks/useSettings';
+import { toast } from '@/hooks/use-toast';
+import {
+  downloadCustomerCertificate, downloadCustomerDocument, downloadCustomerInvoice,
+  downloadCustomerQuotation, primePdfSettings,
+} from '@/lib/customerDownloads';
 
 export default function CustomerDocuments() {
   const { user, isCustomer } = useAuth();
+  const { settings } = useSettings();
   const [params, setParams] = useSearchParams();
-  const tab = ['invoices', 'receipts', 'certificates'].includes(params.get('tab') || '') ? (params.get('tab') as string) : 'invoices';
+  const tab = ['invoices', 'receipts', 'certificates', 'quotations'].includes(params.get('tab') || '') ? (params.get('tab') as string) : 'invoices';
   const [invoices, setInvoices] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
+  const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     if (!user || !isCustomer) { setLoading(false); return; }
