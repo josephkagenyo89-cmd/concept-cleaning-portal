@@ -152,7 +152,9 @@ export default function MarketServiceDetail() {
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading service…</div>;
   if (!service) return <div className="p-6 text-sm text-muted-foreground">Service not found.</div>;
 
-  const price = startingPrice(service);
+  const pricing = applyGlobalDiscount(startingPrice(service), globalDiscount);
+  const price = pricing.final;
+
 
   return (
     <div className="pb-6">
