@@ -105,6 +105,10 @@ export default function CustomerDocuments() {
               <div className="text-right">
                 <p className="text-sm font-bold text-market">{formatKes(Number(i.amount))}</p>
                 <Badge variant="secondary" className="capitalize">{i.payment_status}</Badge>
+                <Button size="sm" variant="outline" className="mt-1 h-7 w-full px-2 text-xs"
+                  onClick={() => download(() => downloadCustomerInvoice(i), i.invoice_number)}>
+                  <Download className="mr-1 h-3 w-3" /> PDF
+                </Button>
               </div>
             </CardContent></Card>
           ))}
@@ -121,7 +125,13 @@ export default function CustomerDocuments() {
                   {String(d.document_type).replace('_', ' ')} · {new Date(d.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <p className="text-sm font-bold text-market">{formatKes(Number(d.amount))}</p>
+              <div className="text-right">
+                <p className="text-sm font-bold text-market">{formatKes(Number(d.amount))}</p>
+                <Button size="sm" variant="outline" className="mt-1 h-7 px-2 text-xs"
+                  onClick={() => download(() => downloadCustomerDocument(d), d.document_number)}>
+                  <Download className="mr-1 h-3 w-3" /> PDF
+                </Button>
+              </div>
             </CardContent></Card>
           ))}
         </TabsContent>
@@ -135,10 +145,17 @@ export default function CustomerDocuments() {
                 <p className="truncate text-sm font-semibold">{c.certificate_number}</p>
                 <p className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</p>
               </div>
-              <p className="text-sm font-bold text-market">{formatKes(Number(c.amount_paid))}</p>
+              <div className="text-right">
+                <p className="text-sm font-bold text-market">{formatKes(Number(c.amount_paid))}</p>
+                <Button size="sm" variant="outline" className="mt-1 h-7 px-2 text-xs"
+                  onClick={() => download(() => downloadCustomerCertificate(c), c.certificate_number)}>
+                  <Download className="mr-1 h-3 w-3" /> PDF
+                </Button>
+              </div>
             </CardContent></Card>
           ))}
         </TabsContent>
+
       </Tabs>
     </div>
   );
