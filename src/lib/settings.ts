@@ -10,7 +10,9 @@ export type SettingsCategory =
   | 'crm'
   | 'system'
   | 'notifications'
-  | 'integrations';
+  | 'integrations'
+  | 'discount';
+
 
 export interface GeneralSettings {
   company_name: string;
