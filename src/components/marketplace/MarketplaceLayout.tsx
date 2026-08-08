@@ -152,13 +152,16 @@ export default function MarketplaceLayout() {
         </nav>
 
         <div className="mx-auto max-w-3xl border-t bg-muted/40 px-4 py-2">
-          <Link
-            to="/login"
+          <a
+            href="https://conceptcleaningke.lovable.app/admin"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground"
           >
             <Building2 className="h-4 w-4" /> Staff Login
-          </Link>
+          </a>
         </div>
+
       </div>
     </div>
   );
