@@ -101,6 +101,13 @@ export const DEFAULT_SETTINGS: AllSettings = {
     whatsapp_quotation_template: 'Hello {client_name}, here is your quotation {quotation_number} for Ksh {amount}.',
   },
   integrations: { google_review_url: '' },
+  discount: {
+    global_enabled: false,
+    global_percentage: 0,
+    start_date: '',
+    end_date: '',
+    label: '',
+  },
 };
 
 let cache: AllSettings | null = null;
