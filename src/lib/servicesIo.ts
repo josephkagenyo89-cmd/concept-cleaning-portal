@@ -131,8 +131,9 @@ export function downloadServicesPdf(services: ServiceRow[], companyName = 'Conce
 
   autoTable(doc, {
     startY: 72,
-    head: [['Service', 'Category', 'Description', 'Base Price (Ksh)', 'Unit', 'Duration', 'Active']],
+    head: [['Code', 'Service', 'Category', 'Description', 'Base Price (Ksh)', 'Unit', 'Duration', 'Active']],
     body: services.map(s => [
+      s.service_code || '',
       s.name,
       s.category || '',
       s.description || '',
