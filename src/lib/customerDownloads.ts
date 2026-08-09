@@ -17,7 +17,7 @@ function toLineItems(raw: any, fallbackName: string, amount: number): DocumentLi
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.map((i: any) => ({
       name: i.service_name || i.name || fallbackName,
-      description: i.description || i.notes || undefined,
+      description: i.description || i.serviceCode || i.notes || undefined,
       quantity: i.quantity ?? 1,
       unitPrice: Number(i.unit_price ?? i.unitPrice ?? i.total ?? amount) || 0,
       total: Number(i.total ?? amount) || 0,

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ServiceRow {
   id?: string;
+  service_code?: string | null;
   name: string;
   category: string;
   description?: string | null;
@@ -16,7 +17,7 @@ export interface ServiceRow {
 }
 
 const CSV_HEADERS = [
-  'name', 'category', 'description', 'short_description', 'base_price',
+  'service_code', 'name', 'category', 'description', 'short_description', 'base_price',
   'pricing_unit', 'estimated_duration', 'commission_eligible', 'is_active',
 ] as const;
 
@@ -130,8 +131,9 @@ export function downloadServicesPdf(services: ServiceRow[], companyName = 'Conce
 
   autoTable(doc, {
     startY: 72,
-    head: [['Service', 'Category', 'Description', 'Base Price (Ksh)', 'Unit', 'Duration', 'Active']],
+    head: [['Code', 'Service', 'Category', 'Description', 'Base Price (Ksh)', 'Unit', 'Duration', 'Active']],
     body: services.map(s => [
+      s.service_code || '',
       s.name,
       s.category || '',
       s.description || '',

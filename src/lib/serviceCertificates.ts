@@ -23,6 +23,10 @@ export interface CertificateRecord {
   staff_signed_name: string | null;
   client_signed_at: string | null;
   staff_signed_at: string | null;
+  signature_bypassed?: boolean;
+  signature_bypass_reason?: string | null;
+  signature_bypassed_by_name?: string | null;
+  signature_bypassed_at?: string | null;
   document_reference: string | null;
   generated_by: string;
   generated_by_name: string | null;
@@ -36,6 +40,7 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
     Array.isArray(c.line_items) && c.line_items.length > 0
       ? c.line_items.map((i: any) => ({
           name: i.name,
+          description: i.description || i.serviceCode || undefined,
           quantity: i.quantity || 1,
           unitPrice: i.unitPrice || i.total,
           total: i.total,
@@ -59,7 +64,7 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
     invoiceNumber: c.invoice_number || undefined,
     amountPaid: Number(c.amount_paid),
     signatures: {
-      clientSignature: c.client_signature,
+      clientSignature: c.client_signature || undefined,
       clientName: c.client_name,
       clientSignedAt: c.client_signed_at || undefined,
       staffSignature: c.staff_signature,
@@ -67,6 +72,11 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
       staffSignedAt: c.staff_signed_at || undefined,
     },
     notes:
+      (c.signature_bypassed
+        ? `Client signature waived by ${c.signature_bypassed_by_name || 'administrator'}${
+            c.signature_bypass_reason ? ` — ${c.signature_bypass_reason}` : ''
+          }. `
+        : '') +
       'This certificate confirms that the cleaning service has been completed satisfactorily and payment has been received in full. Thank you for choosing Concept Cleaning Services. We appreciate your business.',
   };
 }
@@ -76,6 +86,9 @@ export interface GenerateOptions {
   generatedById: string;
   generatedByName: string;
   generatedByRole: string;
+  /** Admin-controlled override: issue the certificate without the client signature. */
+  bypassClientSignature?: boolean;
+  bypassReason?: string;
 }
 
 export interface GenerateResult {
@@ -108,7 +121,10 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
   if (!['completed', 'fully_confirmed'].includes(b.status)) {
     return { ok: false, reason: 'Booking must be completed or fully confirmed before issuing a certificate.' };
   }
-  if (!b.client_signature) return { ok: false, reason: 'Client signature is missing.' };
+  const bypassed = !b.client_signature && !!opts.bypassClientSignature;
+  if (!b.client_signature && !opts.bypassClientSignature) {
+    return { ok: false, reason: 'Client signature is missing.' };
+  }
   if (!b.staff_signature) return { ok: false, reason: 'Staff signature is missing.' };
 
   // 2. Resolve payment data — prefer booking, fall back to paid invoice
@@ -170,7 +186,12 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     mpesa_code: mpesaCode,
     payment_date: paymentDate,
     invoice_number: invoiceNumber,
-    client_signature: b.client_signature,
+    client_signature: b.client_signature || null,
+    signature_bypassed: bypassed,
+    signature_bypass_reason: bypassed ? (opts.bypassReason || 'Client signature waived by administrator') : null,
+    signature_bypassed_by: bypassed ? opts.generatedById : null,
+    signature_bypassed_by_name: bypassed ? opts.generatedByName : null,
+    signature_bypassed_at: bypassed ? new Date().toISOString() : null,
     staff_signature: b.staff_signature,
     staff_signed_name: b.staff_signed_name,
     client_signed_at: b.client_signed_at,

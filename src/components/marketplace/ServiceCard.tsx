@@ -38,6 +38,14 @@ export default function ServiceCard({ service, variant = 'grid' }: Props) {
         <Link to={`/service/${service.id}`} className="block">
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{service.name}</h3>
         </Link>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {service.service_code && (
+            <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+              {service.service_code}
+            </span>
+          )}
+          <span className="rounded-full bg-market/10 px-2 py-0.5 text-[10px] font-medium text-market">{service.category}</span>
+        </div>
         <p className="line-clamp-2 text-xs text-muted-foreground">
           {service.short_description || service.description || service.category}
         </p>

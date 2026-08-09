@@ -51,6 +51,11 @@ export default function MultiServiceSelector({ services, lineItems, onChange }: 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{item.service.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
+                  {item.service.service_code && (
+                    <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                      {item.service.service_code}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">{item.service.category}</span>
                   {item.unitPrice > 0 && (
                     <Badge variant="secondary" className="text-xs">

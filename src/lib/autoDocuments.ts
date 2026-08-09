@@ -6,7 +6,7 @@ interface AutoQuotationParams {
   clientName: string;
   clientPhone: string;
   clientLocation?: string;
-  lineItems: { name: string; quantity?: number; unitPrice?: number; total: number }[];
+  lineItems: { name: string; description?: string; serviceCode?: string | null; quantity?: number; unitPrice?: number; total: number }[];
   totalAmount: number;
   subtotal?: number;
   discountAmount?: number;
@@ -62,8 +62,9 @@ export async function autoCreateQuotationForBooking(params: AutoQuotationParams)
     clientName: params.clientName,
     clientPhone: params.clientPhone,
     clientLocation: params.clientLocation,
-    lineItems: params.lineItems.map(i => ({
+    lineItems: params.lineItems.map((i: any) => ({
       name: i.name,
+      description: i.description || i.serviceCode || undefined,
       quantity: i.quantity || 1,
       unitPrice: i.unitPrice || i.total,
       total: i.total,

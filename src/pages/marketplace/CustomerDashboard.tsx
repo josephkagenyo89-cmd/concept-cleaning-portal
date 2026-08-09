@@ -50,7 +50,7 @@ export default function CustomerDashboard() {
   if (!isCustomer) return <CustomerLoginPrompt title="My dashboard" />;
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
       <Card className="bg-market text-market-foreground">
         <CardContent className="p-4">
           <p className="text-xs opacity-80">Welcome back</p>
@@ -65,7 +65,7 @@ export default function CustomerDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
         {[
           { label: 'Bookings', value: stats.bookings },
           { label: 'Quotes', value: stats.quotations },
@@ -85,7 +85,7 @@ export default function CustomerDashboard() {
         <Link to="/"><Sparkles className="mr-2 h-4 w-4" /> Book a new service</Link>
       </Button>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 md:gap-4">
         {SHORTCUTS.map((s) => (
           <Link
             key={s.label}

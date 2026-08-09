@@ -40,7 +40,7 @@ export default function CustomerBookings() {
   if (!isCustomer) return <CustomerLoginPrompt title="Your bookings" />;
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-6">
       <h1 className="text-base font-bold">My bookings</h1>
       <p className="mb-4 text-xs text-muted-foreground">Requests you have made with us.</p>
 

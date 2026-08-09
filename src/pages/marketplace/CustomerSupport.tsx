@@ -17,7 +17,7 @@ export default function CustomerSupport() {
   );
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
       <Link to="/my" className="inline-flex items-center gap-1 text-xs font-medium text-market">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to dashboard
       </Link>
