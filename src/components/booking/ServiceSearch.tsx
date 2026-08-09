@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 interface Service {
   id: string;
   name: string;
+  service_code?: string | null;
   category: string;
   base_price: number;
 }
@@ -35,7 +36,7 @@ export default function ServiceSearch({ services, selectedService, onSelect }: S
   const filtered = useMemo(() => {
     if (!isSearching) return services;
     const q = query.toLowerCase();
-    return services.filter(s => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q));
+    return services.filter(s => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || (s.service_code || '').toLowerCase().includes(q));
   }, [query, services, isSearching]);
 
   const grouped = useMemo(() => {

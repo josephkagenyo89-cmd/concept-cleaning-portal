@@ -206,6 +206,8 @@ export default function AdminBookService() {
       line_items: rows.map(r => ({
         serviceName: r.service.name,
         serviceId: r.service.id,
+        serviceCode: r.service.service_code || null,
+        description: r.service.service_code || null,
         quantity: r.quantity,
         unitPrice: r.unitPrice,
         total: r.quantity * r.unitPrice * (1 - r.discountPct / 100),
@@ -227,6 +229,7 @@ export default function AdminBookService() {
         clientLocation: selectedClient.location || '',
         lineItems: rows.map(r => ({
           name: r.service.name,
+          description: r.service.service_code || undefined,
           quantity: r.quantity,
           unitPrice: r.unitPrice,
           total: r.quantity * r.unitPrice * (1 - r.discountPct / 100),

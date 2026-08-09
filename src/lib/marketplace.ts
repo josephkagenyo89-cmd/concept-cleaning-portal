@@ -9,6 +9,7 @@ import pest from '@/assets/market/pest.jpg';
 export interface MarketService {
   id: string;
   name: string;
+  service_code: string | null;
   description: string | null;
   short_description: string | null;
   category: string;
