@@ -6,7 +6,7 @@ interface AutoQuotationParams {
   clientName: string;
   clientPhone: string;
   clientLocation?: string;
-  lineItems: { name: string; quantity?: number; unitPrice?: number; total: number }[];
+  lineItems: { name: string; description?: string; serviceCode?: string | null; quantity?: number; unitPrice?: number; total: number }[];
   totalAmount: number;
   subtotal?: number;
   discountAmount?: number;
