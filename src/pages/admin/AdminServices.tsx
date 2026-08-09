@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { downloadServicesCsv, downloadServicesPdf, importServicesCsv } from '@/lib/servicesIo';
-
-
-const CATEGORIES = [
-  'Residential Cleaning',
-  'Upholstery Cleaning',
-  'Carpet & Rug Cleaning',
-  'Car Interior Cleaning',
-  'Commercial Cleaning',
-  'Fumigation & Pest Control',
-];
+import ServiceCategoriesDialog from '@/components/admin/ServiceCategoriesDialog';
+import { FALLBACK_CATEGORIES, fetchCategoryNames } from '@/lib/serviceCategories';
 
 interface FormState {
   name: string;
@@ -34,26 +26,46 @@ interface FormState {
 }
 
 const defaultForm: FormState = {
-  name: '', description: '', base_price: '', category: CATEGORIES[0],
+  name: '', description: '', base_price: '', category: '',
   commission_eligible: true,
 };
 
 export default function AdminServices() {
   const [services, setServices] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
   const [form, setForm] = useState<FormState>({ ...defaultForm });
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(CATEGORIES[0]);
+  const [activeTab, setActiveTab] = useState<string>('');
 
   const load = async () => {
     const { data } = await supabase.from('services').select('*').order('name');
     setServices(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadCategories = async () => {
+    const names = await fetchCategoryNames();
+    setCategories(names.length ? names : FALLBACK_CATEGORIES);
+    setActiveTab((prev) => (prev && names.includes(prev) ? prev : names[0] || FALLBACK_CATEGORIES[0]));
+  };
 
-  const resetForm = () => { setForm({ ...defaultForm, category: activeTab }); setEditId(null); };
+  useEffect(() => { load(); loadCategories(); }, []);
+
+  // Include any legacy category still on a service so no data is hidden.
+  const tabs = useMemo(() => {
+    const extra = Array.from(new Set(services.map((s) => s.category).filter(Boolean)))
+      .filter((c) => !categories.includes(c as string)) as string[];
+    return [...categories, ...extra];
+  }, [categories, services]);
+
+  const serviceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    services.forEach((s) => { counts[s.category] = (counts[s.category] || 0) + 1; });
+    return counts;
+  }, [services]);
+
+  const resetForm = () => { setForm({ ...defaultForm, category: activeTab || tabs[0] || '' }); setEditId(null); };
 
   const openCreate = () => { resetForm(); setOpen(true); };
 
@@ -62,7 +74,7 @@ export default function AdminServices() {
       name: s.name,
       description: s.description || '',
       base_price: String(s.base_price),
-      category: s.category || CATEGORIES[0],
+      category: s.category || tabs[0] || '',
       commission_eligible: s.commission_eligible ?? true,
     });
     setEditId(s.id);
@@ -88,7 +100,7 @@ export default function AdminServices() {
 
     setLoading(false);
     if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: editId ? 'Service updated!' : 'Service created!' });
+    toast({ title: editId ? 'Service updated!' : 'Service created!', description: editId ? undefined : 'A unique service code was generated automatically.' });
     resetForm();
     setOpen(false);
     load();
@@ -136,6 +148,7 @@ export default function AdminServices() {
             className="hidden"
             onChange={e => handleImportFile(e.target.files?.[0] || null)}
           />
+          <ServiceCategoriesDialog serviceCounts={serviceCounts} onChanged={loadCategories} />
           <Button variant="outline" size="sm" disabled={importing} onClick={() => fileRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" /> {importing ? 'Importing…' : 'Import CSV'}
           </Button>
@@ -155,9 +168,10 @@ export default function AdminServices() {
             <div className="space-y-3">
               <div><Label>Category</Label>
                 <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <SelectContent>{tabs.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Manage the list from the “Categories” button.</p>
               </div>
               <div><Label>Service Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Sofa Cleaning – 3 Seater" /></div>
               <div><Label>Description (optional)</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description" /></div>
@@ -166,7 +180,7 @@ export default function AdminServices() {
                 <Label>Commission Eligible</Label>
                 <Switch checked={form.commission_eligible} onCheckedChange={v => setForm(f => ({ ...f, commission_eligible: v }))} />
               </div>
-              <Button onClick={handleSave} disabled={loading || !form.name} className="w-full">
+              <Button onClick={handleSave} disabled={loading || !form.name || !form.category} className="w-full">
                 {loading ? 'Saving...' : editId ? 'Update Service' : 'Create Service'}
               </Button>
             </div>
@@ -179,14 +193,14 @@ export default function AdminServices() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full mb-4">
           <TabsList className="inline-flex w-max">
-            {CATEGORIES.map(c => (
+            {tabs.map(c => (
               <TabsTrigger key={c} value={c} className="text-xs sm:text-sm whitespace-nowrap">{c}</TabsTrigger>
             ))}
           </TabsList>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        {CATEGORIES.map(cat => (
+        {tabs.map(cat => (
           <TabsContent key={cat} value={cat}>
             {filtered.length === 0 ? (
               <Card><CardContent className="p-6 text-center text-muted-foreground">No services in this category</CardContent></Card>
@@ -196,7 +210,9 @@ export default function AdminServices() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Code</TableHead>
                         <TableHead>Service</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead>Price (Ksh)</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead>Status</TableHead>
@@ -207,11 +223,15 @@ export default function AdminServices() {
                       {filtered.map(s => (
                         <TableRow key={s.id}>
                           <TableCell>
+                            <Badge variant="outline" className="font-mono text-xs">{s.service_code || '—'}</Badge>
+                          </TableCell>
+                          <TableCell>
                             <div>
                               <p className="font-medium">{s.name}</p>
                               {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
                             </div>
                           </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{s.category}</TableCell>
                           <TableCell>{Number(s.base_price) > 0 ? Number(s.base_price).toLocaleString() : <span className="text-muted-foreground">Not set</span>}</TableCell>
                           <TableCell>
                             {s.commission_eligible ? (
