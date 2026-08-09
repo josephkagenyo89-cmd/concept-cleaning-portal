@@ -1616,6 +1616,36 @@ export type Database = {
         }
         Relationships: []
       }
+      service_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_certificates: {
         Row: {
           amount_paid: number
@@ -1625,7 +1655,7 @@ export type Database = {
           client_location: string | null
           client_name: string
           client_phone: string | null
-          client_signature: string
+          client_signature: string | null
           client_signed_at: string | null
           created_at: string
           date_created: string
@@ -1644,6 +1674,11 @@ export type Database = {
           mpesa_code: string
           payment_date: string
           services: string | null
+          signature_bypass_reason: string | null
+          signature_bypassed: boolean
+          signature_bypassed_at: string | null
+          signature_bypassed_by: string | null
+          signature_bypassed_by_name: string | null
           staff_signature: string
           staff_signed_at: string | null
           staff_signed_name: string | null
@@ -1657,7 +1692,7 @@ export type Database = {
           client_location?: string | null
           client_name: string
           client_phone?: string | null
-          client_signature: string
+          client_signature?: string | null
           client_signed_at?: string | null
           created_at?: string
           date_created?: string
@@ -1676,6 +1711,11 @@ export type Database = {
           mpesa_code: string
           payment_date: string
           services?: string | null
+          signature_bypass_reason?: string | null
+          signature_bypassed?: boolean
+          signature_bypassed_at?: string | null
+          signature_bypassed_by?: string | null
+          signature_bypassed_by_name?: string | null
           staff_signature: string
           staff_signed_at?: string | null
           staff_signed_name?: string | null
@@ -1689,7 +1729,7 @@ export type Database = {
           client_location?: string | null
           client_name?: string
           client_phone?: string | null
-          client_signature?: string
+          client_signature?: string | null
           client_signed_at?: string | null
           created_at?: string
           date_created?: string
@@ -1708,6 +1748,11 @@ export type Database = {
           mpesa_code?: string
           payment_date?: string
           services?: string | null
+          signature_bypass_reason?: string | null
+          signature_bypassed?: boolean
+          signature_bypassed_at?: string | null
+          signature_bypassed_by?: string | null
+          signature_bypassed_by_name?: string | null
           staff_signature?: string
           staff_signed_at?: string | null
           staff_signed_name?: string | null
@@ -1734,6 +1779,7 @@ export type Database = {
           pricing_model: string
           pricing_unit: string
           requires_size_input: boolean
+          service_code: string | null
           service_features: Json
           short_description: string | null
           updated_at: string
@@ -1756,6 +1802,7 @@ export type Database = {
           pricing_model?: string
           pricing_unit?: string
           requires_size_input?: boolean
+          service_code?: string | null
           service_features?: Json
           short_description?: string | null
           updated_at?: string
@@ -1778,6 +1825,7 @@ export type Database = {
           pricing_model?: string
           pricing_unit?: string
           requires_size_input?: boolean
+          service_code?: string | null
           service_features?: Json
           short_description?: string | null
           updated_at?: string
@@ -1937,6 +1985,7 @@ export type Database = {
     }
     Functions: {
       approve_profile_edit: { Args: { request_id: string }; Returns: undefined }
+      build_service_code: { Args: { _name: string }; Returns: string }
       get_profile_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["agent_status"]
@@ -1960,6 +2009,10 @@ export type Database = {
       next_quotation_number: { Args: never; Returns: string }
       next_receipt_number: { Args: never; Returns: string }
       next_salary_voucher_number: { Args: never; Returns: string }
+      next_service_code: {
+        Args: { _exclude_id?: string; _name: string }
+        Returns: string
+      }
       notify_customer: {
         Args: {
           _body: string
