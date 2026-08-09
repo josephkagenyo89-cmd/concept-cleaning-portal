@@ -138,7 +138,7 @@ export default function CustomerAuth() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-8">
       <Card className="mx-auto max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-market">

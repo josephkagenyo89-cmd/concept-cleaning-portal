@@ -107,7 +107,7 @@ export default function ErpInvoices() {
 
   const buildInvoiceDocData = (inv: Invoice): DocumentData => {
     const items = inv.line_items && inv.line_items.length > 0
-      ? inv.line_items.map((i: any) => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
+      ? inv.line_items.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
       : [{ name: inv.service, total: Number(inv.amount) }];
 
     return {
@@ -177,7 +177,7 @@ export default function ErpInvoices() {
       createdByRole: 'admin',
       clientName: form.client_name,
       clientPhone: form.client_phone || undefined,
-      lineItems: lineItemsData.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+      lineItems: lineItemsData.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
       totalAmount,
       paymentStatus: form.payment_status,
       notes: form.notes || undefined,
@@ -256,7 +256,7 @@ export default function ErpInvoices() {
       const { data: rNum } = await supabase.rpc('next_receipt_number' as any);
       const receiptNumber = (rNum as string) || `CCS-RCP-${Date.now()}`;
       const lineItemsData = (inv.line_items && inv.line_items.length > 0)
-        ? inv.line_items.map((i: any) => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
+        ? inv.line_items.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
         : [{ name: inv.service, quantity: 1, unitPrice: Number(inv.amount), total: Number(inv.amount) }];
 
       const receiptDoc: DocumentData = {

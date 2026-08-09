@@ -175,7 +175,7 @@ export default function MarketServiceDetail() {
         </button>
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 md:space-y-6 md:p-6">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-market">{service.category}</p>
           <h1 className="text-lg font-bold leading-snug">{service.name}</h1>

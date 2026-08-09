@@ -35,7 +35,7 @@ export default function CustomerMessages() {
   )}`;
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
       <div>
         <h1 className="text-base font-bold">Messages &amp; notifications</h1>
         <p className="text-xs text-muted-foreground">Updates from our team.</p>

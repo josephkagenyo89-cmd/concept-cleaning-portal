@@ -106,7 +106,7 @@ export default function MarketHome() {
 
       {/* Search results */}
       {query.trim() && (
-        <section className="p-4">
+        <section className="p-4 md:p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold">Results for “{query.trim()}”</h2>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
@@ -128,7 +128,7 @@ export default function MarketHome() {
               <Button variant="outline" size="sm" onClick={() => setQuery('')}>Clear search</Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
               {results.map((s) => <ServiceCard key={s.id} service={s} />)}
             </div>
           )}
@@ -145,7 +145,7 @@ export default function MarketHome() {
                 See all
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 md:gap-4">
               {grouped.map(([cat]) => (
                 <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`} className="text-center">
                   <img
@@ -186,7 +186,7 @@ export default function MarketHome() {
                 <h2 className="text-sm font-bold">{cat}</h2>
                 <span className="text-xs text-muted-foreground">{list.length} services</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
                 {list.slice(0, 4).map((s) => <ServiceCard key={s.id} service={s} />)}
               </div>
               {list.length > 4 && (

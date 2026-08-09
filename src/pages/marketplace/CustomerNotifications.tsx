@@ -57,7 +57,7 @@ export default function CustomerNotifications() {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="flex items-center gap-2 text-base font-bold">

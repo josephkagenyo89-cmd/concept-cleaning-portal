@@ -36,6 +36,7 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
     Array.isArray(c.line_items) && c.line_items.length > 0
       ? c.line_items.map((i: any) => ({
           name: i.name,
+          description: i.description || i.serviceCode || undefined,
           quantity: i.quantity || 1,
           unitPrice: i.unitPrice || i.total,
           total: i.total,

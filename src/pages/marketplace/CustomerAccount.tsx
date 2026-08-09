@@ -67,7 +67,7 @@ export default function CustomerAccount() {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
       {/* Dashboard */}
       <Card className="bg-market text-market-foreground">
         <CardContent className="p-4">
@@ -80,7 +80,7 @@ export default function CustomerAccount() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
         <Card><CardContent className="p-3 text-center">
           <CalendarCheck className="mx-auto h-4 w-4 text-market" />
           <p className="mt-1 text-lg font-bold">{stats.bookings}</p>
@@ -98,7 +98,7 @@ export default function CustomerAccount() {
         </CardContent></Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
         <Button asChild variant="outline"><Link to="/my/bookings"><CalendarCheck className="mr-2 h-4 w-4" />My bookings</Link></Button>
         <Button asChild variant="outline"><Link to="/my/documents"><FileText className="mr-2 h-4 w-4" />My documents</Link></Button>
         <Button asChild variant="outline"><Link to="/my/messages"><Bell className="mr-2 h-4 w-4" />Notifications</Link></Button>

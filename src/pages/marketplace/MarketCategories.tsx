@@ -20,7 +20,7 @@ export default function MarketCategories() {
   const list = active ? services.filter((s) => s.category === active) : [];
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-6">
       <h1 className="text-base font-bold">Categories</h1>
       <p className="mb-4 text-xs text-muted-foreground">Pulled live from our service catalogue.</p>
 
@@ -47,7 +47,7 @@ export default function MarketCategories() {
       {active ? (
         <section className="mt-5">
           <h2 className="mb-3 text-sm font-bold">{active}</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
             {list.map((s) => <ServiceCard key={s.id} service={s} />)}
           </div>
           {!loading && list.length === 0 && (
@@ -55,7 +55,7 @@ export default function MarketCategories() {
           )}
         </section>
       ) : (
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0 lg:grid-cols-3">
           {grouped.map(([cat, items]) => (
             <button
               key={cat}

@@ -58,7 +58,7 @@ export default function CustomerDocuments() {
   if (!isCustomer) return <CustomerLoginPrompt title="My documents" />;
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-6">
       <h1 className="text-base font-bold">My documents</h1>
       <p className="mb-4 text-xs text-muted-foreground">Download your quotations, invoices, receipts and certificates.</p>
 
