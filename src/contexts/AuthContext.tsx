@@ -158,13 +158,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isCustomer = !!user && roles.length === 0;
 
   // Self-heal: make sure every customer account is linked to a CRM client record.
-  useEffect(() => {
-    if (loading || !user || roles.length > 0 || customerClient) return;
-    let cancelled = false;
-    (async () => {
-      const meta = (user.user_metadata || {}) as Record<string, string>;
-      const phone = meta.phone || '';
-      await supabase.from('clients').insert({
+useEffect(() => {
+  if (loading || !user || roles.length > 0 || customerClient) return;
+
+  let cancelled = false;
+
+  (async () => {
+    const meta = (user.user_metadata || {}) as Record<string, string>;
+
+    const phone = (meta.phone || '').trim();
+
+    // Do not create a CRM client if there is no phone number.
+    if (!phone) {
+      console.warn('Customer has no phone number. Skipping CRM client creation.');
+      return;
+    }
+
+    // First check whether a client already exists for this user.
+    const { data: existingByUser, error: userLookupError } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (userLookupError) {
+      console.error('Error checking client by user:', userLookupError);
+      return;
+    }
+
+    if (existingByUser) {
+      if (!cancelled) {
+        setCustomerClient(existingByUser as CustomerClient);
+      }
+      return;
+    }
+
+    // If no client is linked to the user, check the phone number.
+    const { data: existingByPhone, error: phoneLookupError } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (phoneLookupError) {
+      console.error('Error checking client by phone:', phoneLookupError);
+      return;
+    }
+
+    // If the phone already exists, link that existing CRM client
+    // to the logged-in customer instead of creating a duplicate.
+    if (existingByPhone) {
+      const { data: linkedClient, error: linkError } = await supabase
+        .from('clients')
+        .update({
+          user_id: user.id,
+        })
+        .eq('id', existingByPhone.id)
+        .select('*')
+        .maybeSingle();
+
+      if (linkError) {
+        console.error('Error linking existing CRM client:', linkError);
+
+        if (!cancelled) {
+          setCustomerClient(existingByPhone as CustomerClient);
+        }
+
+        return;
+      }
+
+      if (!cancelled) {
+        setCustomerClient(
+          (linkedClient as CustomerClient) ||
+          (existingByPhone as CustomerClient)
+        );
+      }
+
+      return;
+    }
+
+    // No existing client was found, so create a new one.
+    const { data: newClient, error: insertError } = await supabase
+      .from('clients')
+      .insert({
         full_name: meta.full_name || user.email || 'Customer',
         phone,
         whatsapp_number: meta.whatsapp_number || phone,
@@ -174,11 +250,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         created_by: user.id,
         created_by_role: 'customer',
         user_id: user.id,
-      });
-      if (!cancelled) await fetchCustomerClient(user.id);
-    })();
-    return () => { cancelled = true; };
-  }, [loading, user, roles.length, customerClient]);
+      })
+      .select('*')
+      .maybeSingle();
+
+    if (insertError) {
+      console.error('Error creating customer client:', insertError);
+      return;
+    }
+
+    if (!cancelled && newClient) {
+      setCustomerClient(newClient as CustomerClient);
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [loading, user, roles.length, customerClient]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
