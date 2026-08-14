@@ -56,14 +56,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [customerClient, setCustomerClient] = useState<CustomerClient | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    setProfile(data as Profile | null);
-  };
+ const fetchProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching profile:', error);
+    setProfile(null);
+    return;
+  }
+
+  setProfile(data as Profile | null);
+};
 
   const fetchRoles = async (userId: string) => {
     const { data } = await supabase
