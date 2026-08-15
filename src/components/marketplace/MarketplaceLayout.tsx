@@ -191,7 +191,7 @@ export default function MarketplaceLayout() {
 
         <div className="mx-auto max-w-3xl border-t bg-muted/40 px-4 py-2">
           <a
-            href="https://conceptcleaningke.lovable.app/admin"
+            href="https://www.conceptcleaningservices.co.ke/admin"
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground"
