@@ -144,7 +144,7 @@ export default function MarketplaceLayout() {
             )}
 
             <a
-              href="https://conceptcleaningke.lovable.app/admin"
+              href="https://www.conceptcleaningservices.co.ke/admin"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden items-center gap-1.5 rounded-lg border border-white/30 px-3 py-2 text-xs font-semibold hover:bg-white/10 md:flex"
