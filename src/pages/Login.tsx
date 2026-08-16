@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,35 +18,38 @@ function safeNext(next: string | null): string | null {
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
+  const { user, loading, isAdmin, isAgent } = useAuth();
 
-  // If a session already exists (e.g. user returned here mid-OAuth), honour ?next.
+  // Once we know who's logged in (after login, or if already logged in on arrival),
+  // send them where they belong instead of leaving them stuck on this page.
   useEffect(() => {
-    if (!next) return;
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = next;
-    });
-  }, [next]);
+    if (loading || !user) return;
+    if (next) {
+      navigate(next, { replace: true });
+    } else if (isAdmin) {
+      navigate('/admin', { replace: true });
+    } else if (isAgent) {
+      navigate('/agent', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  }, [user, loading, isAdmin, isAgent, next, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setLoading(false);
+      setSubmitting(false);
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
       return;
     }
-    if (next) {
-      window.location.href = next;
-      return;
-    }
-    // On success without ?next, AuthContext-driven routing renders the dashboard.
+    // Success: the useEffect above will redirect once AuthContext picks up the new session.
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -69,8 +73,8 @@ export default function Login() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Signing in...' : 'Sign In'}
             </Button>
             <p className="text-sm text-muted-foreground">
               <Link to="/forgot-password" className="text-primary font-medium hover:underline">Forgot password?</Link>
