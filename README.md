@@ -40,17 +40,12 @@ Create a professional, mobile-first referral and booking app for a cleaning busi
 
 Build the app with **mobile-first responsive design**, **easy navigation**, **secure login**, **automated commission calculations**, and **real-time dashboards** for both agents and admins showing booking history, earnings, tier status, and next-tier progress.
 
-This project was built with [Lovable](https://lovable.dev).
+This project is a mobile-first cleaning services marketplace and ERP for Concept Cleaning Services.
 
-**Live app**: https://concept-cleaning-portal.lovable.app
+**Live app**: https://www.conceptcleaningservices.co.ke
 
-## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/19ad4e02-3f0f-401a-9a15-7b8d83c220ff).
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
