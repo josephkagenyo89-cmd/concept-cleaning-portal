@@ -1,14 +1,13 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
+Disallow: /admin
+Disallow: /agent
+Disallow: /my
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /sign
+Disallow: /.lovable
 Allow: /
+
+Sitemap: https://www.conceptcleaningservices.co.ke/sitemap.xml
