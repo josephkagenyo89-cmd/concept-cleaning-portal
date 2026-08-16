@@ -1,5 +1,4 @@
 import { lazy, Suspense } from "react";
-import { Sparkles } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -88,71 +87,102 @@ const marketplaceRoutes = (
 
 const queryClient = new QueryClient();
 
-function AppRoutes() {
-  const { user, loading, isAdmin, isAgent, isCustomer, profile } = useAuth();
-  useOfflineSync();
+function AdminGate() {
+  const { user, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background transition-opacity duration-500">
-        <div className="flex flex-col items-center gap-6 animate-fade-in">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-            <Sparkles className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Concept Cleaning Services</h1>
-          <div className="h-10 w-10 rounded-full border-4 border-muted border-t-primary animate-spin" />
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium text-foreground">Preparing your workspace...</p>
-            <p className="text-xs text-muted-foreground">Please wait while we load your dashboard.</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+
+  return (
+    <Routes>
+      <Route path="/" element={<AdminLayout />}>
+        <Route index element={<AdminOverview />} />
+        <Route path="bookings" element={<AdminBookings />} />
+        <Route path="bookings/:id" element={<AdminBookingDetails />} />
+        <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
+        <Route path="discount-reports" element={<AdminDiscountReports />} />
+        <Route path="book-service" element={<AdminBookService />} />
+        <Route path="quotations" element={<AdminQuotations />} />
+        <Route path="documents" element={<AdminDocuments />} />
+        <Route path="certificates" element={<AdminCertificates />} />
+        <Route path="agents" element={<AdminAgents />} />
+        <Route path="commissions" element={<AdminCommissions />} />
+        <Route path="payouts" element={<AdminPayouts />} />
+        <Route path="services" element={<AdminServices />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="clients" element={<AdminClients />} />
+        <Route path="clients/:id" element={<AdminClientProfile />} />
+        <Route path="notices" element={<AdminNotices />} />
+        <Route path="messages" element={<AdminMessages />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="feedback" element={<AdminFeedback />} />
+        <Route path="pest" element={<AdminPestJobs />} />
+        <Route path="pest/chemicals" element={<AdminPestChemicals />} />
+        <Route path="pest/revisits" element={<AdminPestRevisits />} />
+        <Route path="pest/:id" element={<AdminPestJobDetail />} />
+        <Route path="erp" element={<ErpDashboard />} />
+        <Route path="erp/income" element={<ErpIncome />} />
+        <Route path="erp/expenses" element={<ErpExpenses />} />
+        <Route path="erp/invoices" element={<ErpInvoices />} />
+        <Route path="erp/reports" element={<ErpReports />} />
+      </Route>
+    </Routes>
+  );
+}
+
+function AgentGate() {
+  const { user, loading, isAgent, isAdmin, profile } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAgent && !isAdmin) return <Navigate to="/" replace />;
+
+  if (isAgent && !isAdmin && profile?.status === 'pending') {
+    return <PendingApproval />;
+  }
+
+  if (isAgent && !isAdmin && profile?.status === 'suspended') {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 text-center">
+        <div>
+          <h1 className="text-xl font-bold text-destructive mb-2">Account Suspended</h1>
+          <p className="text-muted-foreground">Your account has been suspended. Contact admin for support.</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <Suspense fallback={null}>
-      <Routes>
-        {marketplaceRoutes}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/sign" element={<ClientSignature />} />
-        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-        <Route path="/admin/*" element={<Navigate to="/login" replace />} />
-        <Route path="/agent/*" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      </Suspense>
-    );
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<AgentLayout />}>
+        <Route index element={<AgentDashboard />} />
+        <Route path="book" element={<AgentBooking />} />
+        <Route path="wallet" element={<AgentWallet />} />
+        <Route path="messages" element={<AgentMessages />} />
+        <Route path="profile" element={<AgentProfile />} />
+      </Route>
+    </Routes>
+  );
+}
 
-  // Agent pending approval
-  if (isAgent && !isAdmin && profile?.status === 'pending') {
-    return (
-      <Routes>
-        <Route path="*" element={<PendingApproval />} />
-      </Routes>
-    );
-  }
-
-  // Agent suspended
-  if (isAgent && !isAdmin && profile?.status === 'suspended') {
-    return (
-      <Routes>
-        <Route path="*" element={
-          <div className="flex min-h-screen items-center justify-center p-4 text-center">
-            <div>
-              <h1 className="text-xl font-bold text-destructive mb-2">Account Suspended</h1>
-              <p className="text-muted-foreground">Your account has been suspended. Contact admin for support.</p>
-            </div>
-          </div>
-        } />
-      </Routes>
-    );
-  }
+function AppRoutes() {
+  const { user, isAdmin, isAgent, isCustomer } = useAuth();
+  useOfflineSync();
 
   const suspenseFallback = (
     <div className="flex items-center justify-center p-8 text-muted-foreground">
@@ -163,61 +193,25 @@ function AppRoutes() {
   return (
     <Suspense fallback={suspenseFallback}>
       <Routes>
-        {/* Public marketplace + customer portal */}
+        {/* Public marketplace + customer portal — always renders immediately, no auth wait */}
         {marketplaceRoutes}
 
-        {/* Admin routes */}
-        {isAdmin && (
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverview />} />
-            <Route path="bookings" element={<AdminBookings />} />
-            <Route path="bookings/:id" element={<AdminBookingDetails />} />
-            <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
-            <Route path="discount-reports" element={<AdminDiscountReports />} />
-            <Route path="book-service" element={<AdminBookService />} />
-            <Route path="quotations" element={<AdminQuotations />} />
-            <Route path="documents" element={<AdminDocuments />} />
-            <Route path="certificates" element={<AdminCertificates />} />
-            <Route path="agents" element={<AdminAgents />} />
-            <Route path="commissions" element={<AdminCommissions />} />
-            <Route path="payouts" element={<AdminPayouts />} />
-            <Route path="services" element={<AdminServices />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="clients" element={<AdminClients />} />
-            <Route path="clients/:id" element={<AdminClientProfile />} />
-            <Route path="notices" element={<AdminNotices />} />
-            <Route path="messages" element={<AdminMessages />} />
-            <Route path="settings" element={<AdminSettings />} />
-            <Route path="feedback" element={<AdminFeedback />} />
-            <Route path="pest" element={<AdminPestJobs />} />
-            <Route path="pest/chemicals" element={<AdminPestChemicals />} />
-            <Route path="pest/revisits" element={<AdminPestRevisits />} />
-            <Route path="pest/:id" element={<AdminPestJobDetail />} />
-            <Route path="erp" element={<ErpDashboard />} />
-            <Route path="erp/income" element={<ErpIncome />} />
-            <Route path="erp/expenses" element={<ErpExpenses />} />
-            <Route path="erp/invoices" element={<ErpInvoices />} />
-            <Route path="erp/reports" element={<ErpReports />} />
-          </Route>
-        )}
-
-        {/* Agent routes */}
-        {isAgent && (
-          <Route path="/agent" element={<AgentLayout />}>
-            <Route index element={<AgentDashboard />} />
-            <Route path="book" element={<AgentBooking />} />
-            <Route path="wallet" element={<AgentWallet />} />
-            <Route path="messages" element={<AgentMessages />} />
-            <Route path="profile" element={<AgentProfile />} />
-          </Route>
-        )}
-
-        {/* Public routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/sign" element={<ClientSignature />} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-        {/* Default redirect */}
-        {!isCustomer && <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/agent'} replace />} />}
+        {/* Admin & agent — each gated independently, only these wait on auth */}
+        <Route path="/admin/*" element={<AdminGate />} />
+        <Route path="/agent/*" element={<AgentGate />} />
+
+        {/* Logged-in staff landing on "/" get bounced to their dashboard */}
+        {user && !isCustomer && (
+          <Route path="/" element={<Navigate to={isAdmin ? '/admin' : isAgent ? '/agent' : '/'} replace />} />
+        )}
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
