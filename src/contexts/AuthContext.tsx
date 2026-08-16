@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [customerClient, setCustomerClient] = useState<CustomerClient | null>(null);
   const [loading, setLoading] = useState(true);
   const lastFetchedUserId = useRef<string | null>(null);
+  const loadUserDataPromise = useRef<Promise<void> | null>(null);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -104,14 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Loads profile/roles/client data for a user exactly once per session,
   // regardless of how many auth events fire for that same user.
-  const loadUserData = async (userId: string) => {
-    if (lastFetchedUserId.current === userId) return;
+  const loadUserData = (userId: string): Promise<void> => {
+    // If we're already fetching (or have finished fetching) this same user's
+    // data, return the SAME promise instead of assuming it's already done —
+    // this avoids a race where a second auth event marks loading as finished
+    // before the real network fetch has actually completed.
+    if (lastFetchedUserId.current === userId && loadUserDataPromise.current) {
+      return loadUserDataPromise.current;
+    }
     lastFetchedUserId.current = userId;
-    await Promise.all([
+    loadUserDataPromise.current = Promise.all([
       fetchProfile(userId),
       fetchRoles(userId),
       fetchCustomerClient(userId),
-    ]);
+    ]).then(() => {});
+    return loadUserDataPromise.current;
   };
 
   useEffect(() => {
@@ -131,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         } else {
           lastFetchedUserId.current = null;
+          loadUserDataPromise.current = null;
           setProfile(null);
           setRoles([]);
           setCustomerClient(null);
@@ -265,6 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoles([]);
     setCustomerClient(null);
     lastFetchedUserId.current = null;
+    loadUserDataPromise.current = null;
   };
 
   return (
