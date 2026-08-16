@@ -145,8 +145,6 @@ export default function MarketplaceLayout() {
 
             <a
               href="/admin"
-              target="_blank"
-              rel="noopener noreferrer"
               className="hidden items-center gap-1.5 rounded-lg border border-white/30 px-3 py-2 text-xs font-semibold hover:bg-white/10 md:flex"
             >
               <Building2 className="h-4 w-4" /> Staff Login
@@ -192,8 +190,6 @@ export default function MarketplaceLayout() {
         <div className="mx-auto max-w-3xl border-t bg-muted/40 px-4 py-2">
           <a
             href="/admin"
-            target="_blank"
-            rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground"
           >
             <Building2 className="h-4 w-4" /> Staff Login
