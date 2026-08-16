@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tier } from '@/lib/commission';
@@ -55,37 +55,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [customerClient, setCustomerClient] = useState<CustomerClient | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastFetchedUserId = useRef<string | null>(null);
 
- const fetchProfile = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  if (error) {
-    console.error('Error fetching profile:', error);
-    setProfile(null);
-    return;
-  }
+    if (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+      return;
+    }
 
-  setProfile(data as Profile | null);
-};
+    setProfile(data as Profile | null);
+  };
 
   const fetchRoles = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
+    if (error) {
+      console.error('Error fetching roles:', error);
+    }
     setRoles((data || []).map((r: any) => r.role as AppRole));
   };
 
   const fetchCustomerClient = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('clients')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
+    if (error) {
+      console.error('Error fetching customer client:', error);
+    }
     setCustomerClient((data as CustomerClient | null) ?? null);
   };
 
@@ -95,27 +102,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Loads profile/roles/client data for a user exactly once per session,
+  // regardless of how many auth events fire for that same user.
+  const loadUserData = async (userId: string) => {
+    if (lastFetchedUserId.current === userId) return;
+    lastFetchedUserId.current = userId;
+    await Promise.all([
+      fetchProfile(userId),
+      fetchRoles(userId),
+      fetchCustomerClient(userId),
+    ]);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    // Listener for ONGOING auth changes (does NOT control loading)
+    // Supabase fires this immediately with the current session on subscribe,
+    // so we don't need a separate getSession() call — that was causing
+    // duplicate fetches of the same data.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => {
-            if (!isMounted) return;
-            Promise.all([
-              fetchProfile(session.user.id),
-              fetchRoles(session.user.id),
-              fetchCustomerClient(session.user.id),
-            ]).then(() => {
-              if (isMounted) setLoading(false);
-            });
-          }, 0);
+          loadUserData(session.user.id).then(() => {
+            if (isMounted) setLoading(false);
+          });
         } else {
+          lastFetchedUserId.current = null;
           setProfile(null);
           setRoles([]);
           setCustomerClient(null);
@@ -123,27 +138,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     );
-
-    // INITIAL load (controls loading)
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            fetchRoles(session.user.id),
-            fetchCustomerClient(session.user.id),
-          ]);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    initializeAuth();
 
     return () => {
       isMounted = false;
@@ -158,116 +152,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isCustomer = !!user && roles.length === 0;
 
   // Self-heal: make sure every customer account is linked to a CRM client record.
-useEffect(() => {
-  if (loading || !user || roles.length > 0 || customerClient) return;
+  useEffect(() => {
+    if (loading || !user || roles.length > 0 || customerClient) return;
 
-  let cancelled = false;
+    let cancelled = false;
 
-  (async () => {
-    const meta = (user.user_metadata || {}) as Record<string, string>;
+    (async () => {
+      const meta = (user.user_metadata || {}) as Record<string, string>;
 
-    const phone = (meta.phone || '').trim();
+      const phone = (meta.phone || '').trim();
 
-    // Do not create a CRM client if there is no phone number.
-    if (!phone) {
-      console.warn('Customer has no phone number. Skipping CRM client creation.');
-      return;
-    }
-
-    // First check whether a client already exists for this user.
-    const { data: existingByUser, error: userLookupError } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (userLookupError) {
-      console.error('Error checking client by user:', userLookupError);
-      return;
-    }
-
-    if (existingByUser) {
-      if (!cancelled) {
-        setCustomerClient(existingByUser as CustomerClient);
+      if (!phone) {
+        console.warn('Customer has no phone number. Skipping CRM client creation.');
+        return;
       }
-      return;
-    }
 
-    // If no client is linked to the user, check the phone number.
-    const { data: existingByPhone, error: phoneLookupError } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('phone', phone)
-      .maybeSingle();
-
-    if (phoneLookupError) {
-      console.error('Error checking client by phone:', phoneLookupError);
-      return;
-    }
-
-    // If the phone already exists, link that existing CRM client
-    // to the logged-in customer instead of creating a duplicate.
-    if (existingByPhone) {
-      const { data: linkedClient, error: linkError } = await supabase
+      const { data: existingByUser, error: userLookupError } = await supabase
         .from('clients')
-        .update({
-          user_id: user.id,
-        })
-        .eq('id', existingByPhone.id)
         .select('*')
+        .eq('user_id', user.id)
         .maybeSingle();
 
-      if (linkError) {
-        console.error('Error linking existing CRM client:', linkError);
+      if (userLookupError) {
+        console.error('Error checking client by user:', userLookupError);
+        return;
+      }
+
+      if (existingByUser) {
+        if (!cancelled) {
+          setCustomerClient(existingByUser as CustomerClient);
+        }
+        return;
+      }
+
+      const { data: existingByPhone, error: phoneLookupError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (phoneLookupError) {
+        console.error('Error checking client by phone:', phoneLookupError);
+        return;
+      }
+
+      if (existingByPhone) {
+        const { data: linkedClient, error: linkError } = await supabase
+          .from('clients')
+          .update({
+            user_id: user.id,
+          })
+          .eq('id', existingByPhone.id)
+          .select('*')
+          .maybeSingle();
+
+        if (linkError) {
+          console.error('Error linking existing CRM client:', linkError);
+
+          if (!cancelled) {
+            setCustomerClient(existingByPhone as CustomerClient);
+          }
+
+          return;
+        }
 
         if (!cancelled) {
-          setCustomerClient(existingByPhone as CustomerClient);
+          setCustomerClient(
+            (linkedClient as CustomerClient) ||
+            (existingByPhone as CustomerClient)
+          );
         }
 
         return;
       }
 
-      if (!cancelled) {
-        setCustomerClient(
-          (linkedClient as CustomerClient) ||
-          (existingByPhone as CustomerClient)
-        );
+      const { data: newClient, error: insertError } = await supabase
+        .from('clients')
+        .insert({
+          full_name: meta.full_name || user.email || 'Customer',
+          phone,
+          whatsapp_number: meta.whatsapp_number || phone,
+          location: meta.location || '',
+          notes: meta.notes || null,
+          status: 'new',
+          created_by: user.id,
+          created_by_role: 'customer',
+          user_id: user.id,
+        })
+        .select('*')
+        .maybeSingle();
+
+      if (insertError) {
+        console.error('Error creating customer client:', insertError);
+        return;
       }
 
-      return;
-    }
+      if (!cancelled && newClient) {
+        setCustomerClient(newClient as CustomerClient);
+      }
+    })();
 
-    // No existing client was found, so create a new one.
-    const { data: newClient, error: insertError } = await supabase
-      .from('clients')
-      .insert({
-        full_name: meta.full_name || user.email || 'Customer',
-        phone,
-        whatsapp_number: meta.whatsapp_number || phone,
-        location: meta.location || '',
-        notes: meta.notes || null,
-        status: 'new',
-        created_by: user.id,
-        created_by_role: 'customer',
-        user_id: user.id,
-      })
-      .select('*')
-      .maybeSingle();
-
-    if (insertError) {
-      console.error('Error creating customer client:', insertError);
-      return;
-    }
-
-    if (!cancelled && newClient) {
-      setCustomerClient(newClient as CustomerClient);
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
-}, [loading, user, roles.length, customerClient]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, roles.length, customerClient]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -276,8 +264,8 @@ useEffect(() => {
     setProfile(null);
     setRoles([]);
     setCustomerClient(null);
+    lastFetchedUserId.current = null;
   };
-
 
   return (
     <AuthContext.Provider value={{
