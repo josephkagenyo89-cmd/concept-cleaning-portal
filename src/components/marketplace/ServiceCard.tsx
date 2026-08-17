@@ -8,9 +8,10 @@ import { applyGlobalDiscount } from '@/lib/globalDiscount';
 interface Props {
   service: MarketService;
   variant?: 'grid' | 'carousel';
+  priority?: boolean;
 }
 
-export default function ServiceCard({ service, variant = 'grid' }: Props) {
+export default function ServiceCard({ service, variant = 'grid', priority = false }: Props) {
   const basePrice = startingPrice(service);
   const discount = useGlobalDiscount();
   const pricing = applyGlobalDiscount(basePrice, discount);
@@ -28,7 +29,8 @@ export default function ServiceCard({ service, variant = 'grid' }: Props) {
         <img
           src={serviceImage(service)}
           alt={service.name}
-          loading="lazy"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
           width={800}
           height={600}
           className="h-28 w-full object-cover"

@@ -175,7 +175,7 @@ export default function MarketHome() {
               {!loading && recommendation.services.length === 0 && (
                 <p className="text-sm text-muted-foreground">No services published yet.</p>
               )}
-              {recommendation.services.map((s) => <ServiceCard key={s.id} service={s} variant="carousel" />)}
+              {recommendation.services.map((s, i) => <ServiceCard key={s.id} service={s} variant="carousel" priority={i === 0} />)}
             </div>
           </section>
 
