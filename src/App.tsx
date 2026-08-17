@@ -5,15 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import PendingApproval from "@/pages/PendingApproval";
-import AgentLayout from "@/layouts/AgentLayout";
-import AdminLayout from "@/layouts/AdminLayout";
-import NotFound from "@/pages/NotFound";
-import ClientSignature from "@/pages/ClientSignature";
+const Login = lazy(() => import("@/pages/Login"));
+const Signup = lazy(() => import("@/pages/Signup"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const PendingApproval = lazy(() => import("@/pages/PendingApproval"));
+const AgentLayout = lazy(() => import("@/layouts/AgentLayout"));
+const AdminLayout = lazy(() => import("@/layouts/AdminLayout"));
+const ClientSignature = lazy(() => import("@/pages/ClientSignature"));
 import NetworkStatus from "@/components/NetworkStatus";
 import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -102,6 +101,9 @@ function AdminGate() {
   if (!isAdmin) return <Navigate to="/" replace />;
 
   return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+    </div>}>
     <Routes>
       <Route path="/" element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
@@ -135,6 +137,7 @@ function AdminGate() {
         <Route path="erp/reports" element={<ErpReports />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 }
 
@@ -153,7 +156,9 @@ function AgentGate() {
   if (!isAgent && !isAdmin) return <Navigate to="/" replace />;
 
   if (isAgent && !isAdmin && profile?.status === 'pending') {
-    return <PendingApproval />;
+    return <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+    </div>}><PendingApproval /></Suspense>;
   }
 
   if (isAgent && !isAdmin && profile?.status === 'suspended') {
@@ -168,6 +173,9 @@ function AgentGate() {
   }
 
   return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+    </div>}>
     <Routes>
       <Route path="/" element={<AgentLayout />}>
         <Route index element={<AgentDashboard />} />
@@ -177,6 +185,7 @@ function AgentGate() {
         <Route path="profile" element={<AgentProfile />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 }
 
