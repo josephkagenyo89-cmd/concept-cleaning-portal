@@ -1,7 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MarketService, displayRating, formatKes, serviceImage, startingPrice } from '@/lib/marketplace';
+import {
+  MarketService,
+  displayRating,
+  formatKes,
+  serviceImage,
+  startingPrice,
+} from '@/lib/marketplace';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 
@@ -11,13 +17,20 @@ interface Props {
   priority?: boolean;
 }
 
-export default function ServiceCard({ service, variant = 'grid', priority = false }: Props) {
+export default function ServiceCard({
+  service,
+  variant = 'grid',
+  priority = false,
+}: Props) {
   const basePrice = startingPrice(service);
   const discount = useGlobalDiscount();
   const pricing = applyGlobalDiscount(basePrice, discount);
   const price = pricing.final;
   const rating = displayRating(service.id);
 
+  // Use the SEO-friendly slug when available.
+  // Fall back to the existing UUID so old services continue working.
+  const servicePath = `/service/${service.slug || service.id}`;
 
   return (
     <div
@@ -25,7 +38,7 @@ export default function ServiceCard({ service, variant = 'grid', priority = fals
         variant === 'carousel' ? 'w-[190px] shrink-0' : ''
       }`}
     >
-      <Link to={`/service/${service.id}`}>
+      <Link to={servicePath}>
         <img
           src={serviceImage(service)}
           alt={service.name}
@@ -36,57 +49,93 @@ export default function ServiceCard({ service, variant = 'grid', priority = fals
           className="h-28 w-full object-cover"
         />
       </Link>
+
       <div className="space-y-1.5 p-3">
-        <Link to={`/service/${service.id}`} className="block">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{service.name}</h3>
+        <Link to={servicePath} className="block">
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
+            {service.name}
+          </h3>
         </Link>
+
         <div className="flex flex-wrap items-center gap-1.5">
           {service.service_code && (
             <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
               {service.service_code}
             </span>
           )}
-          <span className="rounded-full bg-market/10 px-2 py-0.5 text-[10px] font-medium text-market">{service.category}</span>
+
+          <span className="rounded-full bg-market/10 px-2 py-0.5 text-[10px] font-medium text-market">
+            {service.category}
+          </span>
         </div>
+
         <p className="line-clamp-2 text-xs text-muted-foreground">
-          {service.short_description || service.description || service.category}
+          {service.short_description ||
+            service.description ||
+            service.category}
         </p>
+
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-0.5 font-medium text-foreground">
             <Star className="h-3 w-3 fill-warning text-warning" />
             {rating.toFixed(1)}
           </span>
+
           {service.estimated_duration && (
             <span className="flex items-center gap-0.5">
-              <Clock className="h-3 w-3" /> {service.estimated_duration}
+              <Clock className="h-3 w-3" />
+              {service.estimated_duration}
             </span>
           )}
         </div>
+
         <div className="pt-0.5">
           {price > 0 ? (
             <>
               <p className="text-sm font-bold text-market">
                 From {formatKes(price)}
-                <span className="text-[10px] font-medium text-muted-foreground"> /{service.pricing_unit}</span>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {' '}
+                  /{service.pricing_unit}
+                </span>
               </p>
+
               {pricing.active && (
                 <p className="text-[11px] text-muted-foreground">
-                  <span className="line-through">{formatKes(pricing.original)}</span>{' '}
-                  <span className="font-semibold text-destructive">-{pricing.percentage}%</span>
+                  <span className="line-through">
+                    {formatKes(pricing.original)}
+                  </span>{' '}
+                  <span className="font-semibold text-destructive">
+                    -{pricing.percentage}%
+                  </span>
                 </p>
               )}
             </>
           ) : (
-            <p className="text-sm font-bold text-market">On quotation</p>
+            <p className="text-sm font-bold text-market">
+              On quotation
+            </p>
           )}
         </div>
 
         <div className="flex gap-1.5 pt-1">
-          <Button asChild size="sm" className="h-8 flex-1 bg-market text-market-foreground hover:bg-market/90">
-            <Link to={`/service/${service.id}`}>Book Now</Link>
+          <Button
+            asChild
+            size="sm"
+            className="h-8 flex-1 bg-market text-market-foreground hover:bg-market/90"
+          >
+            <Link to={servicePath}>Book Now</Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="h-8 flex-1 text-xs">
-            <Link to={`/service/${service.id}?mode=quote`}>Quotation</Link>
+
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="h-8 flex-1 text-xs"
+          >
+            <Link to={`${servicePath}?mode=quote`}>
+              Quotation
+            </Link>
           </Button>
         </div>
       </div>

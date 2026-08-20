@@ -9,6 +9,7 @@ import pest from '@/assets/market/pest.jpg';
 export interface MarketService {
   id: string;
   name: string;
+  slug: string | null;
   service_code: string | null;
   description: string | null;
   short_description: string | null;
@@ -46,12 +47,16 @@ export function categoryImage(category: string): string {
   return CATEGORY_IMAGES[category] || residential;
 }
 
-export function serviceImage(service: Pick<MarketService, 'image_url' | 'category'>): string {
+export function serviceImage(
+  service: Pick<MarketService, 'image_url' | 'category'>
+): string {
   return service.image_url || categoryImage(service.category);
 }
 
 export function formatKes(amount: number): string {
-  return `KES ${Number(amount || 0).toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
+  return `KES ${Number(amount || 0).toLocaleString('en-KE', {
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 /** Services module is the single source of truth for the marketplace catalogue. */
@@ -62,30 +67,50 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
     .eq('is_active', true)
     .order('category')
     .order('name');
+
   if (error) throw error;
+
   return ((data || []) as any[]).map((s) => ({
     ...s,
+    slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
-    service_features: Array.isArray(s.service_features) ? s.service_features : [],
+    service_features: Array.isArray(s.service_features)
+      ? s.service_features
+      : [],
   })) as MarketService[];
 }
 
-export function groupByCategory(services: MarketService[]): [string, MarketService[]][] {
+export function groupByCategory(
+  services: MarketService[]
+): [string, MarketService[]][] {
   const groups: Record<string, MarketService[]> = {};
+
   services.forEach((s) => {
     (groups[s.category] = groups[s.category] || []).push(s);
   });
+
   const sorted: [string, MarketService[]][] = [];
-  CATEGORY_ORDER.forEach((c) => { if (groups[c]) sorted.push([c, groups[c]]); });
-  Object.keys(groups).forEach((c) => { if (!CATEGORY_ORDER.includes(c)) sorted.push([c, groups[c]]); });
+
+  CATEGORY_ORDER.forEach((c) => {
+    if (groups[c]) sorted.push([c, groups[c]]);
+  });
+
+  Object.keys(groups).forEach((c) => {
+    if (!CATEGORY_ORDER.includes(c)) sorted.push([c, groups[c]]);
+  });
+
   return sorted;
 }
 
 /** Deterministic pseudo-rating so cards look complete without inventing stored data. */
 export function displayRating(id: string): number {
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 1000;
+
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) % 1000;
+  }
+
   return 4.3 + (h % 7) / 10;
 }
 
@@ -99,12 +124,30 @@ export function startingPrice(s: MarketService): number {
 
 /** Category → categories that pair well with it (cross-selling). */
 const CROSS_SELL: Record<string, string[]> = {
-  'Fumigation & Pest Control': ['Upholstery Cleaning', 'Residential Cleaning'],
-  'Upholstery Cleaning': ['Carpet & Rug Cleaning', 'Residential Cleaning'],
-  'Carpet & Rug Cleaning': ['Upholstery Cleaning', 'Residential Cleaning'],
-  'Commercial Cleaning': ['Carpet & Rug Cleaning', 'Residential Cleaning'],
-  'Residential Cleaning': ['Fumigation & Pest Control', 'Upholstery Cleaning'],
-  'Car Interior Cleaning': ['Upholstery Cleaning', 'Carpet & Rug Cleaning'],
+  'Fumigation & Pest Control': [
+    'Upholstery Cleaning',
+    'Residential Cleaning',
+  ],
+  'Upholstery Cleaning': [
+    'Carpet & Rug Cleaning',
+    'Residential Cleaning',
+  ],
+  'Carpet & Rug Cleaning': [
+    'Upholstery Cleaning',
+    'Residential Cleaning',
+  ],
+  'Commercial Cleaning': [
+    'Carpet & Rug Cleaning',
+    'Residential Cleaning',
+  ],
+  'Residential Cleaning': [
+    'Fumigation & Pest Control',
+    'Upholstery Cleaning',
+  ],
+  'Car Interior Cleaning': [
+    'Upholstery Cleaning',
+    'Carpet & Rug Cleaning',
+  ],
 };
 
 /** Keyword fallback so cross-selling still works for custom categories. */
@@ -118,14 +161,22 @@ const KEYWORD_CROSS_SELL: [RegExp, string[]][] = [
 
 function matchesKeywords(s: MarketService, keywords: string[]) {
   const hay = `${s.name} ${s.category}`.toLowerCase();
-  return keywords.some((k) => hay.includes(k.toLowerCase()));
+
+  return keywords.some((k) =>
+    hay.includes(k.toLowerCase())
+  );
 }
 
 /** A featured category that rotates daily, used when there is no history. */
-export function rotatingFeaturedCategory(available: string[]): string | null {
+export function rotatingFeaturedCategory(
+  available: string[]
+): string | null {
   const list = available.length ? available : CATEGORY_ORDER;
+
   if (!list.length) return null;
+
   const dayIndex = Math.floor(Date.now() / 86_400_000);
+
   return list[dayIndex % list.length];
 }
 
@@ -143,13 +194,19 @@ export function buildRecommendations(
   historyCategories: string[],
   historyNames: string[] = []
 ): Recommendation {
-  const available = Array.from(new Set(services.map((s) => s.category)));
+  const available = Array.from(
+    new Set(services.map((s) => s.category))
+  );
 
   if (historyCategories.length || historyNames.length) {
     const wanted = new Set<string>();
-    historyCategories.forEach((c) => (CROSS_SELL[c] || []).forEach((x) => wanted.add(x)));
+
+    historyCategories.forEach((c) =>
+      (CROSS_SELL[c] || []).forEach((x) => wanted.add(x))
+    );
 
     const keywordTargets: string[] = [];
+
     [...historyCategories, ...historyNames].forEach((label) => {
       KEYWORD_CROSS_SELL.forEach(([re, targets]) => {
         if (re.test(label)) keywordTargets.push(...targets);
@@ -157,19 +214,32 @@ export function buildRecommendations(
     });
 
     const booked = new Set(historyCategories);
+
     const picks = services.filter(
-      (s) => !booked.has(s.category) && (wanted.has(s.category) || matchesKeywords(s, keywordTargets))
+      (s) =>
+        !booked.has(s.category) &&
+        (wanted.has(s.category) ||
+          matchesKeywords(s, keywordTargets))
     );
 
     if (picks.length) {
-      return { reason: 'Goes well with what you have booked before', services: picks.slice(0, 8) };
+      return {
+        reason: 'Goes well with what you have booked before',
+        services: picks.slice(0, 8),
+      };
     }
   }
 
   const featured = rotatingFeaturedCategory(available);
-  const list = featured ? services.filter((s) => s.category === featured) : [];
+
+  const list = featured
+    ? services.filter((s) => s.category === featured)
+    : [];
+
   return {
-    reason: featured ? `Featured today: ${featured}` : 'Popular services',
+    reason: featured
+      ? `Featured today: ${featured}`
+      : 'Popular services',
     services: (list.length ? list : services).slice(0, 8),
   };
 }
