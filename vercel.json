@@ -2,6 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/service/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Googlebot|Applebot|Bingbot|Discordbot|redditbot|Pinterest"
+        }
+      ],
+      "destination": "/api/service-meta/:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
