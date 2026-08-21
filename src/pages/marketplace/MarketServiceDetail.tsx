@@ -162,13 +162,6 @@ export default function MarketServiceDetail() {
     );
 
     const price = pricing.final;
-  const pageTitle = `${service.name} | Concept Cleaning Services`;
-
-  const pageDescription =
-    service.short_description ||
-    service.description ||
-    `Professional ${service.name.toLowerCase()} in Nairobi and surrounding areas. Book Concept Cleaning Services today.`;
-  const seoUrl = `https://www.conceptcleaningservices.co.ke/service/${service.slug || service.id}`;
 
     const lineItems = [
       {
@@ -302,7 +295,12 @@ export default function MarketServiceDetail() {
 
   const price = pricing.final;
 
-
+  const pageTitle = `${service.name} | Concept Cleaning Services`;
+  const pageDescription =
+    service.short_description ||
+    service.description ||
+    `Professional ${service.name.toLowerCase()} in Nairobi and surrounding areas. Book Concept Cleaning Services today.`;
+  const seoUrl = `https://www.conceptcleaningservices.co.ke/service/${service.slug || service.id}`;
 
   return (
 <>
