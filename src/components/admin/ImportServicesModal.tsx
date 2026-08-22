@@ -155,37 +155,49 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     setIsImporting(true);
     try {
-      // Prepare data exactly like "Add Service" plus extra columns
-      const sanitized = rowsToInsert.map((row) => {
-        const payload: any = {
-          name: row.name,
-          description: row.description || '',
-          base_price: parseFloat(row.base_price) || 0,
-          category: row.category,
-          commission_eligible: row.commission_eligible ?? true,
-          pricing_model: 'fixed',
-          pricing_unit: 'fixed',
-          input_type: 'number',
-          service_code: row.service_code || null,
-          short_description: row.short_description || null,
-          estimated_duration: row.estimated_duration ? parseInt(row.estimated_duration) : null,
-          is_active: row.is_active ?? true,
-        };
-        return payload;
-      });
+      // --- DEBUG: Check user and role ---
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('🔍 Current user:', user);
+      if (user) {
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        console.log('🔍 User role:', roleData);
+      } else {
+        console.warn('⚠️ No authenticated user found!');
+      }
 
-      console.log('📦 Inserting rows with regular supabase client:', sanitized.length, 'rows');
+      // --- Prepare data exactly like "Add Service" ---
+      // For debugging, we'll only insert the first row
+      const firstRow = rowsToInsert[0];
+      const testPayload = {
+        name: firstRow.name,
+        description: firstRow.description || '',
+        base_price: parseFloat(firstRow.base_price) || 0,
+        category: firstRow.category,
+        commission_eligible: firstRow.commission_eligible ?? true,
+        pricing_model: 'fixed',
+        pricing_unit: 'fixed',
+        input_type: 'number',
+        service_code: firstRow.service_code || null,
+        short_description: firstRow.short_description || null,
+        estimated_duration: firstRow.estimated_duration ? parseInt(firstRow.estimated_duration) : null,
+        is_active: firstRow.is_active ?? true,
+      };
+      console.log('📦 Inserting single test row:', testPayload);
 
       const { data, error } = await supabase
         .from('services')
-        .insert(sanitized)
+        .insert(testPayload)
         .select();
 
       if (error) throw new Error(error.message);
 
       toast({
         title: 'Import successful',
-        description: `${sanitized.length} new service(s) imported. ${preview.length - sanitized.length} row(s) skipped.`,
+        description: `1 new service imported. ${preview.length - 1} row(s) skipped.`,
       });
 
       setPreview([]);
@@ -284,7 +296,6 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
         {preview.length > 0 && !isParsing && (
           <div className="space-y-4">
-            {/* Valid rows */}
             <div>
               <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
@@ -320,7 +331,6 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
               </div>
             </div>
 
-            {/* Invalid rows */}
             {invalidRows.length > 0 && (
               <div>
                 <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
