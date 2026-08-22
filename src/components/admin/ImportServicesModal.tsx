@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Upload, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -156,33 +155,28 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     setIsImporting(true);
     try {
-      // --- Generate UNIQUE service_code and prepare data ---
-      const sanitized = rowsToInsert.map((row, index) => {
-        const baseCode = row.service_code || 'service';
-        const cleanBase = baseCode.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
-        const uniqueCode = `${cleanBase}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-${index}`;
-        return {
-          ...row,
-          service_code: uniqueCode,
+      // Prepare data exactly like "Add Service" plus extra columns
+      const sanitized = rowsToInsert.map((row) => {
+        const payload: any = {
+          name: row.name,
+          description: row.description || '',
           base_price: parseFloat(row.base_price) || 0,
+          category: row.category,
+          commission_eligible: row.commission_eligible ?? true,
+          pricing_model: 'fixed',
+          pricing_unit: 'fixed',
+          input_type: 'number',
+          service_code: row.service_code || null,
+          short_description: row.short_description || null,
+          estimated_duration: row.estimated_duration ? parseInt(row.estimated_duration) : null,
+          is_active: row.is_active ?? true,
         };
+        return payload;
       });
 
-      // --- Check environment variable and create service role client ---
-      const url = import.meta.env.VITE_SUPABASE_URL;
-      const key = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-      console.log('🔑 Service role key available?', key ? 'Yes' : 'No', 'Length:', key?.length);
-      console.log('🌐 Supabase URL:', url);
+      console.log('📦 Inserting rows with regular supabase client:', sanitized.length, 'rows');
 
-      if (!url || !key) {
-        throw new Error('Missing environment variables for service role client.');
-      }
-
-      const supabaseAdmin = createClient(url, key);
-
-      console.log('📦 Inserting rows with service role client:', sanitized);
-
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('services')
         .insert(sanitized)
         .select();
