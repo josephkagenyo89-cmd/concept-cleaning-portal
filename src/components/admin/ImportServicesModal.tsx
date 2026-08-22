@@ -165,15 +165,22 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
           ...row,
           service_code: uniqueCode,
           base_price: parseFloat(row.base_price) || 0,
-          // DO NOT include created_by or user_id – the table doesn't have them
         };
       });
 
-      // --- Use service role client to bypass RLS ---
-      const supabaseAdmin = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-      );
+      // --- Check environment variable and create service role client ---
+      const url = import.meta.env.VITE_SUPABASE_URL;
+      const key = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+      console.log('🔑 Service role key available?', key ? 'Yes' : 'No', 'Length:', key?.length);
+      console.log('🌐 Supabase URL:', url);
+
+      if (!url || !key) {
+        throw new Error('Missing environment variables for service role client.');
+      }
+
+      const supabaseAdmin = createClient(url, key);
+
+      console.log('📦 Inserting rows with service role client:', sanitized);
 
       const { data, error } = await supabaseAdmin
         .from('services')
@@ -193,6 +200,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
       onOpenChange(false);
       onSuccess();
     } catch (err: any) {
+      console.error('❌ Import error:', err);
       toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
     } finally {
       setIsImporting(false);
