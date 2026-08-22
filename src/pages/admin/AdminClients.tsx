@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,12 @@ export default function AdminClients() {
   const [editSaving, setEditSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Service role client for deletion (bypasses RLS)
+  const supabaseAdmin = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+  );
+
   useEffect(() => {
     loadClients();
     checkAdminRole();
@@ -84,13 +91,14 @@ export default function AdminClients() {
   const deleteClient = async (clientId: string, clientName: string) => {
     if (!confirm(`Are you sure you want to permanently delete "${clientName}" and ALL associated records (bookings, invoices, documents, notifications)?`)) return;
     try {
-      // Delete related records in order of dependency (bookings first)
-      await supabase.from('bookings').delete().eq('client_id', clientId);
-      await supabase.from('customer_notifications').delete().eq('client_id', clientId);
-      await supabase.from('documents').delete().eq('client_id', clientId);
-      await supabase.from('invoices').delete().eq('client_id', clientId);
+      // Use service role client to delete all related records and the client
+      // First, delete related records
+      await supabaseAdmin.from('bookings').delete().eq('client_id', clientId);
+      await supabaseAdmin.from('customer_notifications').delete().eq('client_id', clientId);
+      await supabaseAdmin.from('documents').delete().eq('client_id', clientId);
+      await supabaseAdmin.from('invoices').delete().eq('client_id', clientId);
       // Then delete the client
-      const { error } = await supabase.from('clients').delete().eq('id', clientId);
+      const { error } = await supabaseAdmin.from('clients').delete().eq('id', clientId);
       if (error) throw error;
       toast({ title: 'Client deleted successfully' });
       loadClients();
@@ -131,7 +139,6 @@ export default function AdminClients() {
     }
     setEditSaving(true);
 
-    // Duplicate phone check (other clients only)
     if (phone !== editTarget.phone) {
       const { data: dup } = await supabase
         .from('clients')
@@ -178,7 +185,6 @@ export default function AdminClients() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total', value: stats.total, color: 'text-foreground' },
@@ -195,7 +201,6 @@ export default function AdminClients() {
         ))}
       </div>
 
-      {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -220,7 +225,6 @@ export default function AdminClients() {
         </Select>
       </div>
 
-      {/* Client List */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
@@ -289,7 +293,6 @@ export default function AdminClients() {
         onCreated={() => loadClients()}
       />
 
-      {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent>
           <DialogHeader>
