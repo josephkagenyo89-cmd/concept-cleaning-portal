@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Phone, MessageCircle, Eye, Users, UserPlus, Pencil } from 'lucide-react';
+import { Search, Phone, MessageCircle, Eye, Users, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -46,10 +46,22 @@ export default function AdminClients() {
   const [editTarget, setEditTarget] = useState<Client | null>(null);
   const [editForm, setEditForm] = useState({ full_name: '', phone: '', location: '' });
   const [editSaving, setEditSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     loadClients();
+    checkAdminRole();
   }, []);
+
+  const checkAdminRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+      if (data && (data.role === 'admin' || data.role === 'super_admin')) {
+        setIsAdmin(true);
+      }
+    }
+  };
 
   // Auto-open create dialog if ?create=1
   useEffect(() => {
@@ -67,6 +79,18 @@ export default function AdminClients() {
     );
     setClients(data || []);
     setLoading(false);
+  };
+
+  const deleteClient = async (clientId: string, clientName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete "${clientName}" and all associated data?`)) return;
+    try {
+      const { error } = await supabase.from('clients').delete().eq('id', clientId);
+      if (error) throw error;
+      toast({ title: 'Client deleted successfully' });
+      loadClients();
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    }
   };
 
   const filtered = clients.filter(c => {
@@ -238,6 +262,11 @@ export default function AdminClients() {
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={e => { e.stopPropagation(); openEdit(client); }}>
                     <Pencil className="h-3 w-3 mr-1" /> Edit
                   </Button>
+                  {isAdmin && (
+                    <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={e => { e.stopPropagation(); deleteClient(client.id, client.full_name); }}>
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="h-7 text-xs ml-auto" onClick={e => { e.stopPropagation(); navigate(`/admin/clients/${client.id}`); }}>
                     <Eye className="h-3 w-3 mr-1" /> View
                   </Button>
