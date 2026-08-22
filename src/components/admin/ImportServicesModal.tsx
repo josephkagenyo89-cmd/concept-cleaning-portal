@@ -155,11 +155,11 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     setIsImporting(true);
     try {
-      // Get the current user ID
+      // Get the current user (for authentication, but we don't need to insert user_id)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('You must be logged in to import services.');
 
-      // --- Generate UNIQUE service_code and add user_id/created_by ---
+      // --- Generate UNIQUE service_code and prepare data ---
       const sanitized = rowsToInsert.map((row, index) => {
         const baseCode = row.service_code || 'service';
         const cleanBase = baseCode.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
@@ -168,9 +168,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
           ...row,
           service_code: uniqueCode,
           base_price: parseFloat(row.base_price) || 0,
-          created_by: user.id,       // if the services table has this column
-          user_id: user.id,          // if it uses this instead
-          created_at: new Date().toISOString(),
+          // DO NOT include created_by or user_id – the table doesn't have them
         };
       });
 
