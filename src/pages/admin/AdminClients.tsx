@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { createClient } from '@supabase/supabase-js';
 import { fetchListWithCache } from '@/lib/offlineRepo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,12 +48,6 @@ export default function AdminClients() {
   const [editSaving, setEditSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Service role client for deletion (bypasses RLS)
-  const supabaseAdmin = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-  );
-
   useEffect(() => {
     loadClients();
     checkAdminRole();
@@ -70,7 +63,6 @@ export default function AdminClients() {
     }
   };
 
-  // Auto-open create dialog if ?create=1
   useEffect(() => {
     if (params.get('create') === '1') {
       setCreateOpen(true);
@@ -89,16 +81,15 @@ export default function AdminClients() {
   };
 
   const deleteClient = async (clientId: string, clientName: string) => {
-    if (!confirm(`Are you sure you want to permanently delete "${clientName}" and ALL associated records (bookings, invoices, documents, notifications)?`)) return;
+    if (!confirm(`Are you sure you want to permanently delete "${clientName}" and ALL associated records?`)) return;
     try {
-      // Use service role client to delete all related records and the client
-      // First, delete related records
-      await supabaseAdmin.from('bookings').delete().eq('client_id', clientId);
-      await supabaseAdmin.from('customer_notifications').delete().eq('client_id', clientId);
-      await supabaseAdmin.from('documents').delete().eq('client_id', clientId);
-      await supabaseAdmin.from('invoices').delete().eq('client_id', clientId);
+      // Delete related records
+      await supabase.from('bookings').delete().eq('client_id', clientId);
+      await supabase.from('customer_notifications').delete().eq('client_id', clientId);
+      await supabase.from('documents').delete().eq('client_id', clientId);
+      await supabase.from('invoices').delete().eq('client_id', clientId);
       // Then delete the client
-      const { error } = await supabaseAdmin.from('clients').delete().eq('id', clientId);
+      const { error } = await supabase.from('clients').delete().eq('id', clientId);
       if (error) throw error;
       toast({ title: 'Client deleted successfully' });
       loadClients();
@@ -262,11 +253,11 @@ export default function AdminClients() {
                     <Phone className="h-3 w-3 mr-1" /> Call
                   </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={e => {
-                    e.stopPropagation();
-                    const num = (client.whatsapp_number || client.phone).replace(/\D/g, '');
-                    const wa = num.startsWith('0') ? `254${num.slice(1)}` : num;
-                    window.open(`https://wa.me/${wa}`, '_blank');
-                  }}>
+                      e.stopPropagation();
+                      const num = (client.whatsapp_number || client.phone).replace(/\D/g, '');
+                      const wa = num.startsWith('0') ? `254${num.slice(1)}` : num;
+                      window.open(`https://wa.me/${wa}`, '_blank');
+                    }}>
                     <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
                   </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={e => { e.stopPropagation(); openEdit(client); }}>
