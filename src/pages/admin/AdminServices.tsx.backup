@@ -13,10 +13,9 @@ import { Plus, Pencil, BadgeCheck, Upload, Download, FileText } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { downloadServicesCsv, downloadServicesPdf } from '@/lib/servicesIo';
+import { downloadServicesCsv, downloadServicesPdf, importServicesCsv } from '@/lib/servicesIo';
 import ServiceCategoriesDialog from '@/components/admin/ServiceCategoriesDialog';
 import { FALLBACK_CATEGORIES, fetchCategoryNames } from '@/lib/serviceCategories';
-import { ImportServicesModal } from '../../components/admin/ImportServicesModal';
 
 interface FormState {
   name: string;
@@ -39,7 +38,6 @@ export default function AdminServices() {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('');
-  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from('services').select('*').order('name');
@@ -112,6 +110,29 @@ export default function AdminServices() {
     load();
   };
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImportFile = async (file: File | null) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const res = await importServicesCsv(text, services as any);
+      toast({
+        title: 'Import complete',
+        description: `${res.created} created · ${res.updated} updated · ${res.skipped} skipped${res.errors.length ? ` · ${res.errors.length} error(s)` : ''}`,
+        variant: res.errors.length ? 'destructive' : 'default',
+      });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Import failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   const filtered = services.filter(s => s.category === activeTab);
 
   return (
@@ -119,9 +140,16 @@ export default function AdminServices() {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold">Services</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={e => handleImportFile(e.target.files?.[0] || null)}
+          />
           <ServiceCategoriesDialog serviceCounts={serviceCounts} onChanged={loadCategories} />
-          <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Import Services (CSV/Excel)
+          <Button variant="outline" size="sm" disabled={importing} onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> {importing ? 'Importing…' : 'Import CSV'}
           </Button>
           <Button variant="outline" size="sm" onClick={() => downloadServicesCsv(services as any)}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
@@ -158,15 +186,6 @@ export default function AdminServices() {
           </Dialog>
         </div>
       </div>
-
-      <ImportServicesModal
-        open={importModalOpen}
-        onOpenChange={setImportModalOpen}
-        onSuccess={() => {
-          load();
-          loadCategories();
-        }}
-      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <ScrollArea className="w-full mb-4">

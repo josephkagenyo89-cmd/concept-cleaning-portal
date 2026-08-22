@@ -71,17 +71,17 @@ const truthy = (v: string) => ['1', 'true', 'yes', 'y'].includes((v || '').trim(
 export interface ImportResult { created: number; updated: number; skipped: number; errors: string[] }
 
 /**
- * Imports services from CSV. Matching is by service name (case-insensitive) so
- * re-importing updates existing services instead of creating duplicates.
+ * Core import logic, shared by both CSV and Excel import paths. Matching is by
+ * service name (case-insensitive) so re-importing updates existing services
+ * instead of creating duplicates.
  */
-export async function importServicesCsv(text: string, existing: ServiceRow[]): Promise<ImportResult> {
-  const rows = parseCsv(text);
+export async function importServicesRows(rows: string[][], existing: ServiceRow[]): Promise<ImportResult> {
   const result: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] };
-  if (rows.length < 2) { result.errors.push('CSV has no data rows.'); return result; }
+  if (rows.length < 2) { result.errors.push('File has no data rows.'); return result; }
 
   const header = rows[0].map(h => h.trim().toLowerCase());
   const idx = (key: string) => header.indexOf(key);
-  if (idx('name') === -1) { result.errors.push('CSV must include a "name" column.'); return result; }
+  if (idx('name') === -1) { result.errors.push('File must include a "name" column.'); return result; }
 
   const byName = new Map(existing.map(s => [s.name.trim().toLowerCase(), s]));
   const seen = new Set<string>();
@@ -118,6 +118,30 @@ export async function importServicesCsv(text: string, existing: ServiceRow[]): P
     else result.created++;
   }
   return result;
+}
+
+/** Backward-compatible CSV entry point — parses CSV text, then delegates to importServicesRows. */
+export async function importServicesCsv(text: string, existing: ServiceRow[]): Promise<ImportResult> {
+  return importServicesRows(parseCsv(text), existing);
+}
+
+/** Reads an .xlsx File's first sheet into the same row format the CSV importer uses. */
+export async function parseXlsxFile(file: File): Promise<string[][]> {
+  const XLSX = await import('xlsx');
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[firstSheetName];
+  const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+  return rows
+    .map(row => row.map(cell => String(cell ?? '').trim()))
+    .filter(row => row.some(v => v !== ''));
+}
+
+/** Imports services from an .xlsx file — same matching/upsert behavior as CSV import. */
+export async function importServicesXlsx(file: File, existing: ServiceRow[]): Promise<ImportResult> {
+  const rows = await parseXlsxFile(file);
+  return importServicesRows(rows, existing);
 }
 
 export function downloadServicesPdf(services: ServiceRow[], companyName = 'Concept Cleaning Services') {
