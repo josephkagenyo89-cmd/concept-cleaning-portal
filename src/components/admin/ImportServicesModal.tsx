@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Upload, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -155,10 +156,6 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     setIsImporting(true);
     try {
-      // Get the current user (for authentication, but we don't need to insert user_id)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('You must be logged in to import services.');
-
       // --- Generate UNIQUE service_code and prepare data ---
       const sanitized = rowsToInsert.map((row, index) => {
         const baseCode = row.service_code || 'service';
@@ -172,8 +169,13 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
         };
       });
 
-      // Use the regular supabase client (the same one that works for "Add Service")
-      const { data, error } = await supabase
+      // --- Use service role client to bypass RLS ---
+      const supabaseAdmin = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+      );
+
+      const { data, error } = await supabaseAdmin
         .from('services')
         .insert(sanitized)
         .select();
