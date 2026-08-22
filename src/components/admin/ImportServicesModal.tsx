@@ -155,19 +155,26 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     setIsImporting(true);
     try {
-      // --- Generate UNIQUE service_code for each row ---
+      // Get the current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('You must be logged in to import services.');
+
+      // --- Generate UNIQUE service_code and add user_id/created_by ---
       const sanitized = rowsToInsert.map((row, index) => {
         const baseCode = row.service_code || 'service';
-        // Remove spaces/special chars
         const cleanBase = baseCode.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
         const uniqueCode = `${cleanBase}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-${index}`;
         return {
           ...row,
           service_code: uniqueCode,
           base_price: parseFloat(row.base_price) || 0,
+          created_by: user.id,       // if the services table has this column
+          user_id: user.id,          // if it uses this instead
+          created_at: new Date().toISOString(),
         };
       });
 
+      // Use the regular supabase client (the same one that works for "Add Service")
       const { data, error } = await supabase
         .from('services')
         .insert(sanitized)
