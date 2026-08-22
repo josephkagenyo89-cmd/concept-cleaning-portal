@@ -82,8 +82,14 @@ export default function AdminClients() {
   };
 
   const deleteClient = async (clientId: string, clientName: string) => {
-    if (!confirm(`Are you sure you want to permanently delete "${clientName}" and all associated data?`)) return;
+    if (!confirm(`Are you sure you want to permanently delete "${clientName}" and ALL associated records (bookings, invoices, documents, notifications)?`)) return;
     try {
+      // Delete related records in order of dependency (bookings first)
+      await supabase.from('bookings').delete().eq('client_id', clientId);
+      await supabase.from('customer_notifications').delete().eq('client_id', clientId);
+      await supabase.from('documents').delete().eq('client_id', clientId);
+      await supabase.from('invoices').delete().eq('client_id', clientId);
+      // Then delete the client
       const { error } = await supabase.from('clients').delete().eq('id', clientId);
       if (error) throw error;
       toast({ title: 'Client deleted successfully' });
