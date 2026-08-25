@@ -154,51 +154,47 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
     }
 
     setIsImporting(true);
+    let created = 0;
+    const failedRows: string[] = [];
+
     try {
-      // --- DEBUG: Check user and role ---
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('🔍 Current user:', user);
-      if (user) {
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        console.log('🔍 User role:', roleData);
-      } else {
-        console.warn('⚠️ No authenticated user found!');
+      for (const row of rowsToInsert) {
+        const payload = {
+          name: row.name,
+          description: row.description || '',
+          base_price: parseFloat(row.base_price) || 0,
+          category: row.category,
+          commission_eligible: row.commission_eligible ?? true,
+          pricing_model: 'fixed',
+          pricing_unit: 'fixed',
+          input_type: 'number',
+          service_code: row.service_code || null,
+          short_description: row.short_description || null,
+          estimated_duration: row.estimated_duration ? parseInt(row.estimated_duration) : null,
+          is_active: row.is_active ?? true,
+        };
+
+        const { error } = await supabase.from('services').insert(payload);
+
+        if (error) {
+          failedRows.push(`${row.name || 'Unnamed'}: ${error.message}`);
+        } else {
+          created++;
+        }
       }
 
-      // --- Prepare data exactly like "Add Service" ---
-      // For debugging, we'll only insert the first row
-      const firstRow = rowsToInsert[0];
-      const testPayload = {
-        name: firstRow.name,
-        description: firstRow.description || '',
-        base_price: parseFloat(firstRow.base_price) || 0,
-        category: firstRow.category,
-        commission_eligible: firstRow.commission_eligible ?? true,
-        pricing_model: 'fixed',
-        pricing_unit: 'fixed',
-        input_type: 'number',
-        service_code: firstRow.service_code || null,
-        short_description: firstRow.short_description || null,
-        estimated_duration: firstRow.estimated_duration ? parseInt(firstRow.estimated_duration) : null,
-        is_active: firstRow.is_active ?? true,
-      };
-      console.log('📦 Inserting single test row:', testPayload);
-
-      const { data, error } = await supabase
-        .from('services')
-        .insert(testPayload)
-        .select();
-
-      if (error) throw new Error(error.message);
-
+      const skipped = preview.length - rowsToInsert.length;
       toast({
-        title: 'Import successful',
-        description: `1 new service imported. ${preview.length - 1} row(s) skipped.`,
+        title: failedRows.length ? 'Import completed with errors' : 'Import successful',
+        description: `${created} service(s) imported. ${skipped} row(s) skipped.${
+          failedRows.length ? ` ${failedRows.length} failed.` : ''
+        }`,
+        variant: failedRows.length ? 'destructive' : 'default',
       });
+
+      if (failedRows.length) {
+        console.error('Rows that failed to import:', failedRows);
+      }
 
       setPreview([]);
       setFile(null);
@@ -206,7 +202,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
       onOpenChange(false);
       onSuccess();
     } catch (err: any) {
-      console.error('❌ Import error:', err);
+      console.error('Import error:', err);
       toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
     } finally {
       setIsImporting(false);
