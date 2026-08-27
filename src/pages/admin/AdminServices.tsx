@@ -7,12 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, BadgeCheck, Upload, Download, FileText } from 'lucide-react';
+import { Plus, Pencil, BadgeCheck, Upload, Download, FileText, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { downloadServicesCsv, downloadServicesPdf } from '@/lib/servicesIo';
 import ServiceCategoriesDialog from '@/components/admin/ServiceCategoriesDialog';
 import { FALLBACK_CATEGORIES, fetchCategoryNames } from '@/lib/serviceCategories';
@@ -40,6 +38,8 @@ export default function AdminServices() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('');
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from('services').select('*').order('name');
@@ -65,6 +65,10 @@ export default function AdminServices() {
     services.forEach((s) => { counts[s.category] = (counts[s.category] || 0) + 1; });
     return counts;
   }, [services]);
+
+  const totalServices = services.length;
+  const totalCategories = tabs.length;
+  const activeServices = services.filter(s => s.is_active).length;
 
   const resetForm = () => { setForm({ ...defaultForm, category: activeTab || tabs[0] || '' }); setEditId(null); };
 
@@ -112,22 +116,33 @@ export default function AdminServices() {
     load();
   };
 
-  const filtered = services.filter(s => s.category === activeTab);
+  // Filter: category + search + active status
+  const filtered = services.filter(s => {
+    const matchesCategory = s.category === activeTab;
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesActive = showInactive ? true : s.is_active === true;
+    return matchesCategory && matchesSearch && matchesActive;
+  });
 
   return (
     <div>
+      {/* Header with stats */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <h1 className="text-2xl font-bold">Services</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Master Service</h1>
+          <p className="text-sm text-muted-foreground">Manage your service catalog</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <ServiceCategoriesDialog serviceCounts={serviceCounts} onChanged={loadCategories} />
           <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Import Services (CSV/Excel)
+            <Upload className="mr-2 h-4 w-4" /> Import
           </Button>
           <Button variant="outline" size="sm" onClick={() => downloadServicesCsv(services as any)}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" /> CSV
           </Button>
           <Button variant="outline" size="sm" onClick={() => downloadServicesPdf(services as any)}>
-            <FileText className="mr-2 h-4 w-4" /> Export PDF
+            <FileText className="mr-2 h-4 w-4" /> PDF
           </Button>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
@@ -159,6 +174,28 @@ export default function AdminServices() {
         </div>
       </div>
 
+      {/* Stats summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="py-4 flex justify-between items-center">
+            <span className="text-sm font-medium text-muted-foreground">Total Services</span>
+            <span className="text-2xl font-bold">{totalServices}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 flex justify-between items-center">
+            <span className="text-sm font-medium text-muted-foreground">Categories</span>
+            <span className="text-2xl font-bold">{totalCategories}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 flex justify-between items-center">
+            <span className="text-sm font-medium text-muted-foreground">Active Services</span>
+            <span className="text-2xl font-bold">{activeServices}</span>
+          </CardContent>
+        </Card>
+      </div>
+
       <ImportServicesModal
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
@@ -168,74 +205,104 @@ export default function AdminServices() {
         }}
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <ScrollArea className="w-full mb-4">
-          <TabsList className="inline-flex w-max">
-            {tabs.map(c => (
-              <TabsTrigger key={c} value={c} className="text-xs sm:text-sm whitespace-nowrap">{c}</TabsTrigger>
-            ))}
-          </TabsList>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+      {/* Category dropdown + search + show inactive toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">Category:</span>
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">({filtered.length} services)</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-inactive"
+              checked={showInactive}
+              onCheckedChange={setShowInactive}
+            />
+            <Label htmlFor="show-inactive" className="text-sm cursor-pointer">
+              Show inactive
+            </Label>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search services..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+        </div>
+      </div>
 
-        {tabs.map(cat => (
-          <TabsContent key={cat} value={cat}>
-            {filtered.length === 0 ? (
-              <Card><CardContent className="p-6 text-center text-muted-foreground">No services in this category</CardContent></Card>
-            ) : (
-              <Card>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price (Ksh)</TableHead>
-                        <TableHead>Commission</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filtered.map(s => (
-                        <TableRow key={s.id}>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono text-xs">{s.service_code || '—'}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{s.name}</p>
-                              {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{s.category}</TableCell>
-                          <TableCell>{Number(s.base_price) > 0 ? Number(s.base_price).toLocaleString() : <span className="text-muted-foreground">Not set</span>}</TableCell>
-                          <TableCell>
-                            {s.commission_eligible ? (
-                              <Badge className="bg-primary/10 text-primary text-xs"><BadgeCheck className="h-3 w-3 mr-1" />Yes</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">No</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Switch checked={s.is_active} onCheckedChange={() => toggleActive(s.id, s.is_active)} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Service table */}
+      {filtered.length === 0 ? (
+        <Card><CardContent className="p-6 text-center text-muted-foreground">No services match your filters</CardContent></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="w-[120px]">Code</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead className="w-[120px]">Price (Ksh)</TableHead>
+                  <TableHead className="w-[120px]">Commission</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[80px] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((s, idx) => (
+                  <TableRow key={s.id} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs">{s.service_code || '—'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{s.name}</p>
+                        {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {Number(s.base_price) > 0 ? Number(s.base_price).toLocaleString() : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell>
+                      {s.commission_eligible ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-none">
+                          <BadgeCheck className="h-3 w-3 mr-1" /> Yes
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="border-none">No</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={s.is_active} onCheckedChange={() => toggleActive(s.id, s.is_active)} />
+                        <span className="text-xs text-muted-foreground">
+                          {s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
