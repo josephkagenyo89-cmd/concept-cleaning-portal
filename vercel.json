@@ -13,7 +13,7 @@
       "destination": "/api/service-meta/:slug"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.(xml|txt|png|jpg|ico|svg|json|webmanifest)).*)",
       "destination": "/index.html"
     }
   ],
