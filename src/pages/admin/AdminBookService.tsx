@@ -81,6 +81,8 @@ export default function AdminBookService() {
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [serviceQuantity, setServiceQuantity] = useState(1);
   const [serviceDiscount, setServiceDiscount] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
 
   // Location fields
   const [address, setAddress] = useState('');
@@ -206,6 +208,11 @@ export default function AdminBookService() {
     }));
   };
 
+  const filteredServices = services.filter(s => {
+    const matchesCategory = !selectedCategory || s.category === selectedCategory;
+    const matchesSearch = !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase());
+    return matchesCategory && matchesSearch && s.is_active !== false;
+  });
   const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
   const totalDiscount = items.reduce((sum, i) => sum + i.discount, 0);
   const grandTotal = items.reduce((sum, i) => sum + i.total, 0);
@@ -387,12 +394,7 @@ export default function AdminBookService() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (filteredClients.length > 0) {
-                          setShowClientResults(true);
-                        } else {
-                          navigate('/admin/clients');
-                          toast({ title: 'Client not found', description: 'Redirecting to add new client...' });
-                        }
+                        setShowClientResults(true);
                       }
                     }}
                     className="text-sm"
@@ -409,6 +411,12 @@ export default function AdminBookService() {
                           <span className="text-xs text-muted-foreground">{c.client_id || c.phone}</span>
                         </div>
                       ))}
+                      <div
+                        className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex items-center gap-2 border-t text-primary"
+                        onClick={() => { setShowClientResults(false); navigate('/admin/clients'); }}
+                      >
+                        <span>+ Add new client</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -564,7 +572,10 @@ export default function AdminBookService() {
           {/* Services Table */}
           <div className="flex items-center justify-between mb-3">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">Services</Label>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) { setSelectedServiceId(''); setServiceQuantity(1); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); }
+            }}>
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Service</Button>
               </DialogTrigger>
@@ -573,19 +584,35 @@ export default function AdminBookService() {
                 <div className="space-y-3">
                   <div>
                     <Label>Service</Label>
-                    <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                      <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <div key={cat}>
-                            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50">{cat}</div>
-                            {services.filter(s => s.category === cat).map(s => (
-                              <SelectItem key={s.id} value={s.id}>{s.name} - {s.base_price?.toLocaleString()} Ksh</SelectItem>
-                            ))}
+                    <Input
+                      placeholder="Search services..."
+                      value={serviceSearch}
+                      onChange={e => setServiceSearch(e.target.value)}
+                      className="mb-2 mt-1"
+                    />
+                    <div className="flex gap-1 flex-wrap mb-2">
+                      <Button type="button" variant={selectedCategory === '' ? 'default' : 'outline'} size="sm" className="text-xs h-7" onClick={() => setSelectedCategory('')}>All</Button>
+                      {categories.map(cat => (
+                        <Button key={cat} type="button" variant={selectedCategory === cat ? 'default' : 'outline'} size="sm" className="text-xs h-7" onClick={() => setSelectedCategory(cat)}>{cat}</Button>
+                      ))}
+                    </div>
+                    <div className="border rounded-md max-h-52 overflow-y-auto overscroll-contain">
+                      {filteredServices.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">No services found</div>
+                      ) : filteredServices.map(s => (
+                        <div
+                          key={s.id}
+                          className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between hover:bg-muted ${selectedServiceId === s.id ? 'bg-primary/10' : ''}`}
+                          onClick={() => setSelectedServiceId(s.id)}
+                        >
+                          <div>
+                            <span className="font-medium">{s.name}</span>
+                            {s.service_code && <span className="ml-2 text-xs text-muted-foreground font-mono">{s.service_code}</span>}
                           </div>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <span className="text-xs text-primary font-mono">Ksh {s.base_price?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
