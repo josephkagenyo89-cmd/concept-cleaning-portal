@@ -106,8 +106,8 @@ export default function AdminBookService() {
   }, []);
 
   const loadClients = async () => {
-    const { data } = await supabase.from('clients').select('id, name, phone, location, client_id');
-    if (data) setClients(data);
+    const { data } = await supabase.from('clients').select('id, full_name, phone, location, client_id') as any;
+    if (data) setClients((data as any[]).map((c: any) => ({ ...c, name: c.full_name })));
   };
 
   const loadServices = async () => {
@@ -120,7 +120,7 @@ export default function AdminBookService() {
   };
 
   const loadAgents = async () => {
-    const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'agent');
+    const { data } = await (supabase.from('profiles') as any).select('id, full_name').eq('role', 'agent');
     if (data) setAgents(data);
   };
 
@@ -160,6 +160,15 @@ export default function AdminBookService() {
       toast({ title: 'Client not found', description: 'Redirecting to CRM to add new client...' });
       navigate('/admin/clients');
     }
+  };
+
+  const handleWalkIn = () => {
+    setClientName('Walk-in Client');
+    setClientPhone('');
+    setClientLocation('');
+    setSelectedClient('');
+    setShowClientResults(false);
+    setSearchQuery('');
   };
 
   const addServiceItem = () => {
@@ -244,7 +253,7 @@ export default function AdminBookService() {
       payment_terms: paymentTerms,
       assigned_technician: assignedTechnician,
     };
-    const { error } = await supabase.from('bookings').insert(payload);
+    const { error } = await (supabase.from('bookings').insert(payload as any) as any);
     setLoading(false);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -282,7 +291,7 @@ export default function AdminBookService() {
       payment_terms: paymentTerms,
       assigned_technician: assignedTechnician,
     };
-    const { error } = await supabase.from('bookings').insert(payload);
+    const { error } = await (supabase.from('bookings').insert(payload as any) as any);
     setLoading(false);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -321,7 +330,7 @@ export default function AdminBookService() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Welcome, {profile?.full_name || 'Admin'}</h1>
-          <p className="text-sm text-muted-foreground">Role: {profile?.role || 'Administrator'}</p>
+          <p className="text-sm text-muted-foreground">Role: {(profile as any)?.role || 'Administrator'}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Button variant="outline" size="sm" onClick={resetForm}><Plus className="h-3.5 w-3.5 mr-1" /> New</Button>
@@ -422,6 +431,9 @@ export default function AdminBookService() {
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSearch}>
                   <Search className="h-4 w-4 mr-1" /> Search CRM
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleWalkIn}>
+                  <UserCheck className="h-4 w-4 mr-1" /> Walk-in
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">Search the CRM to link this booking to a client.</p>
