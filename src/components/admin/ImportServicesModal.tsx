@@ -174,7 +174,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
           is_active: row.is_active ?? true,
         };
 
-        const { error } = await supabase.from('services').insert(payload);
+        const { error } = await (supabase.from('services').insert(payload as any) as any);
 
         if (error) {
           failedRows.push(`${row.name || 'Unnamed'}: ${error.message}`);

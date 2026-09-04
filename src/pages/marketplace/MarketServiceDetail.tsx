@@ -73,11 +73,11 @@ export default function MarketServiceDetail() {
           id
         );
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('services')
         .select('*')
         .eq(isUuid ? 'id' : 'slug', id)
-        .maybeSingle();
+        .maybeSingle() as any);
 
       if (error) {
         console.error('Failed to load service:', error);

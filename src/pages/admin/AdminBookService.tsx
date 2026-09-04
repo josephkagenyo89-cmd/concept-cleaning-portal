@@ -120,7 +120,7 @@ export default function AdminBookService() {
   };
 
   const loadAgents = async () => {
-    const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'agent') as any;
+    const { data } = await (supabase.from('profiles').select('id, full_name').eq('role', 'agent') as any);
     if (data) setAgents(data);
   };
 
