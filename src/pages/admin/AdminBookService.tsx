@@ -162,6 +162,15 @@ export default function AdminBookService() {
     }
   };
 
+  const handleWalkIn = () => {
+    setClientName('Walk-in Client');
+    setClientPhone('');
+    setClientLocation('');
+    setSelectedClient('');
+    setShowClientResults(false);
+    setSearchQuery('');
+  };
+
   const addServiceItem = () => {
     if (!selectedServiceId) {
       toast({ title: 'Select a service', variant: 'destructive' });
@@ -422,6 +431,9 @@ export default function AdminBookService() {
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSearch}>
                   <Search className="h-4 w-4 mr-1" /> Search CRM
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleWalkIn}>
+                  <UserCheck className="h-4 w-4 mr-1" /> Walk-in
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">Search the CRM to link this booking to a client.</p>
