@@ -13,6 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import {
   Plus,
@@ -36,8 +44,18 @@ import {
   CreditCard,
   Wrench,
   Lock,
+  MoreHorizontal,
+  MessageCircle,
+  Paperclip,
+  History,
+  ShieldCheck,
+  Settings2,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
+import { loadBookingSettings, BookingModuleSettings } from '@/lib/bookingSettings';
 
 interface Client {
   id: string;
@@ -59,7 +77,7 @@ interface ServiceItem {
 }
 
 export default function AdminBookService() {
-  const { profile } = useAuth();
+  const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState('');
@@ -75,6 +93,19 @@ export default function AdminBookService() {
   const [bookingNo, setBookingNo] = useState('BK-2026-DRAFT');
   const [status, setStatus] = useState('DRAFT');
   const [lockStatus, setLockStatus] = useState('UNLOCKED');
+  const [bookingSettings, setBookingSettings] = useState<BookingModuleSettings>(() => loadBookingSettings());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [clientContactPerson, setClientContactPerson] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [gpsLocation, setGpsLocation] = useState('');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
+  const [deposit, setDeposit] = useState(0);
+  const [amountPaid, setAmountPaid] = useState(0);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   // Add service dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -224,7 +255,20 @@ export default function AdminBookService() {
   });
   const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
   const totalDiscount = items.reduce((sum, i) => sum + i.discount, 0);
-  const grandTotal = items.reduce((sum, i) => sum + i.total, 0);
+  const netTotal = items.reduce((sum, i) => sum + i.total, 0);
+  const vatAmount = bookingSettings.service.enableVat
+    ? Math.round(netTotal * bookingSettings.service.defaultVatRate) / 100
+    : 0;
+  const grandTotal = netTotal + vatAmount;
+  const currentRole = roles.includes('super_admin') ? 'super_admin' : roles.includes('admin') ? 'admin' : 'agent';
+  const canCreate = bookingSettings.permissions.create.includes(currentRole);
+  const canConfirm = bookingSettings.permissions.confirm.includes(currentRole);
+  const canGenerateDocs = bookingSettings.permissions.generateDocs.includes(currentRole);
+  const canPrint = bookingSettings.permissions.printDocs.includes(currentRole);
+  const canWhatsapp = bookingSettings.permissions.sendWhatsapp.includes(currentRole);
+  const canApproveDiscount = bookingSettings.permissions.approveDiscount.includes(currentRole);
+  const isSaved = status !== 'DRAFT';
+  const balance = Math.max(0, grandTotal - deposit - amountPaid);
 
   const handleSave = async () => {
     if (!clientName || items.length === 0) {
@@ -317,6 +361,17 @@ export default function AdminBookService() {
     setPreferredTime('09:00');
     setPaymentTerms('Cash');
     setAssignedTechnician('');
+    setClientEmail('');
+    setCompanyName('');
+    setClientContactPerson('');
+    setSiteName('');
+    setGpsLocation('');
+    setBookingNotes('');
+    setCustomerNotes('');
+    setInternalNotes('');
+    setDeposit(0);
+    setAmountPaid(0);
+    setAttachments([]);
     generateBookingNo();
     setStatus('DRAFT');
     setLockStatus('UNLOCKED');
@@ -324,450 +379,158 @@ export default function AdminBookService() {
     setShowClientResults(false);
   };
 
-  return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-4">
-      {/* Header with Welcome + compact buttons */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Welcome, {profile?.full_name || 'Admin'}</h1>
-          <p className="text-sm text-muted-foreground">Role: {(profile as any)?.role || 'Administrator'}</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" onClick={resetForm}><Plus className="h-3.5 w-3.5 mr-1" /> New</Button>
-          <Button variant="secondary" size="sm" onClick={handleSave} disabled={loading}><Save className="h-3.5 w-3.5 mr-1" /> Draft</Button>
-          <Button size="sm" onClick={handleConfirm} disabled={loading || !clientName || items.length === 0}>
-            {loading ? 'Saving...' : 'Save'}
-          </Button>
-          <Button variant="outline" size="sm"><FileCheck className="h-3.5 w-3.5 mr-1" /> Quote</Button>
-          <Button variant="default" size="sm"><CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirm</Button>
-          <Button variant="outline" size="sm"><Printer className="h-3.5 w-3.5 mr-1" /> Print</Button>
-          <Button variant="outline" size="sm"><FileText className="h-3.5 w-3.5 mr-1" /> PDF</Button>
-        </div>
-      </div>
+  const fieldClass = 'h-8 text-xs rounded border-input bg-background';
+  const sectionTitle = 'flex items-center gap-2 border-b pb-2 text-xs font-bold uppercase text-primary';
+  const money = (value: number) => `${bookingSettings.general.currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const actionDisabled = loading || !canCreate;
 
-      {/* Booking Details + QR */}
-      <Card className="mb-4">
-        <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Booking No.</p>
-              <p className="text-lg font-mono font-bold">{bookingNo}</p>
+  return (
+    <div className="-m-4 md:-m-6 min-h-screen bg-muted/45 p-2 sm:p-3">
+      <BookingSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setBookingSettings} />
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-md border bg-card shadow-sm">
+        <header className="border-b bg-card px-3 py-3 lg:px-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-foreground">To Book</h1>
+              <nav className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground" aria-label="Breadcrumb">
+                <span>Home</span><span>/</span><span>Bookings</span><span>/</span><span className="font-medium text-primary">To Book</span>
+              </nav>
             </div>
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Status</p>
-                <Badge variant={status === 'DRAFT' ? 'secondary' : 'default'}>{status}</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <QrCode className="h-6 w-6 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Scan to Verify</span>
-              </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 xl:pb-0">
+              <Button variant="outline" size="sm" className="shrink-0" onClick={resetForm}><Plus className="mr-1 h-3.5 w-3.5" />New Booking</Button>
+              <Button variant="secondary" size="sm" className="shrink-0" onClick={handleSave} disabled={actionDisabled}><Save className="mr-1 h-3.5 w-3.5" />Save Draft</Button>
+              <Button size="sm" className="shrink-0" onClick={handleConfirm} disabled={actionDisabled || !clientName || items.length === 0}>{loading ? 'Saving…' : 'Save Booking'}</Button>
+              <Button variant="outline" size="sm" className="shrink-0" disabled={!isSaved || !canGenerateDocs}><FileCheck className="mr-1 h-3.5 w-3.5" />Generate Quotation</Button>
+              <Button size="sm" className="shrink-0 bg-success text-success-foreground hover:bg-success/90" onClick={handleConfirm} disabled={loading || !canConfirm || !clientName || items.length === 0}><CheckCircle className="mr-1 h-3.5 w-3.5" />Confirm Booking</Button>
+              <Button variant="outline" size="icon" title="Print" aria-label="Print booking" disabled={!isSaved || !canPrint} onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /></Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="shrink-0"><MoreHorizontal className="mr-1 h-3.5 w-3.5" />More Actions</Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem disabled={!isSaved || !canGenerateDocs} onClick={() => window.print()}><FileText className="mr-2 h-4 w-4" />Generate PDF</DropdownMenuItem>
+                  <DropdownMenuItem disabled={!isSaved || !canWhatsapp || !clientPhone} onClick={() => window.open(`https://wa.me/${clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${clientName}, your booking ${bookingNo} has been prepared by Concept Cleaning Services.`)}`, '_blank')}><MessageCircle className="mr-2 h-4 w-4" />Send WhatsApp</DropdownMenuItem>
+                  {isAdmin && <DropdownMenuItem onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Booking Settings</DropdownMenuItem>}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </header>
 
-      {/* Client Information - Inline search */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <User className="h-4 w-4" /> Client Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Find Client</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    placeholder="Enter Client ID (CL-0001) or phone number"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      if (e.target.value.length > 0) {
-                        const results = clients.filter(c =>
-                          c.name.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                          c.phone?.includes(e.target.value) ||
-                          c.client_id?.toLowerCase().includes(e.target.value.toLowerCase())
-                        );
-                        if (results.length > 0) {
-                          setShowClientResults(true);
-                        } else {
-                          setShowClientResults(false);
-                        }
-                      } else {
-                        setShowClientResults(false);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        setShowClientResults(true);
-                      }
-                    }}
-                    className="text-sm"
-                  />
-                  {showClientResults && filteredClients.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 border rounded-md bg-background shadow-lg z-10 max-h-64 overflow-y-auto overscroll-contain">
-                      {filteredClients.map(c => (
-                        <div
-                          key={c.id}
-                          className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex items-center justify-between"
-                          onClick={() => handleClientSelect(c.id)}
-                        >
-                          <span>{c.name}</span>
-                          <span className="text-xs text-muted-foreground">{c.client_id || c.phone}</span>
-                        </div>
-                      ))}
-                      <div
-                        className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex items-center gap-2 border-t text-primary"
-                        onClick={() => { setShowClientResults(false); navigate('/admin/clients'); }}
-                      >
-                        <span>+ Add new client</span>
-                      </div>
+        <section className="flex flex-col gap-3 border-b bg-muted/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs sm:flex sm:items-center sm:gap-8">
+            <div><p className="text-[10px] font-semibold uppercase text-muted-foreground">Booking No.</p><p className="font-mono text-base font-bold text-primary">{isSaved ? bookingNo : 'Generated on save'}</p></div>
+            <div><p className="text-[10px] font-semibold uppercase text-muted-foreground">Booking Date</p><p className="font-semibold">{format(new Date(), 'dd/MM/yyyy')}</p></div>
+            <div><p className="text-[10px] font-semibold uppercase text-muted-foreground">Status</p><Badge variant={status === 'DRAFT' ? 'secondary' : 'default'} className="mt-0.5 text-[10px]">{status}</Badge></div>
+            <div><p className="text-[10px] font-semibold uppercase text-muted-foreground">Lock</p><Badge variant="outline" className="mt-0.5 text-[10px]">{lockStatus}</Badge></div>
+          </div>
+          {bookingSettings.documents.showQr && <div className="flex items-center gap-2"><div className="grid h-11 w-11 place-items-center border bg-background"><QrCode className="h-8 w-8" /></div><div className="text-[10px] text-muted-foreground"><p className="font-semibold text-foreground">Scan to Verify</p><p>Available after saving</p></div></div>}
+        </section>
+
+        <div className="grid grid-cols-1 divide-y lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+          <section className="p-4 lg:col-span-1">
+            <h2 className={sectionTitle}><User className="h-4 w-4" />Client Information</h2>
+            <div className="mt-3 space-y-2">
+              <Label className="text-[10px] uppercase text-muted-foreground">Client ID or Phone Search</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <div className="relative min-w-[160px] flex-1">
+                  <Input className={fieldClass} placeholder="Client ID or phone" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setShowClientResults(e.target.value.length > 0); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }} />
+                  {showClientResults && searchQuery && (
+                    <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded border bg-popover shadow-lg">
+                      {filteredClients.length > 0 ? filteredClients.map((client) => <button type="button" key={client.id} className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => handleClientSelect(client.id)}><span className="font-medium">{client.name}</span><span className="text-muted-foreground">{client.client_id || client.phone}</span></button>) : <button type="button" className="w-full px-3 py-3 text-left text-xs text-destructive" onClick={() => navigate('/admin/clients')}>Client not found. Create New Client.</button>}
                     </div>
                   )}
                 </div>
-                <Button variant="outline" size="sm" onClick={handleSearch}>
-                  <Search className="h-4 w-4 mr-1" /> Search CRM
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleWalkIn}>
-                  <UserCheck className="h-4 w-4 mr-1" /> Walk-in
-                </Button>
+                <Button variant="outline" size="sm" onClick={handleSearch}><Search className="mr-1 h-3.5 w-3.5" />Search CRM</Button>
+                {bookingSettings.client.allowWalkIn && <Button variant="outline" size="sm" onClick={handleWalkIn}><UserCheck className="mr-1 h-3.5 w-3.5" />Walk-in</Button>}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Search the CRM to link this booking to a client.</p>
-            </div>
-
-            {selectedClient && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                <div>
-                  <Label className="text-xs">Client Name</Label>
-                  <Input value={clientName} onChange={e => setClientName(e.target.value)} className="text-sm" />
-                </div>
-                <div>
-                  <Label className="text-xs">Phone</Label>
-                  <Input value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="text-sm" />
-                </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                <div><Label className="text-[10px]">Client Name</Label><Input className={fieldClass} value={clientName} onChange={(e) => setClientName(e.target.value)} /></div>
+                <div><Label className="text-[10px]">Phone Number</Label><Input className={fieldClass} value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
+                <div><Label className="text-[10px]">Company Name</Label><Input className={fieldClass} value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></div>
+                <div><Label className="text-[10px]">Contact Person</Label><Input className={fieldClass} value={clientContactPerson} onChange={(e) => setClientContactPerson(e.target.value)} /></div>
+                <div><Label className="text-[10px]">Email</Label><Input type="email" className={fieldClass} value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} /></div>
+                <div><Label className="text-[10px]">Address</Label><Input className={fieldClass} value={clientLocation} onChange={(e) => setClientLocation(e.target.value)} /></div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </section>
 
-      {/* Service Location - removed GPS */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <MapPin className="h-4 w-4" /> Service Location
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Address / Site</Label>
-              <Input
-                placeholder="Building, floor, street..."
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                className="text-sm"
-              />
+          <section className="p-4 lg:col-span-1">
+            <h2 className={sectionTitle}><MapPin className="h-4 w-4" />Service Location</h2>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div><Label className="text-[10px]">Site Name</Label><Input className={fieldClass} value={siteName} onChange={(e) => setSiteName(e.target.value)} /></div>
+              <div><Label className="text-[10px]">Address</Label><Input className={fieldClass} placeholder="Building, floor, street" value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+              {bookingSettings.ui.showGps && <div><Label className="text-[10px]">GPS Location</Label><Input className={fieldClass} placeholder="Coordinates or map link" value={gpsLocation} onChange={(e) => setGpsLocation(e.target.value)} /></div>}
+              {bookingSettings.ui.showSiteContact && <><div><Label className="text-[10px]">Contact Person</Label><Input className={fieldClass} value={siteContact} onChange={(e) => setSiteContact(e.target.value)} /></div><div><Label className="text-[10px]">Contact Number</Label><Input className={fieldClass} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></div></>}
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Site Contact</Label>
-              <Input
-                placeholder="Contact person on-site"
-                value={siteContact}
-                onChange={e => setSiteContact(e.target.value)}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Contact Phone</Label>
-              <Input
-                placeholder="+254..."
-                value={contactPhone}
-                onChange={e => setContactPhone(e.target.value)}
-                className="text-sm"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </section>
 
-      {/* Booking Information */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Booking Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">Salesperson</Label>
-              <Select value={salesperson} onValueChange={setSalesperson}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="Select salesperson" /></SelectTrigger>
-                <SelectContent>
-                  {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+          <section className="p-4 lg:col-span-1">
+            <h2 className={sectionTitle}><CalendarIcon className="h-4 w-4" />Booking Information</h2>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div><Label className="text-[10px]">Booking Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="h-8 w-full justify-start text-xs font-normal"><CalendarIcon className="mr-2 h-3.5 w-3.5" />{preferredDate ? format(preferredDate, 'dd/MM/yyyy') : 'Select date'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} initialFocus /></PopoverContent></Popover></div>
+              <div><Label className="text-[10px]">Preferred Time</Label><Input type="time" className={fieldClass} value={preferredTime} onChange={(e) => setPreferredTime(e.target.value)} /></div>
+              {bookingSettings.ui.showTechnician && <div><Label className="text-[10px]">Assigned Technician</Label><Select value={assignedTechnician} onValueChange={setAssignedTechnician}><SelectTrigger className={fieldClass}><SelectValue placeholder="Select technician" /></SelectTrigger><SelectContent>{agents.map((agent) => <SelectItem key={agent.id} value={agent.id}>{agent.full_name}</SelectItem>)}<SelectItem value="unassigned">Unassigned</SelectItem></SelectContent></Select></div>}
+              <div><Label className="text-[10px]">Salesperson</Label><Select value={salesperson} onValueChange={setSalesperson}><SelectTrigger className={fieldClass}><SelectValue placeholder="Select salesperson" /></SelectTrigger><SelectContent>{agents.map((agent) => <SelectItem key={agent.id} value={agent.id}>{agent.full_name}</SelectItem>)}<SelectItem value="admin">Admin</SelectItem></SelectContent></Select></div>
+              <div><Label className="text-[10px]">Payment Terms</Label><Select value={paymentTerms} onValueChange={setPaymentTerms}><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent>{['Cash','M-Pesa','Bank Transfer','Credit Card',bookingSettings.payment.defaultTerms].filter((v, i, a) => a.indexOf(v) === i).map((term) => <SelectItem key={term} value={term}>{term}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label className="text-[10px]">Booking Notes</Label><Textarea className="min-h-14 text-xs" value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} /></div>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Shipment Mode</Label>
-              <Select value={shipmentMode} onValueChange={setShipmentMode}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="Select mode" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Road">Road</SelectItem>
-                  <SelectItem value="Air">Air</SelectItem>
-                  <SelectItem value="Sea">Sea</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Preferred Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-sm font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preferredDate ? format(preferredDate, 'PPP') : 'Pick a date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Preferred Time</Label>
-              <Select value={preferredTime} onValueChange={setPreferredTime}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="Select time" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="08:00">08:00 AM</SelectItem>
-                  <SelectItem value="09:00">09:00 AM</SelectItem>
-                  <SelectItem value="10:00">10:00 AM</SelectItem>
-                  <SelectItem value="11:00">11:00 AM</SelectItem>
-                  <SelectItem value="12:00">12:00 PM</SelectItem>
-                  <SelectItem value="13:00">01:00 PM</SelectItem>
-                  <SelectItem value="14:00">02:00 PM</SelectItem>
-                  <SelectItem value="15:00">03:00 PM</SelectItem>
-                  <SelectItem value="16:00">04:00 PM</SelectItem>
-                  <SelectItem value="17:00">05:00 PM</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Payment Terms</Label>
-              <Select value={paymentTerms} onValueChange={setPaymentTerms}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="Select terms" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="M-Pesa">M-Pesa</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Assigned Technician</Label>
-              <Select value={assignedTechnician} onValueChange={setAssignedTechnician}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="Select technician" /></SelectTrigger>
-                <SelectContent>
-                  {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </section>
 
-          <Separator className="my-3" />
+          <section className="p-4 lg:col-span-1">
+            <h2 className={sectionTitle}><ShieldCheck className="h-4 w-4" />Status & Approval</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
+              <dt className="text-muted-foreground">Booking Status</dt><dd><Badge variant={status === 'DRAFT' ? 'secondary' : 'default'} className="text-[10px]">{status}</Badge></dd>
+              <dt className="text-muted-foreground">Approval</dt><dd><Badge variant="outline" className="text-[10px]">{status === 'CONFIRMED' ? 'APPROVED' : 'PENDING'}</Badge></dd>
+              <dt className="text-muted-foreground">Created By</dt><dd className="font-medium">{profile?.full_name || 'Admin'}</dd>
+              <dt className="text-muted-foreground">Role</dt><dd className="font-medium capitalize">{currentRole.replace('_', ' ')}</dd>
+              <dt className="text-muted-foreground">Last Modified</dt><dd className="font-medium">{format(new Date(), 'dd/MM/yyyy HH:mm')}</dd>
+            </dl>
+          </section>
+        </div>
 
-          {/* Services Table */}
-          <div className="flex items-center justify-between mb-3">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Services</Label>
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) { setSelectedServiceId(''); setServiceQuantity(1); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); }
-            }}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Service</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label>Service</Label>
-                    <Input
-                      placeholder="Search services..."
-                      value={serviceSearch}
-                      onChange={e => setServiceSearch(e.target.value)}
-                      className="mb-2 mt-1"
-                    />
-                    <div className="flex gap-1 flex-wrap mb-2">
-                      <Button type="button" variant={selectedCategory === '' ? 'default' : 'outline'} size="sm" className="text-xs h-7" onClick={() => setSelectedCategory('')}>All</Button>
-                      {categories.map(cat => (
-                        <Button key={cat} type="button" variant={selectedCategory === cat ? 'default' : 'outline'} size="sm" className="text-xs h-7" onClick={() => setSelectedCategory(cat)}>{cat}</Button>
-                      ))}
-                    </div>
-                    <div className="border rounded-md max-h-52 overflow-y-auto overscroll-contain">
-                      {filteredServices.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">No services found</div>
-                      ) : filteredServices.map(s => (
-                        <div
-                          key={s.id}
-                          className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between hover:bg-muted ${selectedServiceId === s.id ? 'bg-primary/10' : ''}`}
-                          onClick={() => setSelectedServiceId(s.id)}
-                        >
-                          <div>
-                            <span className="font-medium">{s.name}</span>
-                            {s.service_code && <span className="ml-2 text-xs text-muted-foreground font-mono">{s.service_code}</span>}
-                          </div>
-                          <span className="text-xs text-primary font-mono">Ksh {s.base_price?.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Quantity</Label>
-                      <Input type="number" min="1" value={serviceQuantity} onChange={e => setServiceQuantity(Number(e.target.value) || 1)} />
-                    </div>
-                    <div>
-                      <Label>Discount (KES)</Label>
-                      <Input type="number" min="0" value={serviceDiscount} onChange={e => setServiceDiscount(Number(e.target.value) || 0)} />
-                    </div>
-                  </div>
-                  <Button onClick={addServiceItem} className="w-full">Add to Booking</Button>
-                </div>
-              </DialogContent>
+        <section className="border-y bg-muted/20 px-3 py-4 lg:px-5">
+          <div className="mb-3 flex items-center justify-between"><h2 className="text-xs font-bold uppercase text-primary">Services</h2>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedServiceId(''); setServiceQuantity(bookingSettings.service.defaultQuantity); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); } }}>
+              <DialogTrigger asChild><Button size="sm" disabled={!bookingSettings.service.enableMultiple && items.length > 0}><Plus className="mr-1 h-3.5 w-3.5" />Add Service</Button></DialogTrigger>
+              <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader><div className="space-y-3"><Input placeholder="Search services" value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} /><div className="flex flex-wrap gap-1">{['', ...categories].map((category) => <Button key={category || 'all'} variant={selectedCategory === category ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category)}>{category || 'All'}</Button>)}</div><div className="max-h-64 overflow-y-auto rounded border">{filteredServices.map((service) => <button type="button" key={service.id} className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-muted ${selectedServiceId === service.id ? 'bg-primary/10' : ''}`} onClick={() => setSelectedServiceId(service.id)}><span><strong>{service.name}</strong><small className="ml-2 font-mono text-muted-foreground">{service.service_code}</small></span><span>{money(service.base_price || 0)}</span></button>)}</div><div className="grid grid-cols-2 gap-3"><div><Label>Quantity</Label><Input type="number" min="1" value={serviceQuantity} onChange={(e) => setServiceQuantity(Number(e.target.value) || 1)} /></div><div><Label>Discount (KES)</Label><Input type="number" min="0" value={serviceDiscount} onChange={(e) => setServiceDiscount(Number(e.target.value) || 0)} /></div></div><Button onClick={addServiceItem}>Add to Booking</Button></div></DialogContent>
             </Dialog>
           </div>
 
-          {items.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground text-sm">No services added yet</div>
-          ) : (
-            <>
-            {/* Mobile card view - shown only on small screens */}
-            <div className="sm:hidden space-y-3">
-              {items.map((item) => (
-                <div key={item.id} className="border rounded-lg p-3 bg-muted/30">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <Badge variant="outline" className="font-mono text-[10px] mb-1">{item.code}</Badge>
-                      <p className="font-semibold text-sm leading-tight">{item.name}</p>
-                      {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive h-8 w-8 shrink-0">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
-                      <Input type="number" min="1" value={item.quantity} onChange={e => updateQuantity(item.id, Number(e.target.value) || 1)} className="h-10 text-base text-center" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Discount (Ksh)</label>
-                      <Input type="number" min="0" value={item.discount} onChange={e => updateDiscount(item.id, Number(e.target.value) || 0)} className="h-10 text-base text-right" />
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-2 border-t">
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-mono">{item.price.toLocaleString()}</span> × {item.quantity}
-                    </div>
-                    <span className="font-bold text-sm text-primary font-mono">{item.total.toLocaleString()} Ksh</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop table view - hidden on small screens */}
-            <div className="hidden sm:block overflow-x-auto">
-              <Table className="text-xs sm:text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell><Badge variant="outline" className="font-mono text-[10px]">{item.code}</Badge></TableCell>
-                      <TableCell>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{item.description}</div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Input type="number" min="1" value={item.quantity} onChange={e => updateQuantity(item.id, Number(e.target.value) || 1)} className="w-14 h-7 text-center mx-auto text-sm" />
-                      </TableCell>
-                      <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <Input type="number" min="0" value={item.discount} onChange={e => updateDiscount(item.id, Number(e.target.value) || 0)} className="w-20 h-7 text-right ml-auto text-sm" />
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">{item.total.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive h-7 w-7"><X className="h-3 w-3" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            </>
-          )}
-
-          {items.length > 0 && (
-            <div className="mt-3 border-t pt-3 flex flex-col items-end gap-1 text-sm">
-              <div className="flex justify-between w-full sm:w-56">
-                <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-mono">{subtotal.toLocaleString()} Ksh</span>
-              </div>
-              <div className="flex justify-between w-full sm:w-56">
-                <span className="text-muted-foreground">Discount:</span>
-                <span className="font-mono text-green-600">-{totalDiscount.toLocaleString()} Ksh</span>
-              </div>
-              <div className="flex justify-between w-full sm:w-56 text-base font-bold border-t pt-1">
-                <span>Total:</span>
-                <span className="text-primary">{grandTotal.toLocaleString()} Ksh</span>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Status & Approval */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Lock className="h-4 w-4" /> Status & Approval
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Booking Status</Label>
-              <Badge variant={status === 'DRAFT' ? 'secondary' : 'default'}>{status}</Badge>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Lock Status</Label>
-              <Badge variant={lockStatus === 'UNLOCKED' ? 'outline' : 'default'}>{lockStatus}</Badge>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Created By</Label>
-              <p className="text-sm font-medium">{profile?.full_name || 'Admin'}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Created On</Label>
-              <p className="text-sm font-medium">{format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
-            </div>
+          <div className="hidden overflow-x-auto rounded border sm:block">
+            <Table className="min-w-[1050px] text-xs"><TableHeader><TableRow className="bg-primary hover:bg-primary"><TableHead className="w-10 text-primary-foreground">#</TableHead><TableHead className="text-primary-foreground">Service</TableHead><TableHead className="text-primary-foreground">Description</TableHead><TableHead className="text-center text-primary-foreground">Qty</TableHead><TableHead className="text-primary-foreground">Unit</TableHead><TableHead className="text-right text-primary-foreground">Unit Price</TableHead><TableHead className="text-right text-primary-foreground">Discount %</TableHead><TableHead className="text-right text-primary-foreground">Discount KES</TableHead><TableHead className="text-right text-primary-foreground">VAT</TableHead><TableHead className="text-right text-primary-foreground">Line Total</TableHead><TableHead className="text-center text-primary-foreground">Actions</TableHead></TableRow></TableHeader>
+              <TableBody>{items.length === 0 ? <TableRow><TableCell colSpan={11} className="h-20 text-center text-muted-foreground">No services added. Select Add Service to begin.</TableCell></TableRow> : items.map((item, index) => { const itemNet = Math.max(0, item.price * item.quantity - item.discount); const itemVat = bookingSettings.service.enableVat ? itemNet * bookingSettings.service.defaultVatRate / 100 : 0; return <TableRow key={item.id}><TableCell>{index + 1}</TableCell><TableCell><p className="font-semibold">{item.name}</p><p className="font-mono text-[9px] text-muted-foreground">{item.code}</p></TableCell><TableCell className="max-w-52 truncate text-muted-foreground">{item.description}</TableCell><TableCell><Input type="number" min="1" className="mx-auto h-7 w-14 text-center text-xs" value={item.quantity} onChange={(e) => updateQuantity(item.id, Number(e.target.value) || 1)} /></TableCell><TableCell>{bookingSettings.service.defaultUnit}</TableCell><TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell><TableCell className="text-right font-mono">{item.price * item.quantity > 0 ? ((item.discount / (item.price * item.quantity)) * 100).toFixed(1) : '0.0'}</TableCell><TableCell><Input type="number" min="0" className="ml-auto h-7 w-20 text-right text-xs" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></TableCell><TableCell className="text-right font-mono">{itemVat.toLocaleString()}</TableCell><TableCell className="text-right font-mono font-bold">{(itemNet + itemVat).toLocaleString()}</TableCell><TableCell><div className="flex justify-center"><Button variant="ghost" size="icon" className="h-7 w-7" title="Edit service"><Edit3 className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete service" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody>
+            </Table>
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2 sm:hidden">{items.length === 0 ? <div className="rounded border bg-card p-6 text-center text-sm text-muted-foreground">No services added yet</div> : items.map((item) => <div key={item.id} className="rounded border bg-card p-3"><div className="flex justify-between"><div><Badge variant="outline" className="font-mono text-[9px]">{item.code}</Badge><p className="mt-1 text-sm font-semibold">{item.name}</p></div><Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button></div><p className="mt-1 text-xs text-muted-foreground">{item.description}</p><div className="mt-3 grid grid-cols-2 gap-2"><div><Label className="text-[10px]">Quantity</Label><Input type="number" min="1" value={item.quantity} onChange={(e) => updateQuantity(item.id, Number(e.target.value) || 1)} /></div><div><Label className="text-[10px]">Discount (KES)</Label><Input type="number" min="0" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></div></div><div className="mt-3 flex justify-between border-t pt-2 text-xs"><span>{money(item.price)} × {item.quantity}</span><strong>{money(item.total)}</strong></div></div>)}</div>
+          <div className="mt-3 flex flex-col gap-1 text-xs sm:flex-row sm:justify-between"><span className="font-semibold">Total Items: {items.length}</span><span className="font-semibold">Subtotal Before Discount: <strong className="ml-2 text-sm">{money(subtotal)}</strong></span></div>
+        </section>
+
+        <div className="grid grid-cols-1 divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+          <section className="p-4"><h2 className={sectionTitle}>Discount Information</h2><div className="mt-3 space-y-2"><div><Label className="text-[10px]">Discount Type</Label><Select value="fixed" disabled><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Line Discount (KES)</SelectItem></SelectContent></Select></div><div><Label className="text-[10px]">Discount Amount</Label><Input className={fieldClass} value={totalDiscount.toFixed(2)} readOnly /></div><div><Label className="text-[10px]">Discount Reason</Label><Textarea className="min-h-16 text-xs" placeholder="Required when a discount is applied" /></div><Button variant="outline" size="sm" className="w-full" disabled={totalDiscount <= 0}>Request Discount</Button></div></section>
+          <section className="p-4"><h2 className={sectionTitle}>Discount Approval</h2><div className="mt-3 rounded border bg-muted/30 p-3 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="text-[9px]">NOT REQUESTED</Badge></div><div className="mt-3"><Label className="text-[10px]">Approval Comment</Label><Textarea className="mt-1 min-h-16 bg-background text-xs" disabled={!canApproveDiscount} /></div><div className="mt-3 grid grid-cols-2 gap-2"><Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" disabled={!canApproveDiscount || totalDiscount <= 0}>Approve</Button><Button variant="destructive" size="sm" disabled={!canApproveDiscount || totalDiscount <= 0}>Reject</Button></div></div></section>
+          <section className="p-4"><h2 className={sectionTitle}>Price Breakdown</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(subtotal)}</span></div><div className="flex justify-between text-destructive"><span>Discount</span><span>− {money(totalDiscount)}</span></div><div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">VAT ({bookingSettings.service.enableVat ? bookingSettings.service.defaultVatRate : 0}%)</span><span>+ {money(vatAmount)}</span></div><div className="flex items-baseline justify-between border-t pt-2"><strong className="text-sm">Grand Total</strong><strong className="text-lg text-primary">{money(grandTotal)}</strong></div><div className="rounded border border-success/20 bg-success/10 p-2"><p className="text-[9px] font-bold uppercase text-success">Amount in Words</p><p className="mt-1 text-[10px]">Kenya Shillings {grandTotal.toLocaleString()} only</p></div></div></section>
+          <section className="p-4"><h2 className={sectionTitle}>Payment Summary</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Payment Terms</span><strong>{paymentTerms}</strong></div>{bookingSettings.payment.allowDeposits && <div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Deposit</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={deposit || ''} onChange={(e) => setDeposit(Number(e.target.value) || 0)} /></div>}<div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Amount Paid</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={amountPaid || ''} onChange={(e) => setAmountPaid(Number(e.target.value) || 0)} /></div><div className="flex items-baseline justify-between border-t pt-3"><strong>Balance</strong><strong className="text-lg text-destructive">{money(balance)}</strong></div></div></section>
+        </div>
+
+        <Tabs defaultValue="attachments" className="border-t">
+          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b bg-muted/30 px-3 py-2">
+            <TabsTrigger value="attachments" className="text-xs"><Paperclip className="mr-1 h-3.5 w-3.5" />Attachments ({attachments.length})</TabsTrigger>
+            <TabsTrigger value="notes" className="text-xs"><FileText className="mr-1 h-3.5 w-3.5" />Notes</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs"><History className="mr-1 h-3.5 w-3.5" />History</TabsTrigger>
+            <TabsTrigger value="activity" className="text-xs"><Clock className="mr-1 h-3.5 w-3.5" />Activity Log</TabsTrigger>
+          </TabsList>
+          <TabsContent value="attachments" className="m-0 p-4"><div className="rounded border border-dashed bg-muted/20 p-5 text-center"><Paperclip className="mx-auto h-5 w-5 text-muted-foreground" /><p className="mt-1 text-xs text-muted-foreground">Photos, site images, contracts and supporting documents</p><Input type="file" multiple className="mx-auto mt-3 max-w-sm text-xs" onChange={(e) => setAttachments(Array.from(e.target.files || []))} /></div></TabsContent>
+          <TabsContent value="notes" className="m-0 grid gap-3 p-4 md:grid-cols-2"><div><Label className="text-xs">Customer Notes</Label><Textarea value={customerNotes} onChange={(e) => setCustomerNotes(e.target.value)} /></div><div><Label className="text-xs">Internal Notes</Label><Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} /></div></TabsContent>
+          <TabsContent value="history" className="m-0 p-4 text-xs text-muted-foreground">Booking history will appear after the booking is saved.</TabsContent>
+          <TabsContent value="activity" className="m-0 p-4"><div className="grid gap-3 text-xs sm:grid-cols-3"><div><span className="text-muted-foreground">Created By</span><p className="font-semibold">{profile?.full_name || 'Admin'}</p></div><div><span className="text-muted-foreground">Last Modified By</span><p className="font-semibold">{profile?.full_name || 'Admin'}</p></div><div><span className="text-muted-foreground">Approval History</span><p className="font-semibold">No activity yet</p></div></div></TabsContent>
+        </Tabs>
+
+        <footer className="grid grid-cols-2 gap-4 border-t bg-muted/20 px-4 py-4 text-[10px] sm:grid-cols-4">
+          <div className="flex items-center gap-2"><ShieldCheck className="h-7 w-7 text-primary" /><div><p className="uppercase text-muted-foreground">Verification Code</p><p className="font-mono font-semibold">{isSaved ? bookingNo : 'Pending save'}</p></div></div>
+          <div className="flex items-center gap-2"><CalendarIcon className="h-7 w-7 text-primary" /><div><p className="uppercase text-muted-foreground">Generated Date</p><p className="font-semibold">{format(new Date(), 'dd/MM/yyyy HH:mm')}</p></div></div>
+          <div className="flex items-center gap-2"><User className="h-7 w-7 text-primary" /><div><p className="uppercase text-muted-foreground">Generated By</p><p className="font-semibold">{profile?.full_name || 'Admin'}</p></div></div>
+          <div className="flex items-center gap-2"><CheckCircle className="h-7 w-7 text-success" /><div><p className="font-semibold uppercase text-success">Secure Document</p><p className="text-muted-foreground">Official booking record</p></div>{bookingSettings.documents.showQr && <QrCode className="ml-auto h-8 w-8" />}</div>
+        </footer>
+      </div>
     </div>
   );
 }
