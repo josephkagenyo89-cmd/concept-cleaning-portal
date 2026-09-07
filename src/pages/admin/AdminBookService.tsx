@@ -497,9 +497,44 @@ export default function AdminBookService() {
 
         <section className="border-y bg-muted/20 px-3 py-4 lg:px-5">
           <div className="mb-3 flex items-center justify-between"><h2 className="text-xs font-bold uppercase text-primary">Services</h2>
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedServiceId(''); setServiceQuantity(bookingSettings.service.defaultQuantity); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); } }}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedServiceId(''); setServiceQuantity(''); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); } }}>
               <DialogTrigger asChild><Button size="sm" disabled={!bookingSettings.service.enableMultiple && items.length > 0}><Plus className="mr-1 h-3.5 w-3.5" />Add Service</Button></DialogTrigger>
-              <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader><div className="space-y-3"><Input placeholder="Search services" value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} /><div className="flex flex-wrap gap-1">{['', ...categories].map((category) => <Button key={category || 'all'} variant={selectedCategory === category ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category)}>{category || 'All'}</Button>)}</div><div className="max-h-64 overflow-y-auto rounded border">{filteredServices.map((service) => <button type="button" key={service.id} className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-muted ${selectedServiceId === service.id ? 'bg-primary/10' : ''}`} onClick={() => setSelectedServiceId(service.id)}><span><strong>{service.name}</strong><small className="ml-2 font-mono text-muted-foreground">{service.service_code}</small></span><span>{money(service.base_price || 0)}</span></button>)}</div><div className="grid grid-cols-2 gap-3"><div><Label>Quantity</Label><Input type="number" min="1" value={serviceQuantity} onChange={(e) => setServiceQuantity(Number(e.target.value) || 1)} /></div><div><Label>Discount (KES)</Label><Input type="number" min="0" value={serviceDiscount} onChange={(e) => setServiceDiscount(Number(e.target.value) || 0)} /></div></div><Button onClick={addServiceItem}>Add to Booking</Button></div></DialogContent>
+              <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:w-full">
+                <DialogHeader className="border-b px-4 py-3"><DialogTitle>Add Service</DialogTitle></DialogHeader>
+                <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                  <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search services..." value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} className="h-11 pl-9 text-base" /></div>
+                  <div className="flex flex-wrap gap-1.5">{['', ...categories].map((category) => <Button key={category || 'all'} variant={selectedCategory === category ? 'default' : 'outline'} size="sm" className="h-8" onClick={() => setSelectedCategory(category)}>{category || 'All'}</Button>)}</div>
+                  <div className="max-h-72 overflow-y-auto rounded border">
+                    {filteredServices.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No services found</p>}
+                    {filteredServices.map((service) => { const isSelected = selectedServiceId === service.id; return (
+                      <button type="button" key={service.id} className={`flex w-full items-center justify-between gap-2 border-b px-3 py-3.5 text-left text-sm last:border-b-0 active:bg-muted ${isSelected ? 'bg-primary/10' : 'hover:bg-muted'}`} onClick={() => setSelectedServiceId(isSelected ? '' : service.id)}>
+                        <span className="min-w-0"><strong className="block truncate">{service.name}</strong><small className="font-mono text-xs text-muted-foreground">{service.service_code}</small></span>
+                        <span className="flex shrink-0 items-center gap-2"><span className="font-semibold">{money(service.base_price || 0)}</span>{isSelected && <Check className="h-4 w-4 text-primary" />}</span>
+                      </button>); })}
+                  </div>
+                  {selectedServiceId && (
+                    <div className="space-y-3 rounded border bg-muted/30 p-3">
+                      <div>
+                        <Label className="text-xs">Quantity</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" disabled={!serviceQuantity || Number(serviceQuantity) <= 1} onClick={() => setServiceQuantity(String(Math.max(1, Number(serviceQuantity || 0) - 1)))}><Minus className="h-4 w-4" /></Button>
+                          <Input type="number" inputMode="numeric" min="1" placeholder="Qty" value={serviceQuantity} onChange={(e) => setServiceQuantity(e.target.value)} className="h-11 flex-1 text-center text-lg font-semibold" />
+                          <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={() => setServiceQuantity(String(Number(serviceQuantity || 0) + 1))}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Discount (KES)</Label>
+                        <Input type="number" inputMode="numeric" min="0" placeholder="0" value={serviceDiscount || ''} onChange={(e) => setServiceDiscount(Number(e.target.value) || 0)} className="mt-1 h-11" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t p-4">
+                  <Button className="h-12 w-full text-base" onClick={addServiceItem} disabled={!selectedServiceId || !Number(serviceQuantity)}>
+                    {!selectedServiceId ? 'Select a service above' : !Number(serviceQuantity) ? 'Enter quantity' : 'Add to Booking'}
+                  </Button>
+                </div>
+              </DialogContent>
             </Dialog>
           </div>
 
