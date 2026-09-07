@@ -52,6 +52,8 @@ import {
   Settings2,
   Trash2,
   Edit3,
+  Minus,
+  Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
@@ -110,7 +112,7 @@ export default function AdminBookService() {
   // Add service dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [serviceQuantity, setServiceQuantity] = useState(1);
+  const [serviceQuantity, setServiceQuantity] = useState('');
   const [serviceDiscount, setServiceDiscount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
