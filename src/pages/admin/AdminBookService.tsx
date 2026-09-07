@@ -52,6 +52,8 @@ import {
   Settings2,
   Trash2,
   Edit3,
+  Minus,
+  Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
@@ -110,7 +112,7 @@ export default function AdminBookService() {
   // Add service dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [serviceQuantity, setServiceQuantity] = useState(1);
+  const [serviceQuantity, setServiceQuantity] = useState('');
   const [serviceDiscount, setServiceDiscount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
@@ -207,11 +209,16 @@ export default function AdminBookService() {
       toast({ title: 'Select a service', variant: 'destructive' });
       return;
     }
+    const qty = Number(serviceQuantity);
+    if (!qty || qty < 1) {
+      toast({ title: 'Enter a quantity', variant: 'destructive' });
+      return;
+    }
     const service = services.find(s => s.id === selectedServiceId);
     if (!service) return;
 
     const price = service.base_price || 0;
-    const total = (price * serviceQuantity) - serviceDiscount;
+    const total = (price * qty) - serviceDiscount;
 
     const newItem: ServiceItem = {
       id: service.id,
@@ -219,14 +226,14 @@ export default function AdminBookService() {
       name: service.name,
       description: service.description || '',
       price,
-      quantity: serviceQuantity,
+      quantity: qty,
       discount: serviceDiscount,
       total,
     };
     setItems([...items, newItem]);
     setDialogOpen(false);
     setSelectedServiceId('');
-    setServiceQuantity(1);
+    setServiceQuantity('');
     setServiceDiscount(0);
   };
 
@@ -490,18 +497,53 @@ export default function AdminBookService() {
 
         <section className="border-y bg-muted/20 px-3 py-4 lg:px-5">
           <div className="mb-3 flex items-center justify-between"><h2 className="text-xs font-bold uppercase text-primary">Services</h2>
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedServiceId(''); setServiceQuantity(bookingSettings.service.defaultQuantity); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); } }}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedServiceId(''); setServiceQuantity(''); setServiceDiscount(0); setSelectedCategory(''); setServiceSearch(''); } }}>
               <DialogTrigger asChild><Button size="sm" disabled={!bookingSettings.service.enableMultiple && items.length > 0}><Plus className="mr-1 h-3.5 w-3.5" />Add Service</Button></DialogTrigger>
-              <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader><div className="space-y-3"><Input placeholder="Search services" value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} /><div className="flex flex-wrap gap-1">{['', ...categories].map((category) => <Button key={category || 'all'} variant={selectedCategory === category ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category)}>{category || 'All'}</Button>)}</div><div className="max-h-64 overflow-y-auto rounded border">{filteredServices.map((service) => <button type="button" key={service.id} className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm hover:bg-muted ${selectedServiceId === service.id ? 'bg-primary/10' : ''}`} onClick={() => setSelectedServiceId(service.id)}><span><strong>{service.name}</strong><small className="ml-2 font-mono text-muted-foreground">{service.service_code}</small></span><span>{money(service.base_price || 0)}</span></button>)}</div><div className="grid grid-cols-2 gap-3"><div><Label>Quantity</Label><Input type="number" min="1" value={serviceQuantity} onChange={(e) => setServiceQuantity(Number(e.target.value) || 1)} /></div><div><Label>Discount (KES)</Label><Input type="number" min="0" value={serviceDiscount} onChange={(e) => setServiceDiscount(Number(e.target.value) || 0)} /></div></div><Button onClick={addServiceItem}>Add to Booking</Button></div></DialogContent>
+              <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:w-full">
+                <DialogHeader className="border-b px-4 py-3"><DialogTitle>Add Service</DialogTitle></DialogHeader>
+                <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                  <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search services..." value={serviceSearch} onChange={(e) => setServiceSearch(e.target.value)} className="h-11 pl-9 text-base" /></div>
+                  <div className="flex flex-wrap gap-1.5">{['', ...categories].map((category) => <Button key={category || 'all'} variant={selectedCategory === category ? 'default' : 'outline'} size="sm" className="h-8" onClick={() => setSelectedCategory(category)}>{category || 'All'}</Button>)}</div>
+                  <div className="max-h-72 overflow-y-auto rounded border">
+                    {filteredServices.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No services found</p>}
+                    {filteredServices.map((service) => { const isSelected = selectedServiceId === service.id; return (
+                      <button type="button" key={service.id} className={`flex w-full items-center justify-between gap-2 border-b px-3 py-3.5 text-left text-sm last:border-b-0 active:bg-muted ${isSelected ? 'bg-primary/10' : 'hover:bg-muted'}`} onClick={() => setSelectedServiceId(isSelected ? '' : service.id)}>
+                        <span className="min-w-0"><strong className="block truncate">{service.name}</strong><small className="font-mono text-xs text-muted-foreground">{service.service_code}</small></span>
+                        <span className="flex shrink-0 items-center gap-2"><span className="font-semibold">{money(service.base_price || 0)}</span>{isSelected && <Check className="h-4 w-4 text-primary" />}</span>
+                      </button>); })}
+                  </div>
+                  {selectedServiceId && (
+                    <div className="space-y-3 rounded border bg-muted/30 p-3">
+                      <div>
+                        <Label className="text-xs">Quantity</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" disabled={!serviceQuantity || Number(serviceQuantity) <= 1} onClick={() => setServiceQuantity(String(Math.max(1, Number(serviceQuantity || 0) - 1)))}><Minus className="h-4 w-4" /></Button>
+                          <Input type="number" inputMode="numeric" min="1" placeholder="Qty" value={serviceQuantity} onChange={(e) => setServiceQuantity(e.target.value)} className="h-11 flex-1 text-center text-lg font-semibold" />
+                          <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={() => setServiceQuantity(String(Number(serviceQuantity || 0) + 1))}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Discount (KES)</Label>
+                        <Input type="number" inputMode="numeric" min="0" placeholder="0" value={serviceDiscount || ''} onChange={(e) => setServiceDiscount(Number(e.target.value) || 0)} className="mt-1 h-11" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t p-4">
+                  <Button className="h-12 w-full text-base" onClick={addServiceItem} disabled={!selectedServiceId || !Number(serviceQuantity)}>
+                    {!selectedServiceId ? 'Select a service above' : !Number(serviceQuantity) ? 'Enter quantity' : 'Add to Booking'}
+                  </Button>
+                </div>
+              </DialogContent>
             </Dialog>
           </div>
 
           <div className="hidden overflow-x-auto rounded border sm:block">
             <Table className="min-w-[1050px] text-xs"><TableHeader><TableRow className="bg-primary hover:bg-primary"><TableHead className="w-10 text-primary-foreground">#</TableHead><TableHead className="text-primary-foreground">Service</TableHead><TableHead className="text-primary-foreground">Description</TableHead><TableHead className="text-center text-primary-foreground">Qty</TableHead><TableHead className="text-primary-foreground">Unit</TableHead><TableHead className="text-right text-primary-foreground">Unit Price</TableHead><TableHead className="text-right text-primary-foreground">Discount %</TableHead><TableHead className="text-right text-primary-foreground">Discount KES</TableHead><TableHead className="text-right text-primary-foreground">VAT</TableHead><TableHead className="text-right text-primary-foreground">Line Total</TableHead><TableHead className="text-center text-primary-foreground">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>{items.length === 0 ? <TableRow><TableCell colSpan={11} className="h-20 text-center text-muted-foreground">No services added. Select Add Service to begin.</TableCell></TableRow> : items.map((item, index) => { const itemNet = Math.max(0, item.price * item.quantity - item.discount); const itemVat = bookingSettings.service.enableVat ? itemNet * bookingSettings.service.defaultVatRate / 100 : 0; return <TableRow key={item.id}><TableCell>{index + 1}</TableCell><TableCell><p className="font-semibold">{item.name}</p><p className="font-mono text-[9px] text-muted-foreground">{item.code}</p></TableCell><TableCell className="max-w-52 truncate text-muted-foreground">{item.description}</TableCell><TableCell><Input type="number" min="1" className="mx-auto h-7 w-14 text-center text-xs" value={item.quantity} onChange={(e) => updateQuantity(item.id, Number(e.target.value) || 1)} /></TableCell><TableCell>{bookingSettings.service.defaultUnit}</TableCell><TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell><TableCell className="text-right font-mono">{item.price * item.quantity > 0 ? ((item.discount / (item.price * item.quantity)) * 100).toFixed(1) : '0.0'}</TableCell><TableCell><Input type="number" min="0" className="ml-auto h-7 w-20 text-right text-xs" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></TableCell><TableCell className="text-right font-mono">{itemVat.toLocaleString()}</TableCell><TableCell className="text-right font-mono font-bold">{(itemNet + itemVat).toLocaleString()}</TableCell><TableCell><div className="flex justify-center"><Button variant="ghost" size="icon" className="h-7 w-7" title="Edit service"><Edit3 className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete service" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody>
+              <TableBody>{items.length === 0 ? <TableRow><TableCell colSpan={11} className="h-20 text-center text-muted-foreground">No services added. Select Add Service to begin.</TableCell></TableRow> : items.map((item, index) => { const itemNet = Math.max(0, item.price * item.quantity - item.discount); const itemVat = bookingSettings.service.enableVat ? itemNet * bookingSettings.service.defaultVatRate / 100 : 0; return <TableRow key={item.id}><TableCell>{index + 1}</TableCell><TableCell><p className="font-semibold">{item.name}</p><p className="font-mono text-[9px] text-muted-foreground">{item.code}</p></TableCell><TableCell className="max-w-52 truncate text-muted-foreground">{item.description}</TableCell><TableCell><Input type="number" min="1" placeholder="Qty" className="mx-auto h-7 w-14 text-center text-xs" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /></TableCell><TableCell>{bookingSettings.service.defaultUnit}</TableCell><TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell><TableCell className="text-right font-mono">{item.price * item.quantity > 0 ? ((item.discount / (item.price * item.quantity)) * 100).toFixed(1) : '0.0'}</TableCell><TableCell><Input type="number" min="0" className="ml-auto h-7 w-20 text-right text-xs" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></TableCell><TableCell className="text-right font-mono">{itemVat.toLocaleString()}</TableCell><TableCell className="text-right font-mono font-bold">{(itemNet + itemVat).toLocaleString()}</TableCell><TableCell><div className="flex justify-center"><Button variant="ghost" size="icon" className="h-7 w-7" title="Edit service"><Edit3 className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete service" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody>
             </Table>
           </div>
-          <div className="space-y-2 sm:hidden">{items.length === 0 ? <div className="rounded border bg-card p-6 text-center text-sm text-muted-foreground">No services added yet</div> : items.map((item) => <div key={item.id} className="rounded border bg-card p-3"><div className="flex justify-between"><div><Badge variant="outline" className="font-mono text-[9px]">{item.code}</Badge><p className="mt-1 text-sm font-semibold">{item.name}</p></div><Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button></div><p className="mt-1 text-xs text-muted-foreground">{item.description}</p><div className="mt-3 grid grid-cols-2 gap-2"><div><Label className="text-[10px]">Quantity</Label><Input type="number" min="1" value={item.quantity} onChange={(e) => updateQuantity(item.id, Number(e.target.value) || 1)} /></div><div><Label className="text-[10px]">Discount (KES)</Label><Input type="number" min="0" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></div></div><div className="mt-3 flex justify-between border-t pt-2 text-xs"><span>{money(item.price)} × {item.quantity}</span><strong>{money(item.total)}</strong></div></div>)}</div>
+          <div className="space-y-2 sm:hidden">{items.length === 0 ? <div className="rounded border bg-card p-6 text-center text-sm text-muted-foreground">No services added yet. Tap <strong>Add Service</strong> to begin.</div> : items.map((item) => <div key={item.id} className="rounded border bg-card p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><Badge variant="outline" className="font-mono text-[9px]">{item.code}</Badge><p className="mt-1 text-sm font-semibold leading-tight">{item.name}</p><p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{item.description}</p></div><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button></div><div className="mt-3 flex items-end gap-3"><div className="flex-1"><Label className="text-[10px]">Quantity</Label><div className="mt-1 flex items-center gap-1.5"><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" disabled={item.quantity <= 1} onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button><Input type="number" inputMode="numeric" min="1" placeholder="Qty" className="h-10 flex-1 text-center text-base font-semibold" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button></div></div><div className="w-28"><Label className="text-[10px]">Discount (KES)</Label><Input type="number" inputMode="numeric" min="0" placeholder="0" className="mt-1 h-10" value={item.discount || ''} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></div></div><div className="mt-3 flex justify-between border-t pt-2 text-xs"><span className="text-muted-foreground">{money(item.price)} × {item.quantity || 0}</span><strong className="text-sm">{money(item.total)}</strong></div></div>)}</div>
           <div className="mt-3 flex flex-col gap-1 text-xs sm:flex-row sm:justify-between"><span className="font-semibold">Total Items: {items.length}</span><span className="font-semibold">Subtotal Before Discount: <strong className="ml-2 text-sm">{money(subtotal)}</strong></span></div>
         </section>
 
