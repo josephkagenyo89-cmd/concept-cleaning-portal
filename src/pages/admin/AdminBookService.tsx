@@ -209,11 +209,16 @@ export default function AdminBookService() {
       toast({ title: 'Select a service', variant: 'destructive' });
       return;
     }
+    const qty = Number(serviceQuantity);
+    if (!qty || qty < 1) {
+      toast({ title: 'Enter a quantity', variant: 'destructive' });
+      return;
+    }
     const service = services.find(s => s.id === selectedServiceId);
     if (!service) return;
 
     const price = service.base_price || 0;
-    const total = (price * serviceQuantity) - serviceDiscount;
+    const total = (price * qty) - serviceDiscount;
 
     const newItem: ServiceItem = {
       id: service.id,
@@ -221,14 +226,14 @@ export default function AdminBookService() {
       name: service.name,
       description: service.description || '',
       price,
-      quantity: serviceQuantity,
+      quantity: qty,
       discount: serviceDiscount,
       total,
     };
     setItems([...items, newItem]);
     setDialogOpen(false);
     setSelectedServiceId('');
-    setServiceQuantity(1);
+    setServiceQuantity('');
     setServiceDiscount(0);
   };
 
