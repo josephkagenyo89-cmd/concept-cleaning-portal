@@ -278,6 +278,25 @@ export default function AdminBookService() {
   const isSaved = status !== 'DRAFT';
   const balance = Math.max(0, displayedTotal - deposit - amountPaid);
 
+  // Build an insert payload using only columns that exist on the bookings table.
+  const buildPayload = (statusValue: string, bookingCode: string) => ({
+    agent_id: user?.id,
+    client_id: selectedClient || null,
+    client_name: clientName,
+    client_phone: clientPhone,
+    client_location: [address, clientLocation].filter(Boolean).join(', ') || clientLocation,
+    service_id: items[0]?.id,
+    service_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    quantity: String(items.reduce((sum, i) => sum + i.quantity, 0)),
+    status: statusValue,
+    line_items: items,
+    subtotal,
+    discount_amount: totalDiscount,
+    price: grandTotal,
+    salesperson_name: salesperson || null,
+    booking_code: bookingCode,
+  });
+
   const handleSave = async () => {
     if (!clientName || items.length === 0) {
       toast({ title: 'Add client and at least one service', variant: 'destructive' });
