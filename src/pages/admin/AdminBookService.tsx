@@ -79,7 +79,7 @@ interface ServiceItem {
 }
 
 export default function AdminBookService() {
-  const { profile, roles, isAdmin } = useAuth();
+  const { user, profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState('');
@@ -284,27 +284,7 @@ export default function AdminBookService() {
       return;
     }
     setLoading(true);
-    const payload = {
-      client_name: clientName,
-      client_phone: clientPhone,
-      client_location: clientLocation,
-      booking_date: format(new Date(), 'yyyy-MM-dd'),
-      status: 'draft',
-      items: items,
-      subtotal,
-      discount: totalDiscount,
-      total: grandTotal,
-      booking_no: bookingNo,
-      address,
-      site_contact: siteContact,
-      contact_phone: contactPhone,
-      salesperson,
-      shipment_mode: shipmentMode,
-      preferred_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : null,
-      preferred_time: preferredTime,
-      payment_terms: paymentTerms,
-      assigned_technician: assignedTechnician,
-    };
+    const payload = buildPayload('draft', bookingNo);
     const { error } = await (supabase.from('bookings').insert(payload as any) as any);
     setLoading(false);
     if (error) {
@@ -322,27 +302,7 @@ export default function AdminBookService() {
       return;
     }
     setLoading(true);
-    const payload = {
-      client_name: clientName,
-      client_phone: clientPhone,
-      client_location: clientLocation,
-      booking_date: format(new Date(), 'yyyy-MM-dd'),
-      status: 'confirmed',
-      items: items,
-      subtotal,
-      discount: totalDiscount,
-      total: grandTotal,
-      booking_no: bookingNo.replace('DRAFT', format(new Date(), 'yyyyMMdd')),
-      address,
-      site_contact: siteContact,
-      contact_phone: contactPhone,
-      salesperson,
-      shipment_mode: shipmentMode,
-      preferred_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : null,
-      preferred_time: preferredTime,
-      payment_terms: paymentTerms,
-      assigned_technician: assignedTechnician,
-    };
+    const payload = buildPayload('confirmed', bookingNo.replace('DRAFT', format(new Date(), 'yyyyMMdd')));
     const { error } = await (supabase.from('bookings').insert(payload as any) as any);
     setLoading(false);
     if (error) {
