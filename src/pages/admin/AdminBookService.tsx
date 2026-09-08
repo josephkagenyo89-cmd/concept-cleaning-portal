@@ -284,7 +284,7 @@ export default function AdminBookService() {
     client_id: selectedClient || null,
     client_name: clientName,
     client_phone: clientPhone,
-    client_location: [address, clientLocation].filter(Boolean).join(', ') || clientLocation,
+    location: [address, clientLocation].filter(Boolean).join(', ') || clientLocation || 'N/A',
     service_id: items[0]?.id,
     service_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     quantity: String(items.reduce((sum, i) => sum + i.quantity, 0)),
