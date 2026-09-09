@@ -279,7 +279,9 @@ export default function AdminBookService() {
   const balance = Math.max(0, displayedTotal - deposit - amountPaid);
 
   // Build an insert payload using only columns that exist on the bookings table.
-  const buildPayload = (statusValue: string, bookingCode: string) => ({
+  // booking_code is intentionally omitted: the database assigns a unique code
+  // from its sequence (trg_assign_booking_code), which is safe for concurrent saves.
+  const buildPayload = (statusValue: string) => ({
     agent_id: user?.id,
     client_id: selectedClient || null,
     client_name: clientName,
@@ -294,8 +296,16 @@ export default function AdminBookService() {
     discount_amount: totalDiscount,
     price: grandTotal,
     salesperson_name: salesperson || null,
-    booking_code: bookingCode,
   });
+
+  const insertBooking = async (statusValue: string) => {
+    const payload = buildPayload(statusValue);
+    return await (supabase
+      .from('bookings')
+      .insert(payload as any)
+      .select('booking_code')
+      .single() as any);
+  };
 
   const handleSave = async () => {
     if (!clientName || items.length === 0) {
@@ -303,14 +313,14 @@ export default function AdminBookService() {
       return;
     }
     setLoading(true);
-    const payload = buildPayload('draft', bookingNo);
-    const { error } = await (supabase.from('bookings').insert(payload as any) as any);
+    const { data, error } = await insertBooking('draft');
     setLoading(false);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: 'Booking saved as draft!' });
+    if (data?.booking_code) setBookingNo(data.booking_code);
+    toast({ title: 'Booking saved as draft!', description: data?.booking_code });
     setStatus('DRAFT');
     setLockStatus('UNLOCKED');
   };
@@ -321,14 +331,14 @@ export default function AdminBookService() {
       return;
     }
     setLoading(true);
-    const payload = buildPayload('confirmed', bookingNo.replace('DRAFT', format(new Date(), 'yyyyMMdd')));
-    const { error } = await (supabase.from('bookings').insert(payload as any) as any);
+    const { data, error } = await insertBooking('confirmed');
     setLoading(false);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: 'Booking confirmed successfully!' });
+    if (data?.booking_code) setBookingNo(data.booking_code);
+    toast({ title: 'Booking confirmed successfully!', description: data?.booking_code });
     setStatus('CONFIRMED');
     setLockStatus('LOCKED');
   };
