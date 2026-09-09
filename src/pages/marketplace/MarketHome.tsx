@@ -83,7 +83,7 @@ export default function MarketHome() {
       {/* Hero */}
       <section className="bg-market px-4 pb-6 pt-4 text-market-foreground">
         <h1 className="text-lg font-bold leading-snug">
-          Book trusted cleaning &amp; fumigation services in Kenya
+          Book trusted cleaning &amp; fumigation services in Nairobi, Kenya
         </h1>
         <div className="mt-3 flex items-center gap-1 text-xs opacity-90">
           <MapPin className="h-3.5 w-3.5" /> {settings.general.address || 'Nairobi, Kenya'}
