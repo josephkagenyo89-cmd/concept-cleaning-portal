@@ -309,7 +309,13 @@ export default function AdminBookService() {
 
   const generateQuotation = async (bookingCode: string) => {
     try {
+      const { data: quotationNumber, error: numberError } = await supabase
+        .rpc('next_quotation_number');
+
+      if (numberError) throw numberError;
+      if (!quotationNumber) throw new Error('Failed to generate quotation number.');
       const quotationPayload = {
+        quotation_number: quotationNumber,
         client_name: clientName,
         client_phone: clientPhone || '',
         service_name: items.map(i => i.name).join(', '),
@@ -430,7 +436,7 @@ export default function AdminBookService() {
               <Button variant="outline" size="sm" className="shrink-0" onClick={resetForm}><Plus className="mr-1 h-3.5 w-3.5" />New Booking</Button>
               <Button variant="secondary" size="sm" className="shrink-0" onClick={handleSave} disabled={actionDisabled}><Save className="mr-1 h-3.5 w-3.5" />Save Draft</Button>
               <Button size="sm" className="shrink-0" onClick={handleConfirm} disabled={actionDisabled || !clientName || items.length === 0}>{loading ? 'Saving…' : 'Save Booking'}</Button>
-              <Button variant="outline" size="sm" className="shrink-0" disabled={!isSaved || !canGenerateDocs}><FileCheck className="mr-1 h-3.5 w-3.5" />Generate Quotation</Button>
+              <Button variant="outline" size="sm" className="shrink-0" disabled={!isSaved || !canGenerateDocs|| !bookingNo} onClick={() => bookingNo && generateQuotation(bookingNo) }><FileCheck className="mr-1 h-3.5 w-3.5" />Generate Quotation</Button>
               <Button size="sm" className="shrink-0 bg-success text-success-foreground hover:bg-success/90" onClick={handleConfirm} disabled={loading || !canConfirm || !clientName || items.length === 0}><CheckCircle className="mr-1 h-3.5 w-3.5" />Confirm Booking</Button>
               <Button variant="outline" size="icon" title="Print" aria-label="Print booking" disabled={!isSaved || !canPrint} onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /></Button>
               <DropdownMenu>
