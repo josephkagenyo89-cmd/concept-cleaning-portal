@@ -307,6 +307,33 @@ export default function AdminBookService() {
       .single() as any);
   };
 
+  const generateQuotation = async (bookingCode: string) => {
+    try {
+      const quotationPayload = {
+        client_name: clientName,
+        client_phone: clientPhone || '',
+        service_name: items.map(i => i.name).join(', '),
+        service_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        price: grandTotal,
+        created_by: user?.id,
+        created_by_name: profile?.full_name || salesperson || 'Admin',
+        created_by_role: currentRole,
+        salesperson_id: user?.id || null,
+        salesperson_name: salesperson || profile?.full_name || null,
+        salesperson_role: currentRole,
+        line_items: items,
+        subtotal,
+        discount_amount: totalDiscount,
+        discount_reason: totalDiscount > 0 ? 'Booking discount' : null,
+        local_id: bookingCode,
+      };
+      const { error: qError } = await supabase.from('quotations').insert(quotationPayload);
+      if (qError) console.error('Quotation auto-generation failed:', qError.message);
+    } catch (e) {
+      console.error('Quotation generation error:', e);
+    }
+  };
+
   const handleSave = async () => {
     if (!clientName || items.length === 0) {
       toast({ title: 'Add client and at least one service', variant: 'destructive' });
@@ -319,7 +346,10 @@ export default function AdminBookService() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
-    if (data?.booking_code) setBookingNo(data.booking_code);
+    if (data?.booking_code) {
+      setBookingNo(data.booking_code);
+      await generateQuotation(data.booking_code);
+    }
     toast({ title: 'Booking saved as draft!', description: data?.booking_code });
     setStatus('DRAFT');
     setLockStatus('UNLOCKED');
@@ -337,7 +367,10 @@ export default function AdminBookService() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
-    if (data?.booking_code) setBookingNo(data.booking_code);
+    if (data?.booking_code) {
+      setBookingNo(data.booking_code);
+      await generateQuotation(data.booking_code);
+    }
     toast({ title: 'Booking confirmed successfully!', description: data?.booking_code });
     setStatus('CONFIRMED');
     setLockStatus('LOCKED');
