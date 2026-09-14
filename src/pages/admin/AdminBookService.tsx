@@ -139,8 +139,8 @@ export default function AdminBookService() {
   }, []);
 
   const loadClients = async () => {
-    const { data } = await supabase.from('clients').select('id, full_name, phone, location, client_id') as any;
-    if (data) setClients((data as any[]).map((c: any) => ({ ...c, name: c.full_name })));
+    const { data } = await supabase.from('clients').select('id, name, phone, location, client_id') as any;
+    if (data) setClients(data);
   };
 
   const loadServices = async () => {
@@ -153,8 +153,12 @@ export default function AdminBookService() {
   };
 
   const loadAgents = async () => {
-    const { data } = await (supabase.from('profiles') as any).select('id, full_name').eq('role', 'agent');
-    if (data) setAgents(data);
+    const agentsResult = await (supabase
+      .from('user_roles')
+      .select('user_id, profiles!inner(id, full_name)')
+      .eq('role', 'agent')) as any;
+    const data = agentsResult.data?.map((r: any) => ({ id: r.profiles?.id, full_name: r.profiles?.full_name })) || [];
+    setAgents(data);
   };
 
   const generateBookingNo = () => {
