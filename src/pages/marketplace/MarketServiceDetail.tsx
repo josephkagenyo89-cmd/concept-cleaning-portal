@@ -300,13 +300,33 @@ export default function MarketServiceDetail() {
     service.description ||
     `Professional ${service.name.toLowerCase()} in Nairobi and surrounding areas. Book Concept Cleaning Services today.`;
   const seoUrl = `https://www.conceptcleaningservices.co.ke/service/${service.slug || service.id}`;
-
+  const serviceSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: service.name,
+    description: pageDescription,
+    url: seoUrl,
+    serviceType: service.category,
+    areaServed: {
+      '@type': 'City',
+      name: 'Nairobi',
+    },
+    provider: {
+      '@type': 'LocalBusiness',
+      name: 'Concept Cleaning Services',
+      url: 'https://www.conceptcleaningservices.co.ke/',
+      telephone: '+254796563741',
+    },
+  };
   return (
 <>
     <Helmet>
       <title>{pageTitle}</title>
       <meta name="description" content={pageDescription} />
       <link rel="canonical" href={seoUrl} />
+      <script type="application/ld+json">
+        {JSON.stringify(serviceSchema)}
+      </script>
     </Helmet>
 
 
