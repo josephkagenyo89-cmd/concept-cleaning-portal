@@ -139,8 +139,8 @@ export default function AdminBookService() {
   }, []);
 
   const loadClients = async () => {
-    const { data } = await supabase.from('clients').select('id, name, phone, location, client_id') as any;
-    if (data) setClients(data);
+    const { data } = await supabase.from('clients').select('id, full_name, phone, whatsapp_number, location, client_code') as any;
+    if (data) setClients((data as any[]).map((c: any) => ({ ...c, name: c.full_name, client_id: c.client_code })));
   };
 
   const loadServices = async () => {
