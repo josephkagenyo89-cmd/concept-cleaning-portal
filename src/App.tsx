@@ -67,9 +67,13 @@ const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount")
 const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
 const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
 const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 
 const marketplaceRoutes = (
   <Route element={<MarketplaceLayout />}>
+    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+    <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
     <Route path="/" element={<MarketHome />} />
     <Route path="/categories" element={<MarketCategories />} />
     <Route path="/service/:id" element={<MarketServiceDetail />} />
