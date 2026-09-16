@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
+import { Chrome } from 'lucide-react';
 import { friendlyAuthError, isValidPhone, localPhone } from '@/lib/customerAuth';
 import { pushNotification } from '@/lib/customerNotifications';
 
@@ -63,6 +64,25 @@ export default function CustomerAuth() {
     navigate(next, { replace: true });
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/my`,
+      },
+    });
+
+    if (error) {
+      setLoading(false);
+      toast({
+        title: 'Google sign-in failed',
+        description: friendlyAuthError(error.message),
+        variant: 'destructive',
+      });
+    }
+  };
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = reg.full_name.trim();
@@ -111,23 +131,14 @@ export default function CustomerAuth() {
       return;
     }
 
-    // Auto sign-in when the signup did not already return a session.
-    if (!data.session) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: reg.password });
-      if (signInError) {
-        setLoading(false);
-        toast({ title: 'Account created', description: 'Please sign in with your email and password.' });
-        return;
-      }
-    }
-
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await pushNotification({
         user_id: user.id,
         type: 'account',
-        title: 'Account created successfully',
-        body: `Welcome ${name}! Your customer account is ready. You can now book services and track everything here.`,
+        title: 'Check your email',
+body: `Welcome ${name}! Your account has been created. Please check your email and click the verification link before signing in.`,
         link: '/my',
       });
     }
@@ -169,7 +180,27 @@ export default function CustomerAuth() {
                 <Button type="submit" disabled={loading} className="w-full bg-market text-market-foreground hover:bg-market/90">
                   {loading ? 'Signing in…' : 'Sign In'}
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">
+                 <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <Chrome className="mr-2 h-4 w-4" />
+                  Continue with Google
+                </Button>
+
+                <p className="text-center text-xs text-muted-foreground mt-3">
                   Forgot your password? Contact our team from the{' '}
                   <Link to="/my/support" className="font-medium text-market hover:underline">support page</Link>.
                 </p>
@@ -187,7 +218,7 @@ export default function CustomerAuth() {
                   <Label htmlFor="r_email">Email *</Label>
                   <Input id="r_email" type="email" required placeholder="you@example.com"
                     value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} />
-                  <p className="text-[10px] text-muted-foreground">This is your login. No verification email is sent.</p>
+                  <p className="text-[10px] text-muted-foreground">We'll send a verification link to this email before you can sign in.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="r_phone">Phone number *</Label>
