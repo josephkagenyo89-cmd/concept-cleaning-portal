@@ -1,9 +1,10 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText } from 'lucide-react';
+import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ const DESKTOP_EXTRA = [{ to: '/my/documents', label: 'Documents', icon: FileText
 
 export default function MarketplaceLayout() {
   const { settings } = useSettings();
+  const { theme, setTheme } = useTheme();
   const { user, isCustomer, customerClient } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -120,6 +122,17 @@ export default function MarketplaceLayout() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 px-0 text-market-foreground hover:bg-white/15"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
 
             {isCustomer ? (
               <Button

@@ -13,6 +13,7 @@ import {
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type SortKey = 'recommended' | 'price_asc' | 'price_desc' | 'name';
 
@@ -202,6 +203,69 @@ export default function MarketHome() {
           ))}
         </>
       )}
+      <section className="px-4 pt-10 pb-8">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-5 text-center">
+            <h2 className="text-xl font-bold md:text-2xl">Frequently Asked Questions</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Quick answers about booking our cleaning and fumigation services.
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="rounded-2xl border bg-card px-4">
+            <AccordionItem value="booking">
+              <AccordionTrigger>How do I book a cleaning service?</AccordionTrigger>
+              <AccordionContent>
+                Browse our services, choose the service you need, select the available options,
+                and continue with your booking. You can also contact our customer care team
+                if you need help choosing a service.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="areas">
+              <AccordionTrigger>Where do you offer your services?</AccordionTrigger>
+              <AccordionContent>
+                We serve Nairobi, Kiambu, and selected areas of Kajiado and Machakos.
+                Availability may vary depending on the service and location.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="pricing">
+              <AccordionTrigger>How much does cleaning cost?</AccordionTrigger>
+              <AccordionContent>
+                Prices depend on the type of service, size or quantity, and the specific
+                cleaning requirements. Each service listing shows its starting price and
+                available options.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="same-day">
+              <AccordionTrigger>Do you offer same-day cleaning?</AccordionTrigger>
+              <AccordionContent>
+                Same-day options are available for selected services and locations,
+                subject to availability.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="fumigation">
+              <AccordionTrigger>Do you provide fumigation and pest control?</AccordionTrigger>
+              <AccordionContent>
+                Yes. We provide pest control services for common household pests including
+                cockroaches, bedbugs, and mosquitoes. Service options and pricing are shown
+                in the relevant service listings.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="contact">
+              <AccordionTrigger>How can I contact Concept Cleaning Services?</AccordionTrigger>
+              <AccordionContent>
+                You can contact our customer care team through the contact options available
+                on the website for booking assistance, service questions, or support.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </section>
     </div>
   );
 }

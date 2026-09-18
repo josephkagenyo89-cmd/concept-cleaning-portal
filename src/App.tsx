@@ -18,6 +18,10 @@ import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
 import CustomerProfileRequiredDialog from "@/components/marketplace/CustomerProfileRequiredDialog";
+import ScrollToTop from "@/components/ScrollToTop";
+import ScrollProgress from "@/components/ScrollProgress";
+import CookieBanner from "@/components/CookieBanner";
+import { captureUTMParams } from "@/lib/utm";
 // Lazy-loaded dashboard pages
 const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
 const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
@@ -69,6 +73,7 @@ const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport")
 const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const marketplaceRoutes = (
   <Route element={<MarketplaceLayout />}>
@@ -221,6 +226,11 @@ function CustomerGate() {
     </>
   );
  }
+function UTMTracker() {
+  captureUTMParams();
+  return null;
+}
+
 function AppRoutes() {
   const { user, isAdmin, isAgent, isCustomer } = useAuth();
   useOfflineSync();
@@ -253,7 +263,7 @@ function AppRoutes() {
           <Route path="/" element={<Navigate to={isAdmin ? '/admin' : isAgent ? '/agent' : '/'} replace />} />
         )}
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );
@@ -266,9 +276,13 @@ const App = () => (
       <Sonner />
       <NetworkStatus />
       <BrowserRouter>
+        <UTMTracker />
+        <ScrollProgress />
+        <ScrollToTop />
         <AuthProvider>
           <ErpPwaManager />
           <AppRoutes />
+          <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
