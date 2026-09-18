@@ -18,7 +18,6 @@ export default function CustomerAccount() {
   const [form, setForm] = useState({ full_name: '', phone: '', whatsapp_number: '', location: '' });
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ bookings: 0, documents: 0, feedback: 0 });
-
   useEffect(() => {
     if (customerClient) {
       setForm({
@@ -27,8 +26,21 @@ export default function CustomerAccount() {
         whatsapp_number: customerClient.whatsapp_number || '',
         location: customerClient.location || '',
       });
+      return;
     }
-  }, [customerClient]);
+
+    if (user) {
+      const metadata = (user.user_metadata || {}) as Record<string, string>;
+
+      setForm({
+        full_name: metadata.full_name || metadata.name || '',
+        phone: metadata.phone || '',
+        whatsapp_number: metadata.whatsapp_number || metadata.phone || '',
+        location: metadata.location || '',
+      });
+    }
+  }, [customerClient, user]);
+  
 
   useEffect(() => {
     if (!user || !isCustomer) return;
@@ -200,16 +212,47 @@ export default function CustomerAccount() {
           <LogOut className="mr-2 h-4 w-4" />Sign out
         </Button>
       </div>
+      {!customerClient && user && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Account details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Full name</Label>
+              <Input value={form.full_name} readOnly />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input value={user.email || ''} readOnly />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              These details come from your Google account.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Profile */}
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">My profile</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+  <CardTitle className="text-sm">
+    {customerClient ? 'My profile' : 'Complete your customer profile'}
+  </CardTitle>
+</CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="c_name">Full name</Label>
             <Input id="c_name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           </div>
           <div className="space-y-1.5">
+          {!customerClient && (
+            <p className="text-xs text-muted-foreground">
+              Please add your phone number and location to complete your customer profile.
+            </p>
+          )}
             <Label htmlFor="c_phone">Phone</Label>
             <Input id="c_phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
