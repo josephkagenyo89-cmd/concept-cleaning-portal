@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
@@ -17,7 +17,7 @@ import NetworkStatus from "@/components/NetworkStatus";
 import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
-
+import CustomerProfileRequiredDialog from "@/components/marketplace/CustomerProfileRequiredDialog";
 // Lazy-loaded dashboard pages
 const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
 const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
@@ -78,13 +78,17 @@ const marketplaceRoutes = (
     <Route path="/categories" element={<MarketCategories />} />
     <Route path="/service/:id" element={<MarketServiceDetail />} />
     <Route path="/customer-auth" element={<CustomerAuth />} />
-    <Route path="/my" element={<CustomerDashboard />} />
-    <Route path="/my/bookings" element={<CustomerBookings />} />
-    <Route path="/my/documents" element={<CustomerDocuments />} />
-    <Route path="/my/messages" element={<CustomerMessages />} />
-    <Route path="/my/notifications" element={<CustomerNotifications />} />
+
+    <Route element={<CustomerGate />}>
+      <Route path="/my" element={<CustomerDashboard />} />
+      <Route path="/my/bookings" element={<CustomerBookings />} />
+      <Route path="/my/documents" element={<CustomerDocuments />} />
+      <Route path="/my/messages" element={<CustomerMessages />} />
+      <Route path="/my/notifications" element={<CustomerNotifications />} />
+      <Route path="/my/support" element={<CustomerSupport />} />
+    </Route>
+
     <Route path="/my/account" element={<CustomerAccount />} />
-    <Route path="/my/support" element={<CustomerSupport />} />
   </Route>
 );
 
@@ -192,7 +196,31 @@ function AgentGate() {
     </Suspense>
   );
 }
+function CustomerGate() {
+  const { user, loading, isCustomer, customerClient } = useAuth();
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || !isCustomer) return <Navigate to="/customer-auth" replace />;
+  const profileIncomplete =
+    !customerClient ||
+    !customerClient.full_name?.trim() ||
+    !customerClient.phone?.trim() ||
+    !customerClient.location?.trim();
+
+  return (
+    <>
+      <Outlet />
+      {profileIncomplete && <CustomerProfileRequiredDialog />}
+    </>
+  );
+ }
 function AppRoutes() {
   const { user, isAdmin, isAgent, isCustomer } = useAuth();
   useOfflineSync();
