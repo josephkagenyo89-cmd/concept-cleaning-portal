@@ -152,13 +152,16 @@ export function downloadCustomerBooking(b: any) {
     documentType: 'booking_confirmation',
     documentNumber: bookingNumber,
     dateCreated: safeDate(b.created_at),
-    createdBy:
-      b.created_by_name || b.client_name || 'Customer',
-    createdByRole: b.created_by_role || 'customer',
+
+    // Customer booked directly online, so salesperson is Online.
+    createdBy: 'Online',
+    createdByRole: 'online',
+
     clientName: b.client_name,
     clientId: b.client_id,
     clientPhone: b.client_phone,
     serviceLocation: b.location,
+
     lineItems: toLineItems(
       b.line_items,
       b.services?.name ||
@@ -166,6 +169,7 @@ export function downloadCustomerBooking(b: any) {
         'Cleaning Service',
       amount,
     ),
+
     totalAmount: amount,
     subtotal:
       b.subtotal != null ? Number(b.subtotal) : undefined,
@@ -178,9 +182,13 @@ export function downloadCustomerBooking(b: any) {
     discountReason: b.discount_reason || undefined,
     discountStatus:
       b.discount_approval_status || 'not_required',
+
     serviceDate: b.service_date
       ? safeDate(b.service_date)
       : '',
+
+    salespersonName: 'Online',
+
     notes:
       [
         b.status
