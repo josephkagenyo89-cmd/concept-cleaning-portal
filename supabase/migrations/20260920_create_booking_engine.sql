@@ -103,7 +103,7 @@ CREATE TABLE public.booking_engine_service_config (
   CONSTRAINT booking_engine_service_config_photo_range_check
     CHECK (photo_min <= photo_max),
 
-  CONSTRAINT booking_engine_service_config_photo_mode_check
+  CONSTRAINT booking_engine_service_config_photo_mode_rule_check
     CHECK (
       (photo_mode = 'none' AND photo_min = 0 AND photo_max = 0)
       OR
@@ -2077,89 +2077,7 @@ BEGIN
 
     END IF;
 
-  END IF;
-      -- --------------------------------------------------------
-      -- No Booking Engine pricing rule.
-      -- Fall back to the existing service catalogue.
-      -- --------------------------------------------------------
-
-      IF v_service.base_price IS NULL
-         OR v_service.base_price <= 0 THEN
-
-        v_snapshot := jsonb_build_object(
-          'status', 'quotation_required',
-          'pricing_type', 'quotation',
-          'pricing_source', 'service_catalogue',
-          'service_id', v_service.id,
-          'service_name', v_service.name,
-          'base_price', v_service.base_price,
-          'configuration_version',
-            COALESCE(v_config.config_version, 1),
-          'currency', 'KES'
-        );
-
-        UPDATE public.booking_engine_request_items
-        SET pricing_snapshot = v_snapshot,
-            updated_at = now()
-        WHERE id = p_request_item_id;
-
-        RETURN v_snapshot;
-      END IF;
-
-      v_pricing_source := 'service_catalogue';
-
-      IF v_service.pricing_model = 'fixed' THEN
-
-        v_pricing_type := 'fixed';
-        v_subtotal := v_service.base_price;
-
-      ELSIF v_service.pricing_model = 'per_unit' THEN
-
-        v_pricing_type := 'per_unit';
-        v_quantity := COALESCE(v_item.quantity, 1);
-
-        IF v_quantity <= 0 THEN
-          RAISE EXCEPTION
-            'A valid quantity is required for service "%".',
-            v_service.name;
-        END IF;
-
-        v_subtotal := v_service.base_price * v_quantity;
-
-      ELSIF v_service.pricing_model = 'variation' THEN
-
-        v_snapshot := jsonb_build_object(
-          'status', 'configuration_required',
-          'pricing_type', 'variation',
-          'pricing_source', 'service_catalogue',
-          'service_id', v_service.id,
-          'service_name', v_service.name,
-          'base_price', v_service.base_price,
-          'configuration_version',
-            COALESCE(v_config.config_version, 1),
-          'currency', 'KES'
-        );
-
-        UPDATE public.booking_engine_request_items
-        SET pricing_snapshot = v_snapshot,
-            updated_at = now()
-        WHERE id = p_request_item_id;
-
-        RETURN v_snapshot;
-
-      ELSE
-
-        RAISE EXCEPTION
-          'Unsupported pricing model "%" for service "%".',
-          v_service.pricing_model,
-          v_service.name;
-
-      END IF;
-
-    END IF;
-
   ELSE
-
     -- No Booking Engine configuration exists.
     -- Existing catalogue remains the fallback.
 
