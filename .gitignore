@@ -28,3 +28,4 @@ update-*.sh
 
 .vercel
 .env*
+supabase/.temp/
