@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       audit_logs: {
@@ -43,6 +68,546 @@ export type Database = {
           target_type?: string
         }
         Relationships: []
+      }
+      booking_engine_pricing_rules: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          maximum_quantity: number | null
+          minimum_quantity: number | null
+          pricing_type: string
+          rate: number | null
+          service_config_id: string
+          unit_key: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          maximum_quantity?: number | null
+          minimum_quantity?: number | null
+          pricing_type: string
+          rate?: number | null
+          service_config_id: string
+          unit_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          maximum_quantity?: number | null
+          minimum_quantity?: number | null
+          pricing_type?: string
+          rate?: number | null
+          service_config_id?: string
+          unit_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_pricing_rules_service_config_id_fkey"
+            columns: ["service_config_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_service_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_question_conditions: {
+        Row: {
+          action: string
+          created_at: string
+          depends_on_question_id: string
+          expected_value: Json
+          id: string
+          operator: string
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          depends_on_question_id: string
+          expected_value: Json
+          id?: string
+          operator: string
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          depends_on_question_id?: string
+          expected_value?: Json
+          id?: string
+          operator?: string
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_question_conditions_depends_on_question_id_fkey"
+            columns: ["depends_on_question_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_question_conditions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_questions: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          input_type: string
+          label: string
+          options: Json
+          question_key: string
+          required: boolean
+          service_config_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          input_type: string
+          label: string
+          options?: Json
+          question_key: string
+          required?: boolean
+          service_config_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          input_type?: string
+          label?: string
+          options?: Json
+          question_key?: string
+          required?: boolean
+          service_config_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_questions_service_config_id_fkey"
+            columns: ["service_config_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_service_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_request_events: {
+        Row: {
+          actor_name: string | null
+          actor_role: string | null
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          from_status:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+          id: string
+          message: string | null
+          metadata: Json
+          request_id: string
+          to_status:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_role?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          from_status?:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          request_id: string
+          to_status?:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+        }
+        Update: {
+          actor_name?: string | null
+          actor_role?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          from_status?:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          request_id?: string
+          to_status?:
+            | Database["public"]["Enums"]["booking_engine_request_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_request_items: {
+        Row: {
+          answers: Json
+          created_at: string
+          display_order: number
+          id: string
+          measurements: Json
+          pricing_snapshot: Json
+          quantity: number | null
+          request_id: string
+          scope_snapshot: Json
+          selected_extras: Json
+          service_config_id: string | null
+          service_config_version: number | null
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          measurements?: Json
+          pricing_snapshot?: Json
+          quantity?: number | null
+          request_id: string
+          scope_snapshot?: Json
+          selected_extras?: Json
+          service_config_id?: string | null
+          service_config_version?: number | null
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          measurements?: Json
+          pricing_snapshot?: Json
+          quantity?: number | null
+          request_id?: string
+          scope_snapshot?: Json
+          selected_extras?: Json
+          service_config_id?: string | null
+          service_config_version?: number | null
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_request_items_service_config_id_fkey"
+            columns: ["service_config_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_service_config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_request_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_request_photos: {
+        Row: {
+          created_at: string
+          display_order: number
+          file_size_bytes: number
+          height: number | null
+          id: string
+          mime_type: string
+          original_filename: string | null
+          photo_category: string
+          request_id: string
+          request_item_id: string | null
+          storage_path: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          file_size_bytes: number
+          height?: number | null
+          id?: string
+          mime_type: string
+          original_filename?: string | null
+          photo_category: string
+          request_id: string
+          request_item_id?: string | null
+          storage_path: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          file_size_bytes?: number
+          height?: number | null
+          id?: string
+          mime_type?: string
+          original_filename?: string | null
+          photo_category?: string
+          request_id?: string
+          request_item_id?: string | null
+          storage_path?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_request_photos_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_request_photos_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_requests: {
+        Row: {
+          converted_at: string | null
+          converted_booking_id: string | null
+          created_at: string
+          customer_acknowledged_scope: boolean
+          customer_id: string | null
+          customer_notes: string | null
+          customer_user_id: string | null
+          id: string
+          quotation_id: string | null
+          request_number: string
+          requested_date: string | null
+          requested_time: string | null
+          scope_acknowledged_at: string | null
+          service_location: string | null
+          status: Database["public"]["Enums"]["booking_engine_request_status"]
+          submission_key: string | null
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          converted_at?: string | null
+          converted_booking_id?: string | null
+          created_at?: string
+          customer_acknowledged_scope?: boolean
+          customer_id?: string | null
+          customer_notes?: string | null
+          customer_user_id?: string | null
+          id?: string
+          quotation_id?: string | null
+          request_number?: string
+          requested_date?: string | null
+          requested_time?: string | null
+          scope_acknowledged_at?: string | null
+          service_location?: string | null
+          status?: Database["public"]["Enums"]["booking_engine_request_status"]
+          submission_key?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          converted_at?: string | null
+          converted_booking_id?: string | null
+          created_at?: string
+          customer_acknowledged_scope?: boolean
+          customer_id?: string | null
+          customer_notes?: string | null
+          customer_user_id?: string | null
+          id?: string
+          quotation_id?: string | null
+          request_number?: string
+          requested_date?: string | null
+          requested_time?: string | null
+          scope_acknowledged_at?: string | null
+          service_location?: string | null
+          status?: Database["public"]["Enums"]["booking_engine_request_status"]
+          submission_key?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_requests_converted_booking_id_fkey"
+            columns: ["converted_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_requests_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_service_config: {
+        Row: {
+          availability_config: Json
+          config_version: number
+          created_at: string
+          created_by: string | null
+          customer_instructions: string | null
+          enabled: boolean
+          id: string
+          measurement_config: Json
+          photo_max: number
+          photo_min: number
+          photo_mode: string
+          service_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          availability_config?: Json
+          config_version?: number
+          created_at?: string
+          created_by?: string | null
+          customer_instructions?: string | null
+          enabled?: boolean
+          id?: string
+          measurement_config?: Json
+          photo_max?: number
+          photo_min?: number
+          photo_mode?: string
+          service_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          availability_config?: Json
+          config_version?: number
+          created_at?: string
+          created_by?: string | null
+          customer_instructions?: string | null
+          enabled?: boolean
+          id?: string
+          measurement_config?: Json
+          photo_max?: number
+          photo_min?: number
+          photo_mode?: string
+          service_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_service_config_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_engine_service_scope: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          scope_type: string
+          service_config_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          scope_type: string
+          service_config_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          scope_type?: string
+          service_config_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_engine_service_scope_service_config_id_fkey"
+            columns: ["service_config_id"]
+            isOneToOne: false
+            referencedRelation: "booking_engine_service_config"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookings: {
         Row: {
@@ -1782,6 +2347,7 @@ export type Database = {
           service_code: string | null
           service_features: Json
           short_description: string | null
+          slug: string | null
           updated_at: string
         }
         Insert: {
@@ -1805,6 +2371,7 @@ export type Database = {
           service_code?: string | null
           service_features?: Json
           short_description?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Update: {
@@ -1828,6 +2395,7 @@ export type Database = {
           service_code?: string | null
           service_features?: Json
           short_description?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1984,8 +2552,56 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_booking_engine_quotation: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      add_booking_engine_request_item: {
+        Args: {
+          _answers?: Json
+          _measurements?: Json
+          _quantity?: number
+          _request_id: string
+          _selected_extras?: Json
+          _service_id: string
+        }
+        Returns: string
+      }
       approve_profile_edit: { Args: { request_id: string }; Returns: undefined }
+      booking_engine_is_valid_transition: {
+        Args: {
+          _from_status: Database["public"]["Enums"]["booking_engine_request_status"]
+          _to_status: Database["public"]["Enums"]["booking_engine_request_status"]
+        }
+        Returns: boolean
+      }
       build_service_code: { Args: { _name: string }; Returns: string }
+      build_service_slug: { Args: { _name: string }; Returns: string }
+      calculate_booking_engine_item_price: {
+        Args: { p_request_item_id: string }
+        Returns: Json
+      }
+      calculate_booking_engine_request_price: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      convert_booking_engine_request: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      create_booking_engine_request: {
+        Args: {
+          _customer_notes?: string
+          _requested_date?: string
+          _requested_time?: string
+          _service_location?: string
+        }
+        Returns: string
+      }
+      delete_booking_engine_request_item: {
+        Args: { _item_id: string }
+        Returns: string
+      }
       get_profile_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["agent_status"]
@@ -1997,9 +2613,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
+      is_agent: { Args: never; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      mark_booking_engine_ready_for_booking: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
       next_booking_code: { Args: never; Returns: string }
+      next_booking_engine_request_number: { Args: never; Returns: string }
       next_certificate_number: { Args: never; Returns: string }
       next_client_code: { Args: never; Returns: string }
       next_expense_voucher_number: { Args: never; Returns: string }
@@ -2013,6 +2636,10 @@ export type Database = {
         Args: { _exclude_id?: string; _name: string }
         Returns: string
       }
+      next_service_slug: {
+        Args: { _exclude_id?: string; _name: string }
+        Returns: string
+      }
       notify_customer: {
         Args: {
           _body: string
@@ -2023,14 +2650,55 @@ export type Database = {
         }
         Returns: undefined
       }
-      owns_client: {
-        Args: { _client_id: string; _user_id: string }
-        Returns: boolean
+      owns_client:
+        | { Args: { _client_id: string }; Returns: boolean }
+        | { Args: { _client_id: string; _user_id: string }; Returns: boolean }
+      prepare_booking_engine_quotation: {
+        Args: { _quoted_items?: Json; _request_id: string }
+        Returns: Json
+      }
+      submit_booking_engine_request: {
+        Args: { _request_id: string }
+        Returns: string
+      }
+      update_booking_engine_request: {
+        Args: {
+          _customer_acknowledged_scope?: boolean
+          _customer_notes?: string
+          _request_id: string
+          _requested_date?: string
+          _requested_time?: string
+          _service_location?: string
+        }
+        Returns: string
+      }
+      update_booking_engine_request_item: {
+        Args: {
+          _answers?: Json
+          _item_id: string
+          _measurements?: Json
+          _quantity?: number
+          _selected_extras?: Json
+        }
+        Returns: string
       }
     }
     Enums: {
       agent_status: "pending" | "approved" | "suspended"
       app_role: "agent" | "admin" | "super_admin"
+      booking_engine_request_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "awaiting_customer"
+        | "approved"
+        | "quote_required"
+        | "quote_prepared"
+        | "customer_accepted"
+        | "ready_for_booking"
+        | "converted"
+        | "rejected"
+        | "cancelled"
       booking_status:
         | "pending"
         | "confirmed"
@@ -2168,10 +2836,27 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       agent_status: ["pending", "approved", "suspended"],
       app_role: ["agent", "admin", "super_admin"],
+      booking_engine_request_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "awaiting_customer",
+        "approved",
+        "quote_required",
+        "quote_prepared",
+        "customer_accepted",
+        "ready_for_booking",
+        "converted",
+        "rejected",
+        "cancelled",
+      ],
       booking_status: [
         "pending",
         "confirmed",
