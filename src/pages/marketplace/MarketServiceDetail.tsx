@@ -688,6 +688,7 @@ export default function MarketServiceDetail() {
                   </div>
                 )}
 
+                <div className="flex gap-2">
                 <Button
                   className="flex-1 bg-market text-market-foreground hover:bg-market/90"
                   disabled={saving}
