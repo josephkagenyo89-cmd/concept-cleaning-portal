@@ -12,7 +12,6 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +40,6 @@ import {
 } from '@/lib/marketplace';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
-import { createBookingEngineRequest, addBookingEngineRequestItem, calculateBookingEngineRequestPrice, submitBookingEngineRequest, updateBookingEngineRequest } from '@/lib/bookingEngine';
 
 export default function MarketServiceDetail() {
   const { id } = useParams();
@@ -56,8 +54,6 @@ export default function MarketServiceDetail() {
   const [service, setService] = useState<MarketService | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [scopeAcknowledged, setScopeAcknowledged] = useState(false);
-  const [bookingScope, setBookingScope] = useState<{ title: string; description: string } | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
 
@@ -65,42 +61,8 @@ export default function MarketServiceDetail() {
     service_date: '',
     location: '',
     phone: '',
-    service_time: '',
     notes: '',
   });
-
-  useEffect(() => {
-    if (!service?.id) return;
-
-    const loadBookingScope = async () => {
-      const { data: config } = await supabase
-        .from('booking_engine_service_config')
-        .select('id')
-        .eq('service_id', service.id)
-        .eq('enabled', true)
-        .maybeSingle();
-
-      if (!config) {
-        setBookingScope(null);
-        return;
-      }
-
-      const { data: scope } = await supabase
-        .from('booking_engine_service_scope')
-        .select('title, description')
-        .eq('service_config_id', config.id)
-        .eq('scope_type', 'included')
-        .eq('active', true)
-        .order('display_order', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      setBookingScope(scope || null);
-    };
-
-    loadBookingScope();
-  }, [service?.id]);
-
 
   /*
    * Load service by either:
@@ -148,6 +110,7 @@ export default function MarketServiceDetail() {
 
       setLoading(false);
     };
+
     loadService();
   }, [id]);
 
@@ -164,8 +127,6 @@ export default function MarketServiceDetail() {
     }
   }, [customerClient]);
 
-
-
   /*
    * Send user to customer login while preserving
    * the SEO-friendly service URL and quotation mode.
@@ -179,8 +140,6 @@ export default function MarketServiceDetail() {
       `/customer-auth?next=${encodeURIComponent(currentPath)}`
     );
   };
-
-
 
   /*
    * Build the WhatsApp confirmation message using the
@@ -200,7 +159,6 @@ export default function MarketServiceDetail() {
       `Phone: ${form.phone.trim()}`,
       `Service: ${service?.name || 'N/A'}`,
       `Preferred Date: ${form.service_date || 'Not specified'}`,
-      `Preferred Time: ${form.service_time || 'Not specified'}`,
       `Service Location: ${form.location.trim()}`,
       `Amount: ${formatKes(price)}`,
       form.notes.trim() ? `Notes: ${form.notes.trim()}` : '',
@@ -238,17 +196,10 @@ export default function MarketServiceDetail() {
     if (!user || !isCustomer || !customerClient) {
       return requireLogin();
     }
-    if (mode === 'booking' && (!form.service_date || !form.service_time)) {
-      toast({
-        title: form.service_date ? 'Select a preferred time' : 'Select a service date',
-        variant: 'destructive',
-      });
-      return;
-    }
 
-    if (mode === 'booking' && bookingScope && !scopeAcknowledged) {
+    if (mode === 'booking' && !form.service_date) {
       toast({
-        title: 'Please acknowledge the service scope',
+        title: 'Select a service date',
         variant: 'destructive',
       });
       return;
@@ -297,40 +248,33 @@ export default function MarketServiceDetail() {
 
     try {
       if (mode === 'booking') {
-          const requestId = await createBookingEngineRequest({
-            requestedDate: form.service_date,
-            requestedTime: form.service_time,
-            serviceLocation: form.location.trim(),
-            customerNotes: form.notes,
-          });
+        const { error } = await supabase
+          .from('bookings')
+          .insert({
+            agent_id: user.id,
+            client_id: customerClient.id,
+            client_name: customerClient.full_name,
+            client_phone: form.phone.trim(),
+            location: form.location.trim(),
+            service_id: service.id,
+            service_date: form.service_date,
+            price,
+            system_price: pricing.original,
+            status: 'pending',
+            created_by_name: customerClient.full_name,
+            created_by_role: 'customer',
+            line_items: lineItems as any,
+            ...discountFields,
+            ...(pricing.active
+              ? {
+                  discount_type: 'percent',
+                  discount_value: pricing.percentage,
+                  discount_approval_status: 'approved',
+                }
+              : {}),
+          } as any);
 
-          await updateBookingEngineRequest({
-            requestId,
-            requestedDate: form.service_date,
-            requestedTime: form.service_time,
-            serviceLocation: form.location.trim(),
-            customerNotes: form.notes,
-            acknowledgedScope: bookingScope ? scopeAcknowledged : true,
-          });
-
-          await addBookingEngineRequestItem({
-            requestId,
-            serviceId: service.id,
-            quantity: 1,
-            measurements: {},
-            answers: {},
-            selectedExtras: [],
-          });
-
-          const bookingPricing = await calculateBookingEngineRequestPrice(requestId);
-
-          if ((bookingPricing as any)?.status !== 'priced') {
-            throw new Error('This service requires a quotation.');
-          }
-
-          await submitBookingEngineRequest(requestId);
-
-
+        if (error) throw error;
 
         /*
          * The booking has successfully been saved.
@@ -586,21 +530,6 @@ export default function MarketServiceDetail() {
                   }
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="service_time">Preferred time</Label>
-                <Input
-                  id="service_time"
-                  type="time"
-                  value={form.service_time}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      service_time: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
 
               <div className="space-y-1.5">
                 <Label htmlFor="location">
@@ -666,29 +595,7 @@ export default function MarketServiceDetail() {
                 </p>
               )}
 
-
-                {bookingScope && (
-                  <div className="rounded-lg border border-border bg-muted/20 p-3 mb-3">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id="scope-acknowledgement"
-                        checked={scopeAcknowledged}
-                        onCheckedChange={(checked) =>
-                          setScopeAcknowledged(checked === true)
-                        }
-                      />
-                      <label
-                        htmlFor="scope-acknowledgement"
-                        className="cursor-pointer text-xs leading-relaxed text-foreground"
-                      >
-                        <span className="font-semibold">{bookingScope.title}:</span>{" "}
-                        {bookingScope.description} I confirm that I have reviewed and acknowledge this service scope.
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                 <Button
                   className="flex-1 bg-market text-market-foreground hover:bg-market/90"
                   disabled={saving}
@@ -704,7 +611,6 @@ export default function MarketServiceDetail() {
                       ? 'Request Quotation'
                       : 'Book Now'}
                 </Button>
-
 
                 <Button
                   variant="outline"
