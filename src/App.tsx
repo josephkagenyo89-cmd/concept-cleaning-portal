@@ -31,6 +31,8 @@ const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
 const AdminBookingDetails = lazy(() => import("@/pages/admin/AdminBookingDetails"));
+const AdminBookingEngineRequests = lazy(() => import("@/pages/admin/AdminBookingEngineRequests"));
+const AdminBookingEngineRequestDetails = lazy(() => import("@/pages/admin/AdminBookingEngineRequestDetails"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
 const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
 const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
@@ -122,6 +124,8 @@ function AdminGate() {
         <Route index element={<AdminOverview />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="bookings/:id" element={<AdminBookingDetails />} />
+        <Route path="booking-engine" element={<AdminBookingEngineRequests />} />
+        <Route path="booking-engine/:id" element={<AdminBookingEngineRequestDetails />} />
         <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
         <Route path="discount-reports" element={<AdminDiscountReports />} />
         <Route path="book-service" element={<AdminBookService />} />
