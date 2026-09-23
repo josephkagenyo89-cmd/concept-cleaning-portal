@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import BookingEngineQuestionsConfig from '@/components/admin/BookingEngineQuestionsConfig';
 
 type ServiceRow = {
   id: string;
@@ -381,6 +382,7 @@ export default function AdminBookingEngineConfig() {
           })}
         </div>
       )}
+      <BookingEngineQuestionsConfig />
     </div>
   );
 }
