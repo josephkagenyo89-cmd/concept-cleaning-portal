@@ -32,6 +32,7 @@ const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
 const AdminBookingDetails = lazy(() => import("@/pages/admin/AdminBookingDetails"));
 const AdminBookingEngineRequests = lazy(() => import("@/pages/admin/AdminBookingEngineRequests"));
+const AdminBookingEngineConfig = lazy(() => import("@/pages/admin/AdminBookingEngineConfig"));
 const AdminBookingEngineRequestDetails = lazy(() => import("@/pages/admin/AdminBookingEngineRequestDetails"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
 const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
@@ -73,6 +74,7 @@ const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount")
 const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
 const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
 const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
+const BookingEngine = lazy(() => import("@/pages/marketplace/BookingEngine"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -92,6 +94,7 @@ const marketplaceRoutes = (
       <Route path="/my/documents" element={<CustomerDocuments />} />
       <Route path="/my/messages" element={<CustomerMessages />} />
       <Route path="/my/notifications" element={<CustomerNotifications />} />
+      <Route path="/booking-engine" element={<BookingEngine />} />
       <Route path="/my/support" element={<CustomerSupport />} />
     </Route>
 
@@ -125,6 +128,7 @@ function AdminGate() {
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="bookings/:id" element={<AdminBookingDetails />} />
         <Route path="booking-engine" element={<AdminBookingEngineRequests />} />
+        <Route path="booking-engine/config" element={<AdminBookingEngineConfig />} />
         <Route path="booking-engine/:id" element={<AdminBookingEngineRequestDetails />} />
         <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
         <Route path="discount-reports" element={<AdminDiscountReports />} />

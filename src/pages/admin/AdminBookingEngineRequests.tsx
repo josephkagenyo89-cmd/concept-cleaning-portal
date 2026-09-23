@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 type RequestRow = {
@@ -160,15 +160,26 @@ export default function AdminBookingEngineRequests() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Booking Engine Requests</h1>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={load}
-          disabled={loading}
-        >
-          <RefreshCw className="h-4 w-4 mr-1" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.location.href = "/admin/booking-engine/config"}
+          >
+            <Settings className="h-4 w-4 mr-1" />
+            Configuration
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={load}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="relative mb-4">
