@@ -69,6 +69,29 @@ export async function addBookingEngineRequestItem(params: {
   return data as string;
 }
 
+export async function updateBookingEngineRequestItem(params: {
+  itemId: string;
+  quantity?: number;
+  measurements?: Record<string, unknown>;
+  answers?: Record<string, unknown>;
+  selectedExtras?: unknown[];
+}) {
+  const { data, error } = await supabase.rpc(
+    'update_booking_engine_request_item',
+    {
+      _item_id: params.itemId,
+      _quantity: params.quantity,
+      _measurements: params.measurements || {},
+      _answers: params.answers || {},
+      _selected_extras: params.selectedExtras || [],
+    }
+  );
+
+  if (error) throw error;
+
+  return data as string;
+}
+
 export async function calculateBookingEngineRequestPrice(
   requestId: string
 ) {
