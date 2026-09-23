@@ -363,7 +363,19 @@ export default function AdminBookingEngineConfig() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        document
+                          .getElementById("booking-engine-customer-questions")
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
+                    >
+                      Customer Questions
+                    </Button>
+
                     <Button
                       onClick={() => saveConfig(service)}
                       disabled={isSaving}

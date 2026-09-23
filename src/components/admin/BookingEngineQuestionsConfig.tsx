@@ -356,7 +356,7 @@ export default function BookingEngineQuestionsConfig() {
   }
 
   return (
-    <Card>
+    <Card id="booking-engine-customer-questions">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <div>
