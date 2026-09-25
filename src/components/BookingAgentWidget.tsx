@@ -1,15 +1,12 @@
 /**
- * BOOKING AGENT WIDGET
+ * BOOKING AGENT WIDGET - WhatsApp Style
  * Floating widget that appears 10 seconds after page load
- * Single line question: "What service are you looking for?"
+ * Minimal, non-intrusive, like WhatsApp customer care
  */
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { X, MessageCircle, Send, Loader2 } from 'lucide-react';
+import { X, MessageCircle, Send, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface DialogueMessage {
   role: 'customer' | 'agent';
@@ -30,9 +27,9 @@ interface BookingAgentResponse {
 }
 
 export default function BookingAgentWidget() {
-  const { user } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [conversationHistory, setConversationHistory] = useState<DialogueMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +46,7 @@ export default function BookingAgentWidget() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim() || loading || !user) return;
+    if (!userInput.trim() || loading) return;
 
     const customerMessage = userInput.trim();
     setUserInput('');
@@ -67,22 +64,25 @@ export default function BookingAgentWidget() {
 
       setConversationHistory(newHistory);
 
+      const token = localStorage.getItem('sb-token');
+      const userId = localStorage.getItem('user-id') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
+
       const response = await fetch('/api/booking-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sb-token')}`,
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify({
           customerMessage,
           conversationHistory,
-          userId: user.id,
+          userId,
           requestId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from booking agent');
+        throw new Error(`API error: ${response.status}`);
       }
 
       const data: BookingAgentResponse = await response.json();
@@ -101,26 +101,12 @@ export default function BookingAgentWidget() {
       if (data.requestId) {
         setRequestId(data.requestId);
       }
-
-      // If service matched, offer to open full booking flow
-      if (data.matchedService && data.matchedService.confidence > 0.6) {
-        // Add a subtle suggestion to open full booking
-        setTimeout(() => {
-          setConversationHistory([
-            ...updatedHistory,
-            {
-              role: 'agent',
-              message: `Ready to book "${data.matchedService?.service_name}"? Open the full booking form for more details.`,
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-        }, 500);
-      }
     } catch (error) {
       console.error('Widget error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process message';
       toast({
         title: 'Error',
-        description: 'Failed to process your message',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -128,98 +114,128 @@ export default function BookingAgentWidget() {
     }
   };
 
-  if (!isVisible || !user) return null;
+  if (!isVisible) return null;
 
+  // Closed/Hidden state - show pill button
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => {
+          setIsOpen(true);
+          setIsMinimized(false);
+        }}
+        className="fixed bottom-6 right-6 z-40 px-4 py-3 rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 font-medium text-sm hover:scale-105 active:scale-95"
+        aria-label="Open booking assistant"
+      >
+        <MessageCircle className="h-5 w-5" />
+        <span>What service are you looking for?</span>
+      </button>
+    );
+  }
+
+  // Open state - show chat widget
   return (
-    <>
-      {/* Floating Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-shadow animate-bounce"
-          aria-label="Open booking assistant"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Chat Widget */}
-      {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white shadow-xl flex flex-col h-[500px]">
-          {/* Header */}
-          <div className="flex items-center justify-between bg-primary text-white px-4 py-3 rounded-t-lg">
-            <h3 className="font-semibold">Booking Assistant</h3>
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                setConversationHistory([]);
-                setUserInput('');
-              }}
-              className="hover:bg-primary-dark p-1 rounded"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
+    <div className="fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden border border-slate-100">
+      {/* Header */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-primary to-primary/90 text-white px-5 py-4">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <MessageCircle className="h-6 w-6" />
           </div>
+          <div>
+            <h3 className="font-bold text-sm">Concept Cleaning</h3>
+            <p className="text-xs text-white/80">Usually replies instantly</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-2 hover:bg-white/20 rounded-full transition"
+            aria-label="Minimize"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              setConversationHistory([]);
+              setUserInput('');
+            }}
+            className="p-2 hover:bg-white/20 rounded-full transition"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-slate-50">
+      {/* Messages Area */}
+      {!isMinimized && (
+        <>
+          <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-slate-50 max-h-[350px]">
             {conversationHistory.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-center">
-                <p className="text-sm text-muted-foreground">
-                  What service are you looking for?
-                </p>
+              <div className="flex h-full items-center justify-center text-center py-8">
+                <div>
+                  <MessageCircle className="h-8 w-8 mx-auto text-primary/30 mb-2" />
+                  <p className="text-sm font-medium text-slate-900">What service are you looking for?</p>
+                  <p className="text-xs text-slate-500 mt-1">Tell us your cleaning or pest control needs</p>
+                </div>
               </div>
             ) : (
-              conversationHistory.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === 'customer' ? 'justify-end' : 'justify-start'}`}
-                >
+              <>
+                {conversationHistory.map((msg, idx) => (
                   <div
-                    className={`max-w-xs rounded-lg px-3 py-2 text-sm ${
-                      msg.role === 'customer'
-                        ? 'bg-primary text-white'
-                        : 'bg-white border border-slate-200 text-slate-900'
-                    }`}
+                    key={idx}
+                    className={`flex ${msg.role === 'customer' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.message}
+                    <div
+                      className={`max-w-xs rounded-lg px-3 py-2 text-sm leading-relaxed ${
+                        msg.role === 'customer'
+                          ? 'bg-primary text-white rounded-br-none'
+                          : 'bg-white border border-slate-200 text-slate-900 rounded-bl-none'
+                      }`}
+                    >
+                      {msg.message}
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-slate-200 rounded-lg px-3 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                </div>
-              </div>
+                ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white border border-slate-200 rounded-lg rounded-bl-none px-3 py-2 flex gap-1">
+                      <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
+                      <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                      <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           {/* Input */}
           <form
             onSubmit={sendMessage}
-            className="border-t border-slate-200 p-3 bg-white rounded-b-lg flex gap-2"
+            className="border-t border-slate-200 p-3 bg-white flex gap-2"
           >
-            <Input
+            <input
+              type="text"
               placeholder="Type here..."
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               disabled={loading}
-              className="flex-1 text-sm"
+              className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-slate-50"
             />
-            <Button
+            <button
               type="submit"
               disabled={loading || !userInput.trim()}
-              size="sm"
-              className="px-3"
+              className="p-2 rounded-full bg-primary text-white hover:bg-primary/90 disabled:bg-slate-300 transition"
+              aria-label="Send"
             >
-              <Send className="h-3 w-3" />
-            </Button>
+              <Send className="h-4 w-4" />
+            </button>
           </form>
-        </div>
+        </>
       )}
-    </>
+    </div>
   );
 }
