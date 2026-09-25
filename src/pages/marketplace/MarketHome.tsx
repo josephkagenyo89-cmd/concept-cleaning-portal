@@ -7,6 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import ServiceCard from '@/components/marketplace/ServiceCard';
+import BookingEnginePrompt from '@/components/marketplace/BookingEnginePrompt';
 import {
   MarketService, buildRecommendations, categoryImage, fetchMarketServices, groupByCategory, startingPrice,
 } from '@/lib/marketplace';
@@ -81,6 +82,7 @@ export default function MarketHome() {
 
   return (
     <div>
+      <BookingEnginePrompt />
       {/* Hero */}
       <section className="bg-market px-4 pb-6 pt-4 text-market-foreground">
         <h1 className="text-lg font-bold leading-snug">
