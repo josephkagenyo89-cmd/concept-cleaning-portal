@@ -2,6 +2,7 @@
  * INTELLIGENT BOOKING AGENT API ROUTE
  * POST /api/booking-agent
  * Uses Groq API (free tier)
+ * Supports both authenticated and anonymous users
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -86,7 +87,7 @@ async function extractCustomerIntent(
     content: customerMessage,
   });
 
-  const systemPrompt = `You are an intelligent booking assistant for Concept Cleaning Services in Nairobi.
+  const systemPrompt = `You are an intelligent booking assistant for Concept Cleaning Services in Nairobi, Kenya.
 
 Your ONLY job is to UNDERSTAND what the customer needs, NOT to choose services or make decisions.
 
@@ -390,7 +391,7 @@ function determinePhotoRequirement(
   };
 }
 
-// Create booking engine request
+// Create booking engine request - handles both authenticated and anonymous users
 async function createBookingEngineRequest(
   userId: string,
   matchedService: ServiceMatch,
@@ -428,11 +429,13 @@ async function createBookingEngineRequest(
       throw new Error(`Failed to add item: ${itemError.message}`);
     }
 
+    // Store dialogue and user info
     await supabase
       .from("booking_engine_requests")
       .update({
         dialogue_transcript: conversationHistory,
         extracted_facts: extractedFacts,
+        original_customer_request: conversationHistory[0]?.message || null,
       })
       .eq("id", requestId);
 
@@ -443,17 +446,9 @@ async function createBookingEngineRequest(
   }
 }
 
-// Main handler
+// Main handler - works for both authenticated and anonymous users
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const body: BookingAgentRequest = await request.json();
 
     if (!body.customerMessage) {
@@ -462,6 +457,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // userId can be authenticated user ID or anonymous ID
+    const userId = body.userId || "anonymous-" + Math.random().toString(36).substr(2, 9);
 
     const extractedFacts = await extractCustomerIntent(
       body.customerMessage,
@@ -477,7 +475,7 @@ export async function POST(request: NextRequest) {
     if (matchedService) {
       try {
         const { requestId, itemId } = await createBookingEngineRequest(
-          body.userId,
+          userId,
           matchedService,
           extractedFacts,
           body.conversationHistory || []
