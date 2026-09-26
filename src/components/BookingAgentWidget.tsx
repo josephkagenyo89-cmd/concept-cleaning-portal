@@ -1,7 +1,7 @@
 /**
  * BOOKING AGENT WIDGET - WhatsApp Style
- * Floating widget that appears 10 seconds after page load
- * Calls Supabase Edge Function
+ * Always visible, appears immediately on page load
+ * Minimal, non-intrusive design
  */
 
 import { useState, useEffect } from 'react';
@@ -25,25 +25,16 @@ interface BookingAgentResponse {
   };
   nextStep: string;
   requestId?: string;
+  error?: string;
 }
 
 export default function BookingAgentWidget() {
-  const [isVisible, setIsVisible] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [conversationHistory, setConversationHistory] = useState<DialogueMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
-
-  // Show widget 10 seconds after page load
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 10000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,22 +63,30 @@ export default function BookingAgentWidget() {
       // Generate anonymous ID if not authenticated
       const userId = session?.user?.id || 'anonymous-' + Math.random().toString(36).substr(2, 9);
 
+      console.log('Calling booking-agent function with:', { customerMessage, userId });
+
       // Call Supabase Edge Function
       const response = await supabase.functions.invoke('booking-agent', {
         body: {
           customerMessage,
-          conversationHistory,
+          conversationHistory: newHistory,
           userId,
           requestId,
         },
         headers: authHeader ? { Authorization: authHeader } : {},
       });
 
+      console.log('Function response:', response);
+
       if (response.error) {
         throw new Error(response.error.message || 'Failed to get response');
       }
 
       const data: BookingAgentResponse = response.data;
+
+      if (data.status === 'error') {
+        throw new Error(data.error || data.agentMessage || 'Unknown error');
+      }
 
       const updatedHistory: DialogueMessage[] = [
         ...newHistory,
@@ -106,6 +105,17 @@ export default function BookingAgentWidget() {
     } catch (error) {
       console.error('Widget error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to process message';
+      
+      // Add error message to conversation
+      setConversationHistory(prev => [
+        ...prev,
+        {
+          role: 'agent',
+          message: `Sorry, I had trouble understanding that. ${errorMessage}. Please try again.`,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -116,9 +126,7 @@ export default function BookingAgentWidget() {
     }
   };
 
-  if (!isVisible) return null;
-
-  // Closed/Hidden state - show pill button
+  // Closed/Hidden state - show pill button (always visible)
   if (!isOpen) {
     return (
       <button
