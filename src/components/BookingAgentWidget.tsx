@@ -1,12 +1,13 @@
 /**
  * BOOKING AGENT WIDGET - WhatsApp Style
  * Floating widget that appears 10 seconds after page load
- * Minimal, non-intrusive, like WhatsApp customer care
+ * Calls Supabase Edge Function
  */
 
 import { useState, useEffect } from 'react';
 import { X, MessageCircle, Send, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DialogueMessage {
   role: 'customer' | 'agent';
@@ -64,28 +65,29 @@ export default function BookingAgentWidget() {
 
       setConversationHistory(newHistory);
 
-      const token = localStorage.getItem('sb-token');
-      const userId = localStorage.getItem('user-id') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
+      // Get auth token if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : '';
+      
+      // Generate anonymous ID if not authenticated
+      const userId = session?.user?.id || 'anonymous-' + Math.random().toString(36).substr(2, 9);
 
-      const response = await fetch('/api/booking-agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
+      // Call Supabase Edge Function
+      const response = await supabase.functions.invoke('booking-agent', {
+        body: {
           customerMessage,
           conversationHistory,
           userId,
           requestId,
-        }),
+        },
+        headers: authHeader ? { Authorization: authHeader } : {},
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to get response');
       }
 
-      const data: BookingAgentResponse = await response.json();
+      const data: BookingAgentResponse = response.data;
 
       const updatedHistory: DialogueMessage[] = [
         ...newHistory,
