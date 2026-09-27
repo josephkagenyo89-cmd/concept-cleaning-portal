@@ -71,7 +71,6 @@ const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount")
 const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
 const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
 const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
-const BookingEngine = lazy(() => import("@/pages/marketplace/BookingEngine"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -91,7 +90,6 @@ const marketplaceRoutes = (
       <Route path="/my/documents" element={<CustomerDocuments />} />
       <Route path="/my/messages" element={<CustomerMessages />} />
       <Route path="/my/notifications" element={<CustomerNotifications />} />
-      <Route path="/booking-engine" element={<BookingEngine />} />
       <Route path="/my/support" element={<CustomerSupport />} />
     </Route>
 
