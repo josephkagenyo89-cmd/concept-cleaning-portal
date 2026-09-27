@@ -1,4 +1,3 @@
-import BookingAgentWidget from "@/components/BookingAgentWidget";
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -286,7 +285,6 @@ const App = () => (
           <ErpPwaManager />
           <AppRoutes />
           <CookieBanner />
-          <BookingAgentWidget />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
