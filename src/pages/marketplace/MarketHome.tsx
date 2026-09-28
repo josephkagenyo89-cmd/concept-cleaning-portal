@@ -83,6 +83,16 @@ export default function MarketHome() {
 
   return (
     <div>
+      <style>{`
+        @keyframes blink {
+          0%, 49%, 100% { opacity: 1; }
+          50%, 99% { opacity: 0.5; }
+        }
+        .blink-animation {
+          animation: blink 1s infinite;
+        }
+      `}</style>
+
       {/* Hero */}
       <section className="bg-market px-4 pb-6 pt-4 text-market-foreground">
         <h1 className="text-lg font-bold leading-snug">
@@ -92,13 +102,13 @@ export default function MarketHome() {
           <MapPin className="h-3.5 w-3.5" /> {settings.general.address || 'Nairobi, Kenya'}
         </div>
 
-        {/* Refer & Earn Button - Mobile (above search) */}
+        {/* Refer & Earn Button - Mobile (above search) - Smaller with Blink */}
         <div className="mt-3 md:hidden">
           <Button
             onClick={() => setReferralFormOpen(true)}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1 text-sm blink-animation"
           >
-            <Gift size={18} />
+            <Gift size={16} />
             💰 Refer & Earn
           </Button>
         </div>
