@@ -1,1 +1,2 @@
-project_id = "vbhdbaohwobuhnvtatie"
+[functions.booking-agent]
+verify_jwt = false

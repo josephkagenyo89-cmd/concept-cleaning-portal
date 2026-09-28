@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, ShieldCheck, Star, Sparkles, ArrowDownUp } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, Star, Sparkles, ArrowDownUp, Gift } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import ServiceCard from '@/components/marketplace/ServiceCard';
+import ReferralForm from '@/components/marketplace/ReferralForm';
 import {
   MarketService, buildRecommendations, categoryImage, fetchMarketServices, groupByCategory, startingPrice,
 } from '@/lib/marketplace';
@@ -31,6 +32,7 @@ export default function MarketHome() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('recommended');
   const [history, setHistory] = useState<{ categories: string[]; names: string[] }>({ categories: [], names: [] });
+  const [referralFormOpen, setReferralFormOpen] = useState(false);
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { isCustomer } = useAuth();
@@ -89,6 +91,19 @@ export default function MarketHome() {
         <div className="mt-3 flex items-center gap-1 text-xs opacity-90">
           <MapPin className="h-3.5 w-3.5" /> {settings.general.address || 'Nairobi, Kenya'}
         </div>
+
+        {/* Refer & Earn Button - Mobile (above search) */}
+        <div className="mt-3 md:hidden">
+          <Button
+            onClick={() => setReferralFormOpen(true)}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+          >
+            <Gift size={18} />
+            💰 Refer & Earn
+          </Button>
+        </div>
+
+        {/* Search Field */}
         <div className="relative mt-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -105,11 +120,22 @@ export default function MarketHome() {
         </div>
       </section>
 
+      {/* Refer & Earn Button - Desktop (in header area) */}
+      <section className="hidden md:block px-4 pt-4">
+        <Button
+          onClick={() => setReferralFormOpen(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-lg flex items-center gap-2"
+        >
+          <Gift size={18} />
+          💰 Refer & Earn
+        </Button>
+      </section>
+
       {/* Search results */}
       {query.trim() && (
         <section className="p-4 md:p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold">Results for “{query.trim()}”</h2>
+            <h2 className="text-sm font-bold">Results for "{query.trim()}"</h2>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger className="h-8 w-[150px] text-xs">
                 <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
@@ -148,124 +174,43 @@ export default function MarketHome() {
             </div>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 md:gap-4">
               {grouped.map(([cat]) => (
-                <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`} className="text-center">
-                  <img
-                    src={categoryImage(cat)}
-                    alt={cat}
-                    loading="lazy"
-                    width={800}
-                    height={600}
-                    className="mx-auto h-16 w-16 rounded-full border-2 border-market/20 object-cover"
-                  />
-                  <span className="mt-1 block text-[11px] font-medium leading-tight">{cat}</span>
+                <Link key={cat} to={`/categories/${cat}`}>
+                  <div className="group relative overflow-hidden rounded-xl">
+                    <img src={categoryImage(cat)} alt={cat} className="aspect-square object-cover transition-transform group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-black/40 transition-opacity group-hover:bg-black/50" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <p className="text-center text-xs font-bold text-white">{cat}</p>
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
           </section>
 
-          {/* Recommended (cross-sell / rotating featured) */}
-          <section className="pt-6">
-            <div className="flex items-end justify-between px-4 pb-3">
-              <div>
-                <h2 className="text-sm font-bold">Recommended for you</h2>
-                <p className="text-[11px] text-muted-foreground">{recommendation.reason}</p>
-              </div>
-            </div>
-            <div className="flex gap-3 overflow-x-auto px-4 pb-2">
-              {loading && <p className="text-sm text-muted-foreground">Loading services…</p>}
-              {!loading && recommendation.services.length === 0 && (
-                <p className="text-sm text-muted-foreground">No services published yet.</p>
-              )}
-              {recommendation.services.map((s, i) => <ServiceCard key={s.id} service={s} variant="carousel" priority={i === 0} />)}
-            </div>
-          </section>
-
-          {/* All services by category */}
-          {grouped.map(([cat, list]) => (
-            <section key={cat} className="px-4 pt-6">
+          {/* Recommendations */}
+          {recommendation.length > 0 && (
+            <section className="mt-6 px-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-bold">{cat}</h2>
-                <span className="text-xs text-muted-foreground">{list.length} services</span>
+                <h2 className="text-sm font-bold">Recommended for you</h2>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
-                {list.slice(0, 4).map((s) => <ServiceCard key={s.id} service={s} />)}
+                {recommendation.map((s) => <ServiceCard key={s.id} service={s} />)}
               </div>
-              {list.length > 4 && (
-                <Button
-                  variant="outline"
-                  className="mt-3 w-full"
-                  onClick={() => navigate(`/categories?c=${encodeURIComponent(cat)}`)}
-                >
-                  View all {cat}
-                </Button>
-              )}
             </section>
-          ))}
+          )}
+
+          {/* All services */}
+          <section className="mt-6 px-4 pb-6">
+            <h2 className="mb-3 text-sm font-bold">All services</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
+              {services.map((s) => <ServiceCard key={s.id} service={s} />)}
+            </div>
+          </section>
         </>
       )}
-      <section className="px-4 pt-10 pb-8">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-5 text-center">
-            <h2 className="text-xl font-bold md:text-2xl">Frequently Asked Questions</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Quick answers about booking our cleaning and fumigation services.
-            </p>
-          </div>
 
-          <Accordion type="single" collapsible className="rounded-2xl border bg-card px-4">
-            <AccordionItem value="booking">
-              <AccordionTrigger>How do I book a cleaning service?</AccordionTrigger>
-              <AccordionContent>
-                Browse our services, choose the service you need, select the available options,
-                and continue with your booking. You can also contact our customer care team
-                if you need help choosing a service.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="areas">
-              <AccordionTrigger>Where do you offer your services?</AccordionTrigger>
-              <AccordionContent>
-                We serve Nairobi, Kiambu, and selected areas of Kajiado and Machakos.
-                Availability may vary depending on the service and location.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="pricing">
-              <AccordionTrigger>How much does cleaning cost?</AccordionTrigger>
-              <AccordionContent>
-                Prices depend on the type of service, size or quantity, and the specific
-                cleaning requirements. Each service listing shows its starting price and
-                available options.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="same-day">
-              <AccordionTrigger>Do you offer same-day cleaning?</AccordionTrigger>
-              <AccordionContent>
-                Same-day options are available for selected services and locations,
-                subject to availability.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="fumigation">
-              <AccordionTrigger>Do you provide fumigation and pest control?</AccordionTrigger>
-              <AccordionContent>
-                Yes. We provide pest control services for common household pests including
-                cockroaches, bedbugs, and mosquitoes. Service options and pricing are shown
-                in the relevant service listings.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="contact">
-              <AccordionTrigger>How can I contact Concept Cleaning Services?</AccordionTrigger>
-              <AccordionContent>
-                You can contact our customer care team through the contact options available
-                on the website for booking assistance, service questions, or support.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
+      {/* Referral Form Modal */}
+      <ReferralForm isOpen={referralFormOpen} onClose={() => setReferralFormOpen(false)} />
     </div>
   );
 }
