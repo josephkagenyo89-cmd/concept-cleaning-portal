@@ -545,6 +545,263 @@ export type Database = {
           },
         ]
       }
+      employee_employment: {
+        Row: {
+          contract_reference: string | null
+          created_at: string
+          department_id: string | null
+          employee_id: string
+          employment_status: string | null
+          employment_type: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          position_id: string | null
+          salary_amount: number | null
+          salary_frequency: string | null
+          start_date: string | null
+          supervisor_employee_id: string | null
+          work_location: string | null
+        }
+        Insert: {
+          contract_reference?: string | null
+          created_at?: string
+          department_id?: string | null
+          employee_id: string
+          employment_status?: string | null
+          employment_type?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          position_id?: string | null
+          salary_amount?: number | null
+          salary_frequency?: string | null
+          start_date?: string | null
+          supervisor_employee_id?: string | null
+          work_location?: string | null
+        }
+        Update: {
+          contract_reference?: string | null
+          created_at?: string
+          department_id?: string | null
+          employee_id?: string
+          employment_status?: string | null
+          employment_type?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          position_id?: string | null
+          salary_amount?: number | null
+          salary_frequency?: string | null
+          start_date?: string | null
+          supervisor_employee_id?: string | null
+          work_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_employment_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hr_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_supervisor_employee_id_fkey"
+            columns: ["supervisor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_timeline: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          employee_id: string
+          event_title: string
+          event_type: string
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id: string
+          event_title: string
+          event_type: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id?: string
+          event_title?: string
+          event_type?: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_timeline_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          alternate_phone: string | null
+          county: string | null
+          created_at: string
+          date_of_birth: string | null
+          department_id: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
+          employee_code: string
+          employment_status: string
+          employment_type: string | null
+          first_name: string
+          full_name: string | null
+          gender: string | null
+          hire_date: string | null
+          id: string
+          last_name: string
+          manager_id: string | null
+          marital_status: string | null
+          middle_name: string | null
+          national_id: string | null
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          physical_address: string | null
+          position_id: string | null
+          probation_end_date: string | null
+          termination_date: string | null
+          town: string | null
+          updated_at: string
+          user_id: string | null
+          work_location: string | null
+        }
+        Insert: {
+          alternate_phone?: string | null
+          county?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department_id?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          employee_code: string
+          employment_status?: string
+          employment_type?: string | null
+          first_name: string
+          full_name?: string | null
+          gender?: string | null
+          hire_date?: string | null
+          id?: string
+          last_name: string
+          manager_id?: string | null
+          marital_status?: string | null
+          middle_name?: string | null
+          national_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          physical_address?: string | null
+          position_id?: string | null
+          probation_end_date?: string | null
+          termination_date?: string | null
+          town?: string | null
+          updated_at?: string
+          user_id?: string | null
+          work_location?: string | null
+        }
+        Update: {
+          alternate_phone?: string | null
+          county?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department_id?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          employee_code?: string
+          employment_status?: string
+          employment_type?: string | null
+          first_name?: string
+          full_name?: string | null
+          gender?: string | null
+          hire_date?: string | null
+          id?: string
+          last_name?: string
+          manager_id?: string | null
+          marital_status?: string | null
+          middle_name?: string | null
+          national_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          physical_address?: string | null
+          position_id?: string | null
+          probation_end_date?: string | null
+          termination_date?: string | null
+          town?: string | null
+          updated_at?: string
+          user_id?: string | null
+          work_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hr_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -574,6 +831,88 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      hr_departments: {
+        Row: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          manager_employee_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          manager_employee_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          manager_employee_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_departments_manager_fk"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_positions: {
+        Row: {
+          code: string | null
+          created_at: string
+          department_id: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_positions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       income_records: {
         Row: {
@@ -2002,6 +2341,7 @@ export type Database = {
       next_booking_code: { Args: never; Returns: string }
       next_certificate_number: { Args: never; Returns: string }
       next_client_code: { Args: never; Returns: string }
+      next_employee_code: { Args: never; Returns: string }
       next_expense_voucher_number: { Args: never; Returns: string }
       next_fuel_voucher_number: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
