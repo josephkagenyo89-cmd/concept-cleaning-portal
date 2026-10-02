@@ -88,6 +88,7 @@ export default function AdminBookService() {
   const [clientLocation, setClientLocation] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showClientResults, setShowClientResults] = useState(false);
+  const [clientResolutionStatus, setClientResolutionStatus] = useState<'idle' | 'checking' | 'linked' | 'created' | 'error'>('idle');
   const [services, setServices] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [items, setItems] = useState<ServiceItem[]>([]);
@@ -185,18 +186,54 @@ export default function AdminBookService() {
     c.client_id?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSearch = () => {
+  const resolveClientFromDetails = async () => {
+    const phone = clientPhone.trim();
+    if (!phone) {
+      setSelectedClient('');
+      setClientResolutionStatus('idle');
+      return true;
+    }
+
+    setClientResolutionStatus('checking');
+
+    const { data, error } = await supabase.rpc('resolve_booking_client', {
+      p_full_name: clientName.trim() || 'Unnamed Client',
+      p_phone: phone,
+      p_location: clientLocation.trim() || null,
+      p_created_by_role: currentRole,
+    } as any);
+
+    const resolved = Array.isArray(data) ? data[0] : data;
+
+    if (error || !resolved?.client_id) {
+      console.error('Client resolution failed:', error);
+      setClientResolutionStatus('error');
+      toast({ title: 'Client check failed', description: 'The booking was not linked to a CRM client.', variant: 'destructive' });
+      return false;
+    }
+
+    setSelectedClient(resolved.client_id);
+    setClientName(resolved.full_name || clientName);
+    setClientPhone(resolved.phone || phone);
+    setClientLocation(resolved.location || clientLocation);
+    setSearchQuery(resolved.client_code || resolved.phone || phone);
+    setShowClientResults(false);
+    setClientResolutionStatus(resolved.was_created ? 'created' : 'linked');
+    return true;
+  };
+
+  const handleSearch = async () => {
     if (searchQuery.trim() === '') {
       setShowClientResults(false);
       return;
     }
     if (filteredClients.length > 0) {
       setShowClientResults(true);
-    } else {
-      // No client found – navigate to CRM
-      toast({ title: 'Client not found', description: 'Redirecting to CRM to add new client...' });
-      navigate('/admin/clients');
+      return;
     }
+    setClientPhone(searchQuery.trim());
+    setShowClientResults(false);
+    await resolveClientFromDetails();
   };
 
   const handleWalkIn = () => {
@@ -303,6 +340,11 @@ export default function AdminBookService() {
   });
 
   const insertBooking = async (statusValue: string) => {
+    const clientResolved = await resolveClientFromDetails();
+    if (!clientResolved) {
+      return { data: null, error: new Error('Unable to resolve CRM client') };
+    }
+
     const payload = buildPayload(statusValue);
     return await (supabase
       .from('bookings')
@@ -418,6 +460,7 @@ export default function AdminBookService() {
     setLockStatus('UNLOCKED');
     setSearchQuery('');
     setShowClientResults(false);
+    setClientResolutionStatus('idle');
   };
 
   const fieldClass = 'h-8 text-xs rounded border-input bg-background';
@@ -473,17 +516,18 @@ export default function AdminBookService() {
               <Label className="text-[10px] uppercase text-muted-foreground">Client ID or Phone Search</Label>
               <div className="flex flex-wrap gap-1.5">
                 <div className="relative min-w-[160px] flex-1">
-                  <Input className={fieldClass} placeholder="Client ID or phone" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setShowClientResults(e.target.value.length > 0); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }} />
+                  <Input className={fieldClass} placeholder="Client ID or phone" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setShowClientResults(e.target.value.length > 0); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); } }} />
                   {showClientResults && searchQuery && (
                     <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded border bg-popover shadow-lg">
-                      {filteredClients.length > 0 ? filteredClients.map((client) => <button type="button" key={client.id} className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => handleClientSelect(client.id)}><span className="font-medium">{client.name}</span><span className="text-muted-foreground">{client.client_id || client.phone}</span></button>) : <button type="button" className="w-full px-3 py-3 text-left text-xs text-destructive" onClick={() => navigate('/admin/clients')}>Client not found. Create New Client.</button>}
+                      {filteredClients.length > 0 ? filteredClients.map((client) => <button type="button" key={client.id} className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => handleClientSelect(client.id)}><span className="font-medium">{client.name}</span><span className="text-muted-foreground">{client.client_id || client.phone}</span></button>) : <button type="button" className="w-full px-3 py-3 text-left text-xs text-primary" onClick={() => void resolveClientFromDetails()}>No CRM match. Create and link this client.</button>}
                     </div>
                   )}
                 </div>
-                <Button variant="outline" size="sm" onClick={handleSearch}><Search className="mr-1 h-3.5 w-3.5" />Search CRM</Button>
+                <Button variant="outline" size="sm" onClick={() => void handleSearch()}><Search className="mr-1 h-3.5 w-3.5" />Search CRM</Button>
                 {bookingSettings.client.allowWalkIn && <Button variant="outline" size="sm" onClick={handleWalkIn}><UserCheck className="mr-1 h-3.5 w-3.5" />Walk-in</Button>}
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="text-[10px] text-muted-foreground">{clientResolutionStatus === 'checking' ? 'Checking CRM…' : clientResolutionStatus === 'linked' ? '✓ Existing CRM client linked' : clientResolutionStatus === 'created' ? '✓ New CRM client created and linked' : clientResolutionStatus === 'error' ? 'CRM client link needs attention' : 'Client will be checked automatically when booking is saved'}</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 <div><Label className="text-[10px]">Client Name</Label><Input className={fieldClass} value={clientName} onChange={(e) => setClientName(e.target.value)} /></div>
                 <div><Label className="text-[10px]">Phone Number</Label><Input className={fieldClass} value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
                 <div><Label className="text-[10px]">Company Name</Label><Input className={fieldClass} value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></div>
