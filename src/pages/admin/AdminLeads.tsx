@@ -40,8 +40,19 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
+type LeadTransaction = {
+  booking_id: string;
+  booking_code: string | null;
+  booking_status: string | null;
+  quotation_exists: boolean;
+  invoice_exists: boolean;
+  invoice_status: string | null;
+  invoice_amount: number;
+  amount_paid: number;
+};
 type Lead = {
   id: string;
+  booking_id: string | null;
   lead_code: string;
   full_name: string;
   phone: string | null;
@@ -59,6 +70,7 @@ type Lead = {
   converted_at: string | null;
   created_at: string;
 };
+
 
 const STATUS_OPTIONS = [
   ['new', 'New'],
@@ -145,6 +157,7 @@ export default function AdminLeads() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [transactions, setTransactions] = useState<Record<string, LeadTransaction>>({});
 
   const [form, setForm] = useState({
     full_name: '',
@@ -159,6 +172,75 @@ export default function AdminLeads() {
     estimated_value: '',
     notes: '',
   });
+
+  const getTransactionStatus = (tx?: LeadTransaction) => {
+    if (!tx) return 'Enquiry';
+    if (tx.booking_status === 'cancelled') return 'Cancelled';
+    if (tx.booking_status === 'completed') {
+      return tx.invoice_status === 'paid' ? 'Completed · Paid' : 'Completed';
+    }
+    if (tx.invoice_status === 'paid') return 'Paid';
+    if (tx.invoice_status === 'partial') return 'Partially Paid';
+    if (tx.invoice_exists) return 'Invoiced';
+    if (tx.quotation_exists) return 'Quoted';
+    if (tx.booking_status) return 'Booked';
+    return 'Enquiry';
+  };
+
+  const loadTransactions = async (leadRows: Lead[]) => {
+    const linkedLeads = leadRows.filter((lead) => lead.booking_id);
+    if (linkedLeads.length === 0) {
+      setTransactions({});
+      return;
+    }
+
+    const bookingIds = linkedLeads.map((lead) => lead.booking_id as string);
+
+    const [{ data: bookings }, { data: invoices }] = await Promise.all([
+      supabase
+        .from('bookings')
+        .select('id, booking_code, status, price, amount_paid')
+        .in('id', bookingIds),
+      supabase
+        .from('invoices')
+        .select('booking_id, payment_status, amount')
+        .in('booking_id', bookingIds),
+    ]);
+
+    const quotationLocalIds = (bookings || [])
+      .map((booking: any) => booking.booking_code)
+      .filter(Boolean);
+
+    const { data: quotations } = quotationLocalIds.length
+      ? await supabase
+          .from('quotations')
+          .select('local_id')
+          .in('local_id', quotationLocalIds)
+      : { data: [] as any[] };
+
+    const quotationSet = new Set((quotations || []).map((q: any) => q.local_id));
+    const nextTransactions: Record<string, LeadTransaction> = {};
+
+    linkedLeads.forEach((lead) => {
+      const booking = (bookings || []).find((b: any) => b.id === lead.booking_id);
+      const invoice = (invoices || []).find((i: any) => i.booking_id === lead.booking_id);
+
+      if (!booking) return;
+
+      nextTransactions[lead.id] = {
+        booking_id: booking.id,
+        booking_code: booking.booking_code,
+        booking_status: booking.status,
+        quotation_exists: Boolean(booking.booking_code && quotationSet.has(booking.booking_code)),
+        invoice_exists: Boolean(invoice),
+        invoice_status: invoice?.payment_status || null,
+        invoice_amount: Number(invoice?.amount || 0),
+        amount_paid: Number(booking.amount_paid || 0),
+      };
+    });
+
+    setTransactions(nextTransactions);
+  };
 
   const loadLeads = async () => {
     setLoading(true);
@@ -176,6 +258,7 @@ export default function AdminLeads() {
       });
     } else {
       setLeads((data || []) as Lead[]);
+      await loadTransactions((data || []) as Lead[]);
     }
 
     setLoading(false);
@@ -621,6 +704,7 @@ export default function AdminLeads() {
                       {priorityLabel(lead.priority)}
                     </Badge>
 
+                    <Badge variant="secondary">{getTransactionStatus(transactions[lead.id])}</Badge>
                     <Badge className={statusClass(lead.status)}>
                       {statusLabel(lead.status)}
                     </Badge>

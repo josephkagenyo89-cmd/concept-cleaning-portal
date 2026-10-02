@@ -64,6 +64,50 @@ export default function AdminLeadProfile() {
   const [activities, setActivities] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [transaction, setTransaction] = useState<any>(null);
+
+  const loadTransaction = async (bookingId: string | null) => {
+    if (!bookingId) {
+      setTransaction(null);
+      return;
+    }
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, booking_code, status, price, amount_paid, service_date, client_id')
+      .eq('id', bookingId)
+      .maybeSingle();
+
+    if (!booking) {
+      setTransaction(null);
+      return;
+    }
+
+    const [{ data: quotation }, { data: invoice }] = await Promise.all([
+      supabase
+        .from('quotations')
+        .select('id, quotation_number, local_id, price, subtotal, discount_amount')
+        .eq('local_id', booking.booking_code)
+        .maybeSingle(),
+      supabase
+        .from('invoices')
+        .select('id, invoice_number, amount, payment_status, mpesa_code, payment_date, booking_id')
+        .eq('booking_id', booking.id)
+        .maybeSingle(),
+    ]);
+
+    const invoiceAmount = Number(invoice?.amount || 0);
+    const amountPaid = Number(booking.amount_paid || 0);
+
+    setTransaction({
+      booking,
+      quotation,
+      invoice,
+      invoiceAmount,
+      amountPaid,
+      balance: Math.max(0, invoiceAmount - amountPaid),
+    });
+  };
   const [saving, setSaving] = useState(false);
   const [activityText, setActivityText] = useState('');
   const [taskTitle, setTaskTitle] = useState('');
@@ -100,6 +144,13 @@ export default function AdminLeadProfile() {
     setLead(leadResult.data);
     setActivities(activitiesResult.data || []);
     setTasks(tasksResult.data || []);
+
+    if (leadResult.data?.booking_id) {
+      await loadTransaction(leadResult.data.booking_id);
+    } else {
+      setTransaction(null);
+    }
+
     setLoading(false);
   };
 
@@ -436,6 +487,80 @@ export default function AdminLeadProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {transaction && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Transaction 360</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Complete commercial lifecycle for this lead
+                </p>
+              </div>
+              <Badge variant="secondary">
+                {transaction.invoice?.payment_status === 'paid'
+                  ? transaction.booking?.status === 'completed'
+                    ? 'Completed · Paid'
+                    : 'Paid'
+                  : transaction.invoice
+                    ? transaction.invoice.payment_status === 'partial'
+                      ? 'Partially Paid'
+                      : 'Invoiced'
+                    : transaction.quotation
+                      ? 'Quoted'
+                      : 'Booked'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Booking</p>
+                <p className="font-semibold mt-1">{transaction.booking.booking_code || transaction.booking.id}</p>
+                <p className="text-sm text-muted-foreground capitalize mt-1">
+                  {String(transaction.booking.status || "").replace(/_/g, " ")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Service: {transaction.booking.service_date}
+                </p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate(`/admin/bookings/${transaction.booking.id}`)}>
+                  View Booking
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Quotation</p>
+                {transaction.quotation ? (
+                  <>
+                    <p className="font-semibold mt-1">{transaction.quotation.quotation_number}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      KSh {Number(transaction.quotation.price || 0).toLocaleString()}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-2">No quotation generated yet.</p>
+                )}
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Invoice & Payment</p>
+                {transaction.invoice ? (
+                  <>
+                    <p className="font-semibold mt-1">{transaction.invoice.invoice_number}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Amount: KSh {transaction.invoiceAmount.toLocaleString()}</p>
+                    <p className="text-sm mt-1 capitalize">Status: {String(transaction.invoice.payment_status || "").replace(/_/g, " ")}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Paid: KSh {transaction.amountPaid.toLocaleString()}</p>
+                    <p className="text-sm font-medium mt-1">Balance: KSh {transaction.balance.toLocaleString()}</p>
+                    {transaction.invoice.mpesa_code && <p className="text-xs text-muted-foreground mt-2">M-Pesa: {transaction.invoice.mpesa_code}</p>}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-2">Invoice not generated yet.</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {lead.notes && (
         <Card>
