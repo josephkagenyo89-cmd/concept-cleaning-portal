@@ -16,6 +16,8 @@ import { setPdfSettings } from '@/lib/documentPdf';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
+  { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
+  { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
   { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },
@@ -30,13 +32,10 @@ const navItems = [
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
-  { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/admin/settings', icon: Settings2, label: 'Settings' },
 ];
-
 const erpNavItems = [
   { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
   { to: '/admin/erp/income', icon: DollarSign, label: 'Income' },
