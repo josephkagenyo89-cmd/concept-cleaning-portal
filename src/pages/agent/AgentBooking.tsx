@@ -289,6 +289,7 @@ export default function AgentBooking() {
               <p className="text-sm font-medium mb-2">Generate Quotation</p>
               <QuotationActions
                 clientName={selectedClient?.full_name || ''}
+                clientId={selectedClient?.id}
                 clientPhone={selectedClient?.phone || ''}
                 serviceName={lineItems.map(i => i.service.name).join(', ')}
                 serviceDate={date}

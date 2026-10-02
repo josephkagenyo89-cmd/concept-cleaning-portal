@@ -47,6 +47,8 @@ const AdminBookService = lazy(() => import("@/pages/admin/AdminBookService"));
 const AdminQuotations = lazy(() => import("@/pages/admin/AdminQuotations"));
 const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
 const AdminClients = lazy(() => import("@/pages/admin/AdminClients"));
+const AdminLeads = lazy(() => import("@/pages/admin/AdminLeads"));
+const AdminLeadProfile = lazy(() => import("@/pages/admin/AdminLeadProfile"));
 const AdminClientProfile = lazy(() => import("@/pages/admin/AdminClientProfile"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminCertificates = lazy(() => import("@/pages/admin/AdminCertificates"));
@@ -133,6 +135,8 @@ function AdminGate() {
         <Route path="payouts" element={<AdminPayouts />} />
         <Route path="services" element={<AdminServices />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="leads/:id" element={<AdminLeadProfile />} />
+        <Route path="leads" element={<AdminLeads />} />
         <Route path="clients" element={<AdminClients />} />
         <Route path="clients/:id" element={<AdminClientProfile />} />
         <Route path="notices" element={<AdminNotices />} />

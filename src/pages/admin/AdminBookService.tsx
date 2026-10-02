@@ -320,6 +320,7 @@ export default function AdminBookService() {
       if (!quotationNumber) throw new Error('Failed to generate quotation number.');
       const quotationPayload = {
         quotation_number: quotationNumber,
+        client_id: selectedClient || null,
         client_name: clientName,
         client_phone: clientPhone || '',
         service_name: items.map(i => i.name).join(', '),

@@ -34,6 +34,7 @@ export async function autoCreateQuotationForBooking(params: AutoQuotationParams)
   // Save quotation row
   const { data: q } = await supabase.from('quotations').insert({
     quotation_number: quotationNumber,
+    client_id: params.clientId || null,
     client_name: params.clientName,
     client_phone: params.clientPhone,
     service_name: params.lineItems.map(i => i.name).join(', '),

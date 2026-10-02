@@ -16,6 +16,7 @@ interface LineItemInput {
 
 interface QuotationActionsProps {
   clientName: string;
+  clientId?: string;
   clientPhone: string;
   serviceName: string;
   serviceDate: Date | undefined;
@@ -31,7 +32,7 @@ interface QuotationActionsProps {
 }
 
 export default function QuotationActions({
-  clientName, clientPhone, serviceName, serviceDate, price, userId, userName, userRole, disabled,
+  clientName, clientPhone, serviceName, serviceDate, price, userId, userName, userRole, clientId, disabled,
   lineItems, salespersonName, salespersonId, salespersonRole,
 }: QuotationActionsProps) {
   const [generating, setGenerating] = useState(false);
@@ -52,6 +53,7 @@ export default function QuotationActions({
     // Save to quotations table
     const { data: savedQuotation, error: saveError } = await supabase.from('quotations').insert({
       quotation_number: quotationNumber,
+      client_id: clientId || null,
       client_name: clientName,
       client_phone: clientPhone,
       service_name: resolvedItems.map(i => i.name).join(', '),
