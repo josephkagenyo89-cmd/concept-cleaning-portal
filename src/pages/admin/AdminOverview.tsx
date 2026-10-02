@@ -88,7 +88,7 @@ export default function AdminOverview() {
   }
 
   return (
-    <div className="w-full space-y-4 pb-6 sm:space-y-5 sm:pb-8">
+    <div className="w-full space-y-4 border-t-4 border-t-[#0B3D91] pb-6 sm:space-y-5 sm:pb-8">
       <ProfileHeader />
 
       <div className="flex flex-col gap-3 border-b pb-4 sm:gap-4 sm:pb-5 lg:flex-row lg:items-center lg:justify-between">
@@ -97,7 +97,7 @@ export default function AdminOverview() {
             <span>Home</span><ChevronRight className="h-3.5 w-3.5" /><span className="text-foreground">Overview</span>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Business Overview</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[#0B3D91] sm:text-2xl">Business Overview</h1>
             <Badge variant="secondary" className="font-normal">{roleLabel}</Badge>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground sm:text-sm">
@@ -108,7 +108,7 @@ export default function AdminOverview() {
           <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={refreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
           </Button>
-          <Button size="sm" asChild><Link to="/admin/book-service"><Plus className="mr-2 h-4 w-4" /> New Booking</Link></Button>
+          <Button size="sm" className="bg-[#0B3D91] hover:bg-[#092f70]" asChild><Link to="/admin/book-service"><Plus className="mr-2 h-4 w-4" /> New Booking</Link></Button>
         </div>
       </div>
 
@@ -122,17 +122,17 @@ export default function AdminOverview() {
 
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
         {[
-          ['Bookings Today', stats.todayBookings, 'New activity today', CalendarDays, '/admin/bookings'],
-          ['New Quotations', stats.newQuotations, 'Created today', FileText, '/admin/quotations'],
-          ['Completed Revenue', money(stats.revenue), 'From completed bookings', TrendingUp, '/admin/erp'],
-          ['Total Customers Activity', stats.bookings, 'Bookings in system', Users, '/admin/bookings'],
-        ].map(([label, value, note, Icon, to]) => (
+          ['Bookings Today', stats.todayBookings, 'New activity today', CalendarDays, '/admin/bookings', 'text-[#0B3D91]'],
+          ['New Quotations', stats.newQuotations, 'Created today', FileText, '/admin/quotations', 'text-[#C9A227]'],
+          ['Completed Revenue', money(stats.revenue), 'From completed bookings', TrendingUp, '/admin/erp', 'text-[#00A651]'],
+          ['Total Customers Activity', stats.bookings, 'Bookings in system', Users, '/admin/bookings', 'text-[#333333]'],
+        ].map(([label, value, note, Icon, to, iconColor]) => (
           <Link key={String(label)} to={String(to)}>
-            <Card className="h-full transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <Card className="h-full border-t-2 border-t-[#0B3D91] transition-all hover:-translate-y-0.5 hover:shadow-md">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">{label}</span>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <Icon className={`h-4 w-4 ${iconColor}`} />
                 </div>
                 <div className="mt-1.5 text-xl font-semibold tracking-tight sm:mt-2 sm:text-2xl">{value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{note}</div>
@@ -158,8 +158,8 @@ export default function AdminOverview() {
               ['Active Agents', stats.agents, Users],
               ['Pending Payouts', stats.pendingPayouts, CreditCard],
             ].map(([label, value, Icon]) => (
-              <div key={String(label)} className="rounded-lg border bg-muted/20 p-3 sm:p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{label}</div>
+              <div key={String(label)} className="rounded-lg border bg-slate-50/70 p-3 sm:p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4 text-[#0B3D91]" />{label}</div>
                 <p className="mt-2 text-xl font-semibold">{value}</p>
               </div>
             ))}
@@ -168,7 +168,7 @@ export default function AdminOverview() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Bell className="h-4 w-4" /> Needs Attention</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Bell className="h-4 w-4 text-[#C9A227]" /> Needs Attention</CardTitle>
             <p className="text-xs text-muted-foreground">Work queues requiring action</p>
           </CardHeader>
           <CardContent className="space-y-2.5">
@@ -183,7 +183,7 @@ export default function AdminOverview() {
                   <Icon className="h-4 w-4 text-muted-foreground" />
                   <div><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{text}</p></div>
                 </div>
-                <Badge variant={Number(value) > 0 ? 'default' : 'secondary'}>{value}</Badge>
+                <Badge variant={Number(value) > 0 ? 'default' : 'secondary'} className={Number(value) > 0 ? 'bg-[#0B3D91] hover:bg-[#092f70]' : ''}>{value}</Badge>
               </Link>
             ))}
           </CardContent>
@@ -196,7 +196,7 @@ export default function AdminOverview() {
           {actions.map(({ label, text, icon: Icon, to }) => (
             <Link key={label} to={to} className="group min-w-0 rounded-lg border p-3 transition-colors sm:p-4 hover:border-primary/40 hover:bg-muted/40">
               <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#0B3D91]/10 text-[#0B3D91]"><Icon className="h-4 w-4" /></div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
               </div>
               <p className="mt-3 text-sm font-semibold">{label}</p><p className="mt-1 text-xs text-muted-foreground">{text}</p>
@@ -217,7 +217,7 @@ export default function AdminOverview() {
                 {recentBookings.map((booking) => (
                   <Link key={booking.id} to={`/admin/bookings/${booking.id}`} className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 hover:bg-muted/40 sm:gap-3 sm:px-5">
                     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><BookOpen className="h-4 w-4" /></div>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#00A651]/10 text-[#00A651]"><BookOpen className="h-4 w-4" /></div>
                       <div className="min-w-0"><p className="truncate text-sm font-medium">{booking.booking_code || 'Booking'}</p><p className="text-xs text-muted-foreground">{dateLabel(booking.created_at)}</p></div>
                     </div>
                     <div className="max-w-[42%] text-right"><Badge variant="outline" className="capitalize">{booking.status.replace(/_/g, ' ')}</Badge><p className="mt-1 text-xs font-medium">{money(Number(booking.price || 0))}</p></div>
@@ -230,7 +230,7 @@ export default function AdminOverview() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4" /> Operational Snapshot</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4 text-[#00A651]" /> Operational Snapshot</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">At-a-glance control of the business</p>
           </CardHeader>
           <CardContent className="space-y-2.5 sm:space-y-3">
