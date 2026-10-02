@@ -88,23 +88,23 @@ export default function AdminOverview() {
   }
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="w-full space-y-4 pb-6 sm:space-y-5 sm:pb-8">
       <ProfileHeader />
 
-      <div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 border-b pb-4 sm:gap-4 sm:pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground sm:gap-2 sm:text-xs">
             <span>Home</span><ChevronRight className="h-3.5 w-3.5" /><span className="text-foreground">Overview</span>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Business Overview</h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Business Overview</h1>
             <Badge variant="secondary" className="font-normal">{roleLabel}</Badge>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs leading-5 text-muted-foreground sm:text-sm">
             Welcome back, <span className="font-medium text-foreground">{profile?.full_name || 'User'}</span>. Manage the business from one connected workspace.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={refreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
           </Button>
@@ -112,7 +112,7 @@ export default function AdminOverview() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2 shadow-sm">
+      <div className="flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
         <Search className="h-4 w-4 text-muted-foreground" />
         <Link to="/admin/clients" className="flex-1 text-sm text-muted-foreground hover:text-foreground">
           Search customers, leads, bookings and services…
@@ -120,7 +120,7 @@ export default function AdminOverview() {
         <kbd className="hidden rounded border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">Ctrl K</kbd>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
         {[
           ['Bookings Today', stats.todayBookings, 'New activity today', CalendarDays, '/admin/bookings'],
           ['New Quotations', stats.newQuotations, 'Created today', FileText, '/admin/quotations'],
@@ -129,12 +129,12 @@ export default function AdminOverview() {
         ].map(([label, value, note, Icon, to]) => (
           <Link key={String(label)} to={String(to)}>
             <Card className="h-full transition-all hover:-translate-y-0.5 hover:shadow-md">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">{label}</span>
                   <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="mt-2 text-2xl font-semibold tracking-tight">{value}</div>
+                <div className="mt-1.5 text-xl font-semibold tracking-tight sm:mt-2 sm:text-2xl">{value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{note}</div>
               </CardContent>
             </Card>
@@ -142,23 +142,23 @@ export default function AdminOverview() {
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+      <div className="grid gap-4 xl:grid-cols-3 sm:gap-5">
+        <Card className="xl:col-span-2 min-w-0">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
             <div>
               <CardTitle className="text-base">Business Performance</CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">Core operating indicators across the ERP</p>
             </div>
             <Button variant="ghost" size="sm" asChild><Link to="/admin/analytics">Analytics <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <CardContent className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             {[
               ['Total Bookings', stats.bookings, BookOpen],
               ['Completed', stats.completedBookings, CheckCircle2],
               ['Active Agents', stats.agents, Users],
               ['Pending Payouts', stats.pendingPayouts, CreditCard],
             ].map(([label, value, Icon]) => (
-              <div key={String(label)} className="rounded-lg border bg-muted/20 p-4">
+              <div key={String(label)} className="rounded-lg border bg-muted/20 p-3 sm:p-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{label}</div>
                 <p className="mt-2 text-xl font-semibold">{value}</p>
               </div>
@@ -171,7 +171,7 @@ export default function AdminOverview() {
             <CardTitle className="flex items-center gap-2 text-base"><Bell className="h-4 w-4" /> Needs Attention</CardTitle>
             <p className="text-xs text-muted-foreground">Work queues requiring action</p>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2.5">
             {[
               ['Agent approvals', 'Pending review', stats.pendingApprovals, UserCheck, '/admin/agents'],
               ['Payout requests', 'Awaiting processing', stats.pendingPayouts, WalletCards, '/admin/payouts'],
@@ -192,9 +192,9 @@ export default function AdminOverview() {
 
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <CardContent className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
           {actions.map(({ label, text, icon: Icon, to }) => (
-            <Link key={label} to={to} className="group rounded-lg border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40">
+            <Link key={label} to={to} className="group min-w-0 rounded-lg border p-3 transition-colors sm:p-4 hover:border-primary/40 hover:bg-muted/40">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
@@ -205,7 +205,7 @@ export default function AdminOverview() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2 sm:gap-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div><CardTitle className="text-base">Recent Bookings</CardTitle><p className="mt-1 text-xs text-muted-foreground">Latest customer transactions</p></div>
@@ -215,12 +215,12 @@ export default function AdminOverview() {
             {recentBookings.length === 0 ? <div className="p-6 text-sm text-muted-foreground">No bookings yet.</div> : (
               <div className="divide-y">
                 {recentBookings.map((booking) => (
-                  <Link key={booking.id} to={`/admin/bookings/${booking.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-muted/40">
-                    <div className="flex min-w-0 items-center gap-3">
+                  <Link key={booking.id} to={`/admin/bookings/${booking.id}`} className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 hover:bg-muted/40 sm:gap-3 sm:px-5">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><BookOpen className="h-4 w-4" /></div>
                       <div className="min-w-0"><p className="truncate text-sm font-medium">{booking.booking_code || 'Booking'}</p><p className="text-xs text-muted-foreground">{dateLabel(booking.created_at)}</p></div>
                     </div>
-                    <div className="text-right"><Badge variant="outline" className="capitalize">{booking.status.replace(/_/g, ' ')}</Badge><p className="mt-1 text-xs font-medium">{money(Number(booking.price || 0))}</p></div>
+                    <div className="max-w-[42%] text-right"><Badge variant="outline" className="capitalize">{booking.status.replace(/_/g, ' ')}</Badge><p className="mt-1 text-xs font-medium">{money(Number(booking.price || 0))}</p></div>
                   </Link>
                 ))}
               </div>
@@ -233,7 +233,7 @@ export default function AdminOverview() {
             <CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4" /> Operational Snapshot</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">At-a-glance control of the business</p>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5 sm:space-y-3">
             {[
               ['Today’s bookings', stats.todayBookings, '/admin/bookings', CalendarDays],
               ['Completed bookings', stats.completedBookings, '/admin/bookings', CheckCircle2],
