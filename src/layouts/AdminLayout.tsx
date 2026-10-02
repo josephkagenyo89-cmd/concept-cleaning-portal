@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug,
+  Settings2, Award, Star, Bug, Briefcase, Building2, IdCard,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -35,6 +35,12 @@ const navItems = [
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/admin/settings', icon: Settings2, label: 'Settings' },
+];
+const hrNavItems = [
+  { to: '/admin/hr', icon: Briefcase, label: 'HR Dashboard', end: true },
+  { to: '/admin/hr/employees', icon: Users, label: 'Employees' },
+  { to: '/admin/hr/departments', icon: Building2, label: 'Departments' },
+  { to: '/admin/hr/positions', icon: IdCard, label: 'Positions' },
 ];
 const erpNavItems = [
   { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
@@ -110,8 +116,10 @@ export default function AdminLayout() {
             </NavLink>
           ))}
 
-          <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">ERP & Accounting</p>
-          {erpNavItems.map(({ to, icon: Icon, label, end }) => (
+          <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Human Resources</p>
+          {[hrNavItems, erpNavItems].flatMap((group, gi) => [
+            gi === 1 ? <p key="erp-label" className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">ERP & Accounting</p> : null,
+            ...group.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -127,7 +135,7 @@ export default function AdminLayout() {
               <Icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{label}</span>
             </NavLink>
-          ))}
+          ))])}
         </nav>
 
         {/* Support card */}

@@ -59,6 +59,11 @@ const AdminPestChemicals = lazy(() => import("@/pages/admin/AdminPestChemicals")
 const AdminPestRevisits = lazy(() => import("@/pages/admin/AdminPestRevisits"));
 const AdminDiscountApprovals = lazy(() => import("@/pages/admin/AdminDiscountApprovals"));
 const AdminDiscountReports = lazy(() => import("@/pages/admin/AdminDiscountReports"));
+const HrDashboard = lazy(() => import("@/pages/admin/hr/HrDashboard"));
+const HrEmployees = lazy(() => import("@/pages/admin/hr/HrEmployees"));
+const HrEmployee360 = lazy(() => import("@/pages/admin/hr/HrEmployee360"));
+const HrDepartments = lazy(() => import("@/pages/admin/hr/HrDepartments"));
+const HrPositions = lazy(() => import("@/pages/admin/hr/HrPositions"));
 
 // Marketplace + customer portal
 const MarketplaceLayout = lazy(() => import("@/components/marketplace/MarketplaceLayout"));
@@ -147,6 +152,11 @@ function AdminGate() {
         <Route path="pest/chemicals" element={<AdminPestChemicals />} />
         <Route path="pest/revisits" element={<AdminPestRevisits />} />
         <Route path="pest/:id" element={<AdminPestJobDetail />} />
+        <Route path="hr" element={<HrDashboard />} />
+        <Route path="hr/employees" element={<HrEmployees />} />
+        <Route path="hr/employees/:id" element={<HrEmployee360 />} />
+        <Route path="hr/departments" element={<HrDepartments />} />
+        <Route path="hr/positions" element={<HrPositions />} />
         <Route path="erp" element={<ErpDashboard />} />
         <Route path="erp/income" element={<ErpIncome />} />
         <Route path="erp/expenses" element={<ErpExpenses />} />
