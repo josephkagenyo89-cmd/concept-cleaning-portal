@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
+import { downloadCustomerBooking } from '@/lib/customerDownloads';
 import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
@@ -18,7 +19,6 @@ import {
   Lock, Receipt, Award, Printer, Download, Phone, Mail, CreditCard,
 } from 'lucide-react';
 
-const VAT_RATE = 0.16;
 
 function fmt(n: number) {
   return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -93,10 +93,6 @@ export default function AdminBookingDetails() {
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [paymentSaving, setPaymentSaving] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'bank'>('mpesa');
-  const [paymentReference, setPaymentReference] = useState('');
   const [comment, setComment] = useState('');
   const [qrUrl, setQrUrl] = useState<string>('');
 
@@ -144,9 +140,8 @@ export default function AdminBookingDetails() {
     const discountAmount = Number(booking?.discount_amount || 0);
     const approved = booking?.discount_approval_status === 'approved' || booking?.discount_approval_status === 'not_required';
     const afterDiscount = approved ? subtotal - discountAmount : subtotal;
-    const vat = afterDiscount * VAT_RATE;
-    const grand = afterDiscount + vat;
-    return { subtotal, discountAmount, afterDiscount, vat, grand, approved };
+    const grand = afterDiscount;
+    return { subtotal, discountAmount, afterDiscount, vat: 0, grand, approved };
   }, [booking]);
 
   const approveDiscount = async (decision: 'approved' | 'rejected') => {
@@ -168,34 +163,49 @@ export default function AdminBookingDetails() {
     load();
   };
 
-  const recordPayment = async () => {
-    if (!booking || !user) return;
-    const outstanding = Math.max(0, totals.grand - Number(booking.amount_paid || 0));
-    if (outstanding <= 0) {
-      toast({ title: 'Already paid', description: 'This booking has no outstanding balance.' });
-      return;
-    }
-    if ((paymentMethod === 'mpesa' || paymentMethod === 'bank') && !paymentReference.trim()) {
-      toast({ title: 'Reference required', description: paymentMethod === 'mpesa' ? 'Enter the M-Pesa transaction code.' : 'Enter the bank reference.', variant: 'destructive' });
-      return;
-    }
-    setPaymentSaving(true);
-    const { error } = await supabase.rpc('collect_booking_payment', {
-      p_booking_id: booking.id,
-      p_payment_method: paymentMethod,
-      p_payment_reference: paymentReference.trim() || null,
-    });
-    setPaymentSaving(false);
-    if (error) {
-      toast({ title: 'Payment failed', description: error.message, variant: 'destructive' });
-      return;
-    }
-    toast({ title: 'Payment recorded', description: `KES ${fmt(outstanding)} payment recorded successfully.` });
-    setPaymentOpen(false);
-    setPaymentReference('');
+  const saveBooking = async () => {
+    if (!booking) return;
+    const { error } = await supabase.from('bookings').update({ updated_at: new Date().toISOString() } as any).eq('id', booking.id);
+    if (error) return toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
+    toast({ title: 'Booking saved' });
     await load();
   };
 
+  const confirmBooking = async () => {
+    if (!booking) return;
+    const { error } = await supabase.from('bookings').update({ status: 'confirmed', updated_at: new Date().toISOString() } as any).eq('id', booking.id);
+    if (error) return toast({ title: 'Confirmation failed', description: error.message, variant: 'destructive' });
+    toast({ title: 'Booking confirmed' });
+    await load();
+  };
+
+  const toggleLock = async () => {
+    if (!booking) return;
+    const next = !Boolean(booking.is_locked);
+    const { error } = await supabase.from('bookings').update({ is_locked: next, updated_at: new Date().toISOString() } as any).eq('id', booking.id);
+    if (error) return toast({ title: 'Lock update failed', description: error.message, variant: 'destructive' });
+    toast({ title: next ? 'Booking locked' : 'Booking unlocked' });
+    await load();
+  };
+
+  const openWhatsApp = () => {
+    const phone = String(booking?.client_phone || '').replace(/\D/g, '');
+    if (!phone) return toast({ title: 'No client phone number', variant: 'destructive' });
+    const wa = phone.startsWith('0') ? '254' + phone.slice(1) : phone.startsWith('254') ? phone : '254' + phone;
+    const message = encodeURIComponent('Hello ' + (booking.client_name || 'Client') + ',\n\nRegarding your booking ' + bookingNo + ': ' + (booking.services?.name || 'Cleaning Service') + '.\n\nConcept Cleaning Services');
+    window.open('https://wa.me/' + wa + '?text=' + message, '_blank');
+  };
+
+  const openLocation = () => {
+    const query = booking?.gps_coordinates || booking?.location;
+    if (!query) return toast({ title: 'No service location available', variant: 'destructive' });
+    window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query), '_blank');
+  };
+
+  const openInvoice = () => navigate('/admin/erp/invoices');
+  const openQuotation = () => navigate('/admin/quotations');
+  const openReceipt = () => navigate('/admin/documents');
+  const openCertificate = () => navigate('/admin/certificates');
   if (loading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading booking…</div>;
   }
@@ -229,38 +239,38 @@ export default function AdminBookingDetails() {
           <Button asChild size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
             <Link to="/admin/book"><Plus className="h-3.5 w-3.5 mr-1" /> New Booking</Link>
           </Button>
-          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+          <Button size="sm" variant="outline" onClick={saveBooking} className="border-blue-200 text-blue-700 hover:bg-blue-50">
             <Save className="h-3.5 w-3.5 mr-1" /> Save
           </Button>
-          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+          <Button size="sm" variant="outline" onClick={openQuotation} className="border-blue-200 text-blue-700 hover:bg-blue-50">
             <FileText className="h-3.5 w-3.5 mr-1" /> Quotation
           </Button>
-          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+          <Button size="sm" variant="outline" onClick={confirmBooking} disabled={booking.status === 'confirmed' || booking.status === 'completed' || booking.status === 'fully_confirmed'} className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirm
           </Button>
-          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+          <Button size="sm" variant="outline" onClick={toggleLock} className="border-slate-200 text-slate-700 hover:bg-slate-50">
             <Lock className="h-3.5 w-3.5 mr-1" /> Lock
           </Button>
-          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Button size="sm" variant="outline" onClick={openInvoice} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
           </Button>
-          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Button size="sm" variant="outline" onClick={openReceipt} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
           </Button>
-          <Button size="sm" variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Button size="sm" variant="outline" onClick={openCertificate} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             <Award className="h-3.5 w-3.5 mr-1" /> Certificate
           </Button>
-          <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+          <Button size="sm" variant="outline" onClick={openWhatsApp} className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
             <MessageCircle className="h-3.5 w-3.5 mr-1" /> WhatsApp
           </Button>
           <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1" /> Print
           </Button>
-          <Button size="sm" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+          <Button size="sm" variant="outline" onClick={() => downloadCustomerBooking(booking)} className="border-slate-200 text-slate-700 hover:bg-slate-50">
             <Download className="h-3.5 w-3.5 mr-1" /> PDF
           </Button>
         </div>
-        <Button size="icon" variant="ghost" className="relative text-slate-600">
+        <Button size="icon" variant="ghost" onClick={() => navigate('/admin/notices')} className="relative text-slate-600">
           <Bell className="h-4 w-4" />
           <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">3</span>
         </Button>
@@ -331,7 +341,7 @@ export default function AdminBookingDetails() {
                 <Link to={`/admin/clients/${booking.client_id}`}>View Client Profile</Link>
               </Button>
             )}
-            <Button size="sm" variant="outline" className="border-slate-200 h-8">
+            <Button size="sm" variant="outline" onClick={() => booking.client_id ? navigate('/admin/clients/' + booking.client_id) : navigate('/admin/clients')} className="border-slate-200 h-8">
               <Pencil className="h-3 w-3 mr-1" /> Edit
             </Button>
             {booking.client_phone && (
@@ -355,7 +365,7 @@ export default function AdminBookingDetails() {
           <Field label="GPS" value={booking.gps_coordinates || '—'} />
           <Field label="Contact" value={booking.site_contact_name || booking.client_name || '—'} />
           <Field label="Contact Phone" value={booking.site_contact_phone || booking.client_phone || '—'} />
-          <Button size="sm" variant="outline" className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
+          <Button size="sm" variant="outline" onClick={openLocation} className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
         </SectionCard>
 
         <SectionCard icon={CalIcon} title="Booking Information">
@@ -396,7 +406,7 @@ export default function AdminBookingDetails() {
               <BadgeCheck className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-slate-700">Services</h3>
             </div>
-            <Button size="sm" className="h-8">
+            <Button size="sm" className="h-8" onClick={() => navigate('/admin/book-service')}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Service
             </Button>
           </div>
@@ -412,7 +422,7 @@ export default function AdminBookingDetails() {
                   <th className="px-3 py-2 text-right font-semibold">Unit Price (KES)</th>
                   <th className="px-3 py-2 text-right font-semibold">Discount (%)</th>
                   <th className="px-3 py-2 text-right font-semibold">Discount (KES)</th>
-                  <th className="px-3 py-2 text-right font-semibold">VAT (16%)</th>
+                  <th className="px-3 py-2 text-right font-semibold">VAT</th>
                   <th className="px-3 py-2 text-right font-semibold">Total (KES)</th>
                   <th className="px-3 py-2 text-center font-semibold">Action</th>
                 </tr>
@@ -425,8 +435,8 @@ export default function AdminBookingDetails() {
                   const lineDiscPct = Number(it.discountPercent || 0);
                   const lineDiscAmt = Number(it.discountAmount || (gross * lineDiscPct / 100));
                   const afterDisc = gross - lineDiscAmt;
-                  const vat = afterDisc * VAT_RATE;
-                  const total = afterDisc + vat;
+                  const vat = 0;
+                  const total = afterDisc;
                   return (
                     <tr key={i} className="border-t border-slate-100">
                       <td className="px-3 py-2 text-slate-500">{i + 1}</td>
@@ -441,8 +451,8 @@ export default function AdminBookingDetails() {
                       <td className="px-3 py-2 text-right font-semibold text-slate-800">{fmt(total)}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-center gap-1.5">
-                          <button className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Pencil className="h-3.5 w-3.5" /></button>
-                          <button className="text-red-600 hover:bg-red-50 p-1 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => navigate('/admin/book-service')} className="text-blue-600 hover:bg-blue-50 p-1 rounded" title="Edit booking services"><Pencil className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => toast({ title: 'Service removal', description: 'Use Book Service to edit the booking services before saving.' })} className="text-red-600 hover:bg-red-50 p-1 rounded" title="Edit services"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
                     </tr>
@@ -525,7 +535,7 @@ export default function AdminBookingDetails() {
                 <span className="font-semibold text-slate-800">KES {fmt(totals.afterDiscount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">VAT (16%)</span>
+                <span className="text-slate-500">VAT</span>
                 <span className="font-semibold text-slate-800">+ KES {fmt(totals.vat)}</span>
               </div>
               <Separator className="my-2" />
@@ -550,7 +560,7 @@ export default function AdminBookingDetails() {
             <p className="text-xs text-slate-500 mb-1">Payment Status</p>
             <StatusPill status={Number(booking.amount_paid || 0) >= totals.grand && totals.grand > 0 ? 'paid' : Number(booking.amount_paid || 0) > 0 ? 'partial' : 'unpaid'} />
           </div>
-          <Button size="sm" onClick={() => setPaymentOpen(true)} className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700">
+          <Button size="sm" className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700">
             <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
           </Button>
         </SectionCard>
@@ -571,27 +581,18 @@ export default function AdminBookingDetails() {
                 </TabsTrigger>
               ))}
             </TabsList>
-
             <TabsContent value="payments" className="p-4 mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Field label="Payment Terms" value="Cash" />
-                  <Field label="Deposit Amount" value="KES 0.00" />
-                  <Field label="Amount Paid" value="KES 0.00" />
-                  <Field label="Balance Amount" value={<span className="text-red-600 font-bold">KES {fmt(totals.grand)}</span>} />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase mb-1">M-Pesa Payment</h4>
-                  <Field label="Paybill No." value="400222" />
-                  <Field label="Account No." value={bookingNo} />
-                  <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    <MessageCircle className="h-3.5 w-3.5 mr-1" /> Send Payment Instructions
-                  </Button>
+                  <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
+                  <Field label="Deposit Amount" value={`KES ${fmt(Number(booking.deposit_amount || 0))}`} />
+                  <Field label="Amount Paid" value={`KES ${fmt(Number(booking.amount_paid || 0))}`} />
+                  <Field label="Balance Amount" value={`KES ${fmt(Math.max(0, totals.grand - Number(booking.amount_paid || 0)))`} />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-semibold text-slate-600 uppercase">Payment History</h4>
-                    <Button size="sm" variant="outline" onClick={() => setPaymentOpen(true)} className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50">
+                    <Button size="sm" variant="outline" onClick={openInvoice} className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50">
                       <Plus className="h-3 w-3 mr-1" /> Record Payment
                     </Button>
                   </div>
@@ -602,7 +603,6 @@ export default function AdminBookingDetails() {
                 </div>
               </div>
             </TabsContent>
-
             {['attachments', 'notes', 'history', 'activity'].map(t => (
               <TabsContent key={t} value={t} className="p-6 mt-0">
                 <p className="text-sm text-slate-500 text-center">No {t === 'activity' ? 'activity' : t} yet.</p>
