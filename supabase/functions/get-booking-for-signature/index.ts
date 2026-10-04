@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const token = url.searchParams.get('token');
 
-    if (!token) {
+    if (!token || token.length < 32 || token.length > 256) {
       return new Response(JSON.stringify({ error: 'Token required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     // Validate token
     const { data: tokenData, error: tokenError } = await supabase
       .from('signature_tokens')
-      .select('*')
+      .select('id, booking_id, expires_at, used')
       .eq('token', token)
       .single();
 
