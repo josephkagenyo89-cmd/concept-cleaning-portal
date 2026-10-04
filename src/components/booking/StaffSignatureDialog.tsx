@@ -88,7 +88,9 @@ export default function StaffSignatureDialog({ bookingId, open, onOpenChange, on
         staff_signed_name: staffName,
       };
 
-      // If client also signed, mark as fully_confirmed
+      // Only mark the booking fully confirmed when both signatures exist.
+      // If the client has not signed, keep the booking completed so Admin can
+      // either request the client signature or use the audited certificate bypass.
       if (hasClientSignature) {
         updateData.status = 'fully_confirmed';
       }
@@ -100,7 +102,12 @@ export default function StaffSignatureDialog({ bookingId, open, onOpenChange, on
 
       if (error) throw error;
 
-      toast({ title: 'Signature saved', description: hasClientSignature ? 'Booking fully confirmed!' : 'Awaiting client signature.' });
+      toast({
+        title: 'Staff signature saved',
+        description: hasClientSignature
+          ? 'Booking fully confirmed!'
+          : 'Client signature is optional — request it or continue with the certificate waiver.'
+      });
       onSigned();
       onOpenChange(false);
     } catch (err: any) {
