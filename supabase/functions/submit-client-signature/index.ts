@@ -33,69 +33,44 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Validate token
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('signature_tokens')
-      .select('*')
-      .eq('token', token)
-      .single();
-
-    if (tokenError || !tokenData) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired link' }), {
-        status: 404,
+    // Basic abuse protection: reject oversized request bodies before parsing the signature.
+    const contentLength = Number(req.headers.get('content-length') || '0');
+    if (contentLength > 2500000) {
+      return new Response(JSON.stringify({ error: 'Request too large' }), {
+        status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (tokenData.used) {
-      return new Response(JSON.stringify({ error: 'This signature link has already been used' }), {
-        status: 400,
+    // Use service role only inside this Edge Function. Public clients have no
+    // direct access to signature_tokens or bookings.
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Atomically validate and consume the bearer token, then apply the signature.
+    // This prevents concurrent requests from using the same token twice.
+    const { error: applyError } = await supabase.rpc('apply_client_signature', {
+      p_token: token,
+      p_signature: signature,
+      p_client_name: clientName,
+    });
+
+    if (applyError) {
+      const message = applyError.message || '';
+      const isClientError =
+        message.includes('Invalid signature token') ||
+        message.includes('Invalid signature format') ||
+        message.includes('Invalid client name') ||
+        message.includes('Invalid, expired, or already used signature link');
+
+      return new Response(JSON.stringify({
+        error: isClientError ? message : 'Failed to save signature',
+      }), {
+        status: isClientError ? 400 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    }
-
-    if (new Date(tokenData.expires_at) < new Date()) {
-      return new Response(JSON.stringify({ error: 'This signature link has expired' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Save client signature to booking
-    const { error: bookingError } = await supabase
-      .from('bookings')
-      .update({
-        client_signature: signature,
-        client_signed_at: new Date().toISOString(),
-        client_consent: true,
-      })
-      .eq('id', tokenData.booking_id);
-
-    if (bookingError) {
-      return new Response(JSON.stringify({ error: 'Failed to save signature' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Mark token as used
-    await supabase
-      .from('signature_tokens')
-      .update({ used: true })
-      .eq('id', tokenData.id);
-
-    // Check if staff already signed — if so, mark as fully_confirmed
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('staff_signature')
-      .eq('id', tokenData.booking_id)
-      .single();
-
-    if (booking?.staff_signature) {
-      await supabase
-        .from('bookings')
-        .update({ status: 'fully_confirmed' })
-        .eq('id', tokenData.booking_id);
     }
 
     return new Response(JSON.stringify({ success: true }), {
