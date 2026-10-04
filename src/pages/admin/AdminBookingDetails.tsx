@@ -566,12 +566,12 @@ export default function AdminBookingDetails() {
         </SectionCard>
       </div>
 
-      {/* Tabs: Payments / Attachments / Notes / History / Activity */}
+      {/* Tabs: Attachments / Notes / History / Activity */}
       <Card className="border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          <Tabs defaultValue="payments">
+          <Tabs defaultValue="attachments">
             <TabsList className="bg-transparent border-b border-slate-100 w-full justify-start rounded-none px-3 h-auto">
-              {['payments', 'attachments', 'notes', 'history', 'activity'].map(t => (
+              {['attachments', 'notes', 'history', 'activity'].map(t => (
                 <TabsTrigger
                   key={t}
                   value={t}
@@ -581,43 +581,21 @@ export default function AdminBookingDetails() {
                 </TabsTrigger>
               ))}
             </TabsList>
-
-            <TabsContent value="payments" className="p-4 mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Field label="Payment Terms" value="Cash" />
-                  <Field label="Deposit Amount" value="KES 0.00" />
-                  <Field label="Amount Paid" value="KES 0.00" />
-                  <Field label="Balance Amount" value={<span className="text-red-600 font-bold">KES {fmt(totals.grand)}</span>} />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase mb-1">M-Pesa Payment</h4>
-                  <Field label="Paybill No." value="400222" />
-                  <Field label="Account No." value={bookingNo} />
-                  <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    <MessageCircle className="h-3.5 w-3.5 mr-1" /> Send Payment Instructions
-                  </Button>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-semibold text-slate-600 uppercase">Payment History</h4>
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50">
-                      <Plus className="h-3 w-3 mr-1" /> Record Payment
-                    </Button>
-                  </div>
-                  <div className="rounded-md border border-dashed border-slate-200 p-6 text-center">
-                    <FileText className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-500">No payments recorded yet.</p>
-                  </div>
-                </div>
+            <TabsContent value="attachments" className="p-4 mt-0">
+              <div className="rounded-md border border-dashed border-slate-200 p-6 text-center">
+                <FileText className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                <p className="text-xs text-slate-500">No attachments recorded yet.</p>
               </div>
             </TabsContent>
-
-            {['attachments', 'notes', 'history', 'activity'].map(t => (
-              <TabsContent key={t} value={t} className="p-6 mt-0">
-                <p className="text-sm text-slate-500 text-center">No {t === 'activity' ? 'activity' : t} yet.</p>
-              </TabsContent>
-            ))}
+            <TabsContent value="notes" className="p-4 mt-0">
+              <p className="text-xs text-slate-500">No notes recorded yet.</p>
+            </TabsContent>
+            <TabsContent value="history" className="p-4 mt-0">
+              <p className="text-xs text-slate-500">No booking history recorded yet.</p>
+            </TabsContent>
+            <TabsContent value="activity" className="p-4 mt-0">
+              <p className="text-xs text-slate-500">No activity recorded yet.</p>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
