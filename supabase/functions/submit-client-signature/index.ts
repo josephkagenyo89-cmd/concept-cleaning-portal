@@ -42,13 +42,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role only inside this Edge Function. Public clients have no
-    // direct access to signature_tokens or bookings.
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-
     // Atomically validate and consume the bearer token, then apply the signature.
     // This prevents concurrent requests from using the same token twice.
     const { error: applyError } = await supabase.rpc('apply_client_signature', {
