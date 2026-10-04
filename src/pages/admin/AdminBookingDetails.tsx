@@ -19,7 +19,6 @@ import {
   Lock, Receipt, Award, Printer, Download, Phone, Mail, CreditCard,
 } from 'lucide-react';
 
-const VAT_RATE = 0.16;
 
 function fmt(n: number) {
   return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -141,9 +140,8 @@ export default function AdminBookingDetails() {
     const discountAmount = Number(booking?.discount_amount || 0);
     const approved = booking?.discount_approval_status === 'approved' || booking?.discount_approval_status === 'not_required';
     const afterDiscount = approved ? subtotal - discountAmount : subtotal;
-    const vat = afterDiscount * VAT_RATE;
-    const grand = afterDiscount + vat;
-    return { subtotal, discountAmount, afterDiscount, vat, grand, approved };
+    const grand = afterDiscount;
+    return { subtotal, discountAmount, afterDiscount, vat: 0, grand, approved };
   }, [booking]);
 
   const approveDiscount = async (decision: 'approved' | 'rejected') => {
@@ -424,7 +422,7 @@ export default function AdminBookingDetails() {
                   <th className="px-3 py-2 text-right font-semibold">Unit Price (KES)</th>
                   <th className="px-3 py-2 text-right font-semibold">Discount (%)</th>
                   <th className="px-3 py-2 text-right font-semibold">Discount (KES)</th>
-                  <th className="px-3 py-2 text-right font-semibold">VAT (16%)</th>
+                  <th className="px-3 py-2 text-right font-semibold">VAT</th>
                   <th className="px-3 py-2 text-right font-semibold">Total (KES)</th>
                   <th className="px-3 py-2 text-center font-semibold">Action</th>
                 </tr>
@@ -437,8 +435,8 @@ export default function AdminBookingDetails() {
                   const lineDiscPct = Number(it.discountPercent || 0);
                   const lineDiscAmt = Number(it.discountAmount || (gross * lineDiscPct / 100));
                   const afterDisc = gross - lineDiscAmt;
-                  const vat = afterDisc * VAT_RATE;
-                  const total = afterDisc + vat;
+                  const vat = 0;
+                  const total = afterDisc;
                   return (
                     <tr key={i} className="border-t border-slate-100">
                       <td className="px-3 py-2 text-slate-500">{i + 1}</td>
@@ -537,7 +535,7 @@ export default function AdminBookingDetails() {
                 <span className="font-semibold text-slate-800">KES {fmt(totals.afterDiscount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">VAT (16%)</span>
+                <span className="text-slate-500">VAT</span>
                 <span className="font-semibold text-slate-800">+ KES {fmt(totals.vat)}</span>
               </div>
               <Separator className="my-2" />
