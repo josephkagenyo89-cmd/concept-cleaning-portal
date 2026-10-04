@@ -27,13 +27,21 @@ export default function AdminBookings() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [agents, setAgents] = useState<{ user_id: string; full_name: string }[]>([]);
   const [commissions, setCommissions] = useState<Record<string, { amount: number; bonus: number }>>({});
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
   const printRef = useRef<HTMLDivElement>(null);
   const [staffSignBooking, setStaffSignBooking] = useState<string | null>(null);
   const [staffSignHasClient, setStaffSignHasClient] = useState(false);
 
   const load = async () => {
+    setLoading(true);
+    try {
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
     const data = await fetchListWithCache<any>('bookings', async () => {
-      let q = supabase.from('bookings').select('*, services(name, category)').order('created_at', { ascending: false });
+      let q = supabase.from('bookings').select('*, services(name, category)').neq('status', 'draft').order('created_at', { ascending: false }).range(from, to);
       if (filter !== 'all') q = q.eq('status', filter as any);
       if (agentFilter !== 'all') q = q.eq('agent_id', agentFilter);
       if (dateFrom) q = q.gte('created_at', dateFrom.toISOString());
@@ -47,13 +55,26 @@ export default function AdminBookings() {
     // Drafts live in the Drafts module — never show them in the main bookings list
     const visible = (data || []).filter((b: any) => b.status !== 'draft');
 
+    // Get the total number of non-draft bookings so pagination reflects the full result set.
+    let countQuery = supabase.from('bookings').select('id', { count: 'exact', head: true }).neq('status', 'draft');
+    if (filter !== 'all') countQuery = countQuery.eq('status', filter as any);
+    if (agentFilter !== 'all') countQuery = countQuery.eq('agent_id', agentFilter);
+    if (dateFrom) countQuery = countQuery.gte('created_at', dateFrom.toISOString());
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59);
+      countQuery = countQuery.lte('created_at', end.toISOString());
+    }
+    const { count } = await countQuery;
+    setTotalCount(count || 0);
+
     try {
       const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
       const profileMap: Record<string, { name: string; phone: string }> = {};
       (profiles || []).forEach(p => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone }; });
       setAgents((profiles || []).map(p => ({ user_id: p.user_id, full_name: p.full_name })));
 
-      const bookingIds = (data || []).map(b => b.id);
+      const bookingIds = visible.map((b: any) => b.id);
       if (bookingIds.length > 0) {
         const { data: comms } = await supabase.from('commissions').select('booking_id, amount, bonus_amount').in('booking_id', bookingIds);
         const commMap: Record<string, { amount: number; bonus: number }> = {};
@@ -63,16 +84,27 @@ export default function AdminBookings() {
     } catch { /* offline — keep previous agents/commissions state */ }
 
     const profileMap: Record<string, { name: string; phone: string }> = {};
-    agents.forEach(a => { profileMap[a.user_id] = { name: a.full_name, phone: '' }; });
+    // Use the profiles returned above instead of relying on stale React state.
+    const { data: currentProfiles } = await supabase.from('profiles').select('user_id, full_name, phone');
+    (currentProfiles || []).forEach(p => {
+      profileMap[p.user_id] = { name: p.full_name, phone: p.phone };
+    });
 
     setBookings(visible.map(b => ({
       ...b,
       agent_name: profileMap[b.agent_id]?.name || 'Unknown',
       agent_phone: profileMap[b.agent_id]?.phone || '',
     })));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, [filter, agentFilter, dateFrom, dateTo]);
+  useEffect(() => { load(); }, [filter, agentFilter, dateFrom, dateTo, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, agentFilter, dateFrom, dateTo]);
 
   const filtered = bookings.filter(b => {
     if (!search) return true;
@@ -240,7 +272,9 @@ export default function AdminBookings() {
         {(dateFrom || dateTo) && <Button size="sm" variant="ghost" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>Clear</Button>}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <Card><CardContent className="p-6 text-center text-muted-foreground">Loading bookings...</CardContent></Card>
+      ) : filtered.length === 0 ? (
         <Card><CardContent className="p-6 text-center text-muted-foreground">No bookings</CardContent></Card>
       ) : (
         <div className="space-y-3">
@@ -326,6 +360,23 @@ export default function AdminBookings() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {!loading && totalCount > 0 && (
+        <div className="flex items-center justify-between gap-3 mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount} bookings
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+              Previous
+            </Button>
+            <span className="text-sm font-medium">Page {page} of {Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}</span>
+            <Button size="sm" variant="outline" disabled={page >= Math.ceil(totalCount / PAGE_SIZE)} onClick={() => setPage(p => p + 1)}>
+              Next
+            </Button>
+          </div>
         </div>
       )}
 
