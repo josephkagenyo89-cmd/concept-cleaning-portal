@@ -545,6 +545,77 @@ export type Database = {
           },
         ]
       }
+      employee_compensation: {
+        Row: {
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          basic_salary: number
+          created_at: string
+          effective_date: string
+          employee_id: string
+          housing_levy_exempt: boolean
+          id: string
+          kra_pin: string | null
+          mpesa_number: string | null
+          nssf_exempt: boolean
+          nssf_number: string | null
+          paye_exempt: boolean
+          payment_method: string
+          shif_exempt: boolean
+          shif_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          basic_salary?: number
+          created_at?: string
+          effective_date?: string
+          employee_id: string
+          housing_levy_exempt?: boolean
+          id?: string
+          kra_pin?: string | null
+          mpesa_number?: string | null
+          nssf_exempt?: boolean
+          nssf_number?: string | null
+          paye_exempt?: boolean
+          payment_method?: string
+          shif_exempt?: boolean
+          shif_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          basic_salary?: number
+          created_at?: string
+          effective_date?: string
+          employee_id?: string
+          housing_levy_exempt?: boolean
+          id?: string
+          kra_pin?: string | null
+          mpesa_number?: string | null
+          nssf_exempt?: boolean
+          nssf_number?: string | null
+          paye_exempt?: boolean
+          payment_method?: string
+          shif_exempt?: boolean
+          shif_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_compensation_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_employment: {
         Row: {
           contract_reference: string | null
@@ -622,6 +693,50 @@ export type Database = {
           {
             foreignKeyName: "employee_employment_supervisor_employee_id_fkey"
             columns: ["supervisor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_pay_components: {
+        Row: {
+          amount: number
+          created_at: string
+          employee_id: string
+          id: string
+          is_active: boolean
+          is_taxable: boolean
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          is_taxable?: boolean
+          kind: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          is_taxable?: boolean
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_pay_components_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
@@ -1337,6 +1452,213 @@ export type Database = {
           processed_at?: string | null
           requested_at?: string
           status?: Database["public"]["Enums"]["payout_status"]
+        }
+        Relationships: []
+      }
+      payroll_items: {
+        Row: {
+          adjustment_note: string | null
+          basic_salary: number
+          bonus: number
+          created_at: string
+          deductions_breakdown: Json
+          department_name: string | null
+          earnings_breakdown: Json
+          employee_code: string | null
+          employee_id: string
+          employee_name: string | null
+          employer_housing_levy: number
+          employer_nssf: number
+          gross_salary: number
+          housing_levy_amount: number
+          id: string
+          kra_pin: string | null
+          net_paye: number
+          net_salary: number
+          nssf_tier1: number
+          nssf_tier2: number
+          other_deductions: number
+          overtime: number
+          paye_before_relief: number
+          payment_account: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          payroll_run_id: string
+          personal_relief: number
+          position_title: string | null
+          shif_amount: number
+          taxable_pay: number
+          total_allowances: number
+          total_deductions: number
+          updated_at: string
+        }
+        Insert: {
+          adjustment_note?: string | null
+          basic_salary?: number
+          bonus?: number
+          created_at?: string
+          deductions_breakdown?: Json
+          department_name?: string | null
+          earnings_breakdown?: Json
+          employee_code?: string | null
+          employee_id: string
+          employee_name?: string | null
+          employer_housing_levy?: number
+          employer_nssf?: number
+          gross_salary?: number
+          housing_levy_amount?: number
+          id?: string
+          kra_pin?: string | null
+          net_paye?: number
+          net_salary?: number
+          nssf_tier1?: number
+          nssf_tier2?: number
+          other_deductions?: number
+          overtime?: number
+          paye_before_relief?: number
+          payment_account?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string
+          payroll_run_id: string
+          personal_relief?: number
+          position_title?: string | null
+          shif_amount?: number
+          taxable_pay?: number
+          total_allowances?: number
+          total_deductions?: number
+          updated_at?: string
+        }
+        Update: {
+          adjustment_note?: string | null
+          basic_salary?: number
+          bonus?: number
+          created_at?: string
+          deductions_breakdown?: Json
+          department_name?: string | null
+          earnings_breakdown?: Json
+          employee_code?: string | null
+          employee_id?: string
+          employee_name?: string | null
+          employer_housing_levy?: number
+          employer_nssf?: number
+          gross_salary?: number
+          housing_levy_amount?: number
+          id?: string
+          kra_pin?: string | null
+          net_paye?: number
+          net_salary?: number
+          nssf_tier1?: number
+          nssf_tier2?: number
+          other_deductions?: number
+          overtime?: number
+          paye_before_relief?: number
+          payment_account?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string
+          payroll_run_id?: string
+          personal_relief?: number
+          position_title?: string | null
+          shif_amount?: number
+          taxable_pay?: number
+          total_allowances?: number
+          total_deductions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_items_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          employee_count: number
+          end_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          pay_date: string | null
+          payment_reference: string | null
+          payroll_code: string
+          period_month: number
+          period_year: number
+          start_date: string
+          status: string
+          total_deductions: number
+          total_employer_cost: number
+          total_gross: number
+          total_net: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          employee_count?: number
+          end_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pay_date?: string | null
+          payment_reference?: string | null
+          payroll_code: string
+          period_month: number
+          period_year: number
+          start_date: string
+          status?: string
+          total_deductions?: number
+          total_employer_cost?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          employee_count?: number
+          end_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pay_date?: string | null
+          payment_reference?: string | null
+          payroll_code?: string
+          period_month?: number
+          period_year?: number
+          start_date?: string
+          status?: string
+          total_deductions?: number
+          total_employer_cost?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
         }
         Relationships: []
       }
