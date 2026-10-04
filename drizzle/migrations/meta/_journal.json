@@ -8,6 +8,13 @@
       "when": 1790979163084,
       "tag": "0000_hr_phase1_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791118594737,
+      "tag": "0001_hr_payroll_phase2",
+      "breakpoints": true
     }
   ]
 }
