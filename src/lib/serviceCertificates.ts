@@ -15,7 +15,9 @@ export interface CertificateRecord {
   services: string | null;
   line_items: any[];
   amount_paid: number;
-  mpesa_code: string;
+  mpesa_code: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
   payment_date: string;
   invoice_number: string | null;
   client_signature: string;
@@ -60,6 +62,8 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
     totalAmount: Number(c.amount_paid),
     paymentStatus: 'PAID',
     mpesaCode: c.mpesa_code,
+    paymentMethod: c.payment_method || undefined,
+    paymentReference: c.payment_reference || undefined,
     paymentDate: fmtDate(new Date(c.payment_date), 'PPP'),
     invoiceNumber: c.invoice_number || undefined,
     amountPaid: Number(c.amount_paid),
@@ -129,6 +133,8 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
 
   // 2. Resolve payment data — prefer booking, fall back to paid invoice
   let amountPaid = Number(b.amount_paid || 0);
+  let paymentMethod: string | null = b.payment_method || null;
+  let paymentReference: string | null = b.payment_reference || null;
   let mpesaCode: string | null = b.mpesa_code || null;
   let paymentDate: string | null = b.payment_date || null;
   let invoiceNumber: string | null = null;
@@ -136,7 +142,7 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, invoice_number, amount, mpesa_code, payment_date, payment_status')
+    .select('id, invoice_number, amount, mpesa_code, payment_date, payment_status, payment_method, payment_reference')
     .eq('booking_id', opts.bookingId)
     .order('created_at', { ascending: false })
     .maybeSingle();
@@ -144,15 +150,19 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
   if (invoice) {
     invoiceId = (invoice as any).id;
     invoiceNumber = (invoice as any).invoice_number;
-    if (!mpesaCode) mpesaCode = (invoice as any).mpesa_code;
-    if (!paymentDate) paymentDate = (invoice as any).payment_date;
+    if (!paymentMethod) paymentMethod = (invoice as any).payment_method || null;
+    if (!paymentReference) paymentReference = (invoice as any).payment_reference || null;
+    if (!mpesaCode) mpesaCode = (invoice as any).mpesa_code || null;
+    if (!paymentDate) paymentDate = (invoice as any).payment_date || null;
     if (!amountPaid) amountPaid = Number((invoice as any).amount || 0);
-    if ((invoice as any).payment_status !== 'paid' && !mpesaCode) {
+    if ((invoice as any).payment_status !== 'paid') {
       return { ok: false, reason: 'Invoice must be marked PAID before issuing a certificate.' };
     }
   }
 
-  if (!mpesaCode) return { ok: false, reason: 'M-Pesa transaction code is required (record payment first).' };
+  if (!paymentMethod) return { ok: false, reason: 'Payment method is missing. Record payment first.' };
+  if (paymentMethod === 'mpesa' && !mpesaCode) return { ok: false, reason: 'M-Pesa transaction code is required for M-Pesa payments.' };
+  if (paymentMethod === 'bank' && !paymentReference) return { ok: false, reason: 'Bank reference is required for Bank payments.' };
   if (!paymentDate) paymentDate = new Date().toISOString();
 
   // 3. Generate certificate number
@@ -184,6 +194,8 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     line_items: lineItems,
     amount_paid: amountPaid,
     mpesa_code: mpesaCode,
+    payment_method: paymentMethod,
+    payment_reference: paymentReference,
     payment_date: paymentDate,
     invoice_number: invoiceNumber,
     client_signature: b.client_signature || null,

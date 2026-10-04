@@ -111,6 +111,8 @@ export interface DocumentData {
   signatures?: SignatureData;
   // Payment / linkage fields used by receipts and certificates
   mpesaCode?: string;
+  paymentMethod?: 'mpesa' | 'cash' | 'bank' | string;
+  paymentReference?: string;
   paymentDate?: string;
   invoiceNumber?: string;
   amountPaid?: number;
@@ -580,7 +582,7 @@ function drawPaymentInfo(doc: jsPDF, w: number, y: number, data: DocumentData): 
   const hasMpesa = p.mpesa_paybill || p.mpesa_till;
   const hasBank = p.bank_name && p.bank_account_number;
   const isReceiptOrCert = data.documentType === 'receipt' || data.documentType === 'service_certificate' || data.documentType === 'pest_certificate';
-  const showProof = isReceiptOrCert && (data.mpesaCode || data.paymentDate);
+  const showProof = isReceiptOrCert && (data.paymentMethod || data.mpesaCode || data.paymentReference || data.paymentDate);
   if (!hasMpesa && !hasBank && !showProof) return y;
 
   const brand = primary();
@@ -599,7 +601,16 @@ function drawPaymentInfo(doc: jsPDF, w: number, y: number, data: DocumentData): 
   doc.setTextColor(...INK);
 
   if (showProof) {
-    if (data.mpesaCode) { doc.text(`M-Pesa Code: ${data.mpesaCode}`, MARGIN_X, y); y += 4.5; }
+    if (data.paymentMethod) {
+      const methodLabel = data.paymentMethod === 'mpesa' ? 'M-Pesa' : data.paymentMethod === 'bank' ? 'Bank' : data.paymentMethod === 'cash' ? 'Cash' : data.paymentMethod;
+      doc.text(`Payment Method: ${methodLabel}`, MARGIN_X, y); y += 4.5;
+    }
+    if (data.paymentMethod === 'mpesa' && data.mpesaCode) {
+      doc.text(`M-Pesa Code: ${data.mpesaCode}`, MARGIN_X, y); y += 4.5;
+    }
+    if (data.paymentMethod === 'bank' && data.paymentReference) {
+      doc.text(`Bank Reference: ${data.paymentReference}`, MARGIN_X, y); y += 4.5;
+    }
     if (data.paymentDate) { doc.text(`Payment Date: ${data.paymentDate}`, MARGIN_X, y); y += 4.5; }
     if (data.invoiceNumber) { doc.text(`Invoice #: ${data.invoiceNumber}`, MARGIN_X, y); y += 4.5; }
     return y + 3;
