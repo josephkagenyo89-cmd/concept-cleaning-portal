@@ -321,12 +321,19 @@ export default function AdminBookings() {
                     )}
                     {b.status === 'completed' && (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => sendSignatureWhatsApp(b)}>
-                          <MessageCircle className="h-3 w-3 mr-1" />Send Signature via WhatsApp
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setStaffSignBooking(b.id); setStaffSignHasClient(!!b.client_signature); }}>
-                          <PenLine className="h-3 w-3 mr-1" />Staff Sign
-                        </Button>
+                        {!b.client_signature && (
+                          <Button size="sm" variant="outline" onClick={() => sendSignatureWhatsApp(b)}>
+                            <MessageCircle className="h-3 w-3 mr-1" />Request Client Signature
+                          </Button>
+                        )}
+                        {!b.staff_signature && (
+                          <Button size="sm" variant="outline" onClick={() => { setStaffSignBooking(b.id); setStaffSignHasClient(!!b.client_signature); }}>
+                            <PenLine className="h-3 w-3 mr-1" />Staff Sign
+                          </Button>
+                        )}
+                        {b.staff_signature && (
+                          <GenerateCertificateButton bookingId={b.id} onGenerated={load} />
+                        )}
                       </>
                     )}
                     {b.status === 'fully_confirmed' && (
