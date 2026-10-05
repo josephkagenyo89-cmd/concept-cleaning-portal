@@ -587,7 +587,7 @@ export default function AdminBookingDetails() {
                   <Field label="Payment Terms" value={booking.payment_terms || 'Cash'} />
                   <Field label="Deposit Amount" value={`KES ${fmt(Number(booking.deposit_amount || 0))}`} />
                   <Field label="Amount Paid" value={`KES ${fmt(Number(booking.amount_paid || 0))}`} />
-                  <Field label="Balance Amount" value={`KES ${fmt(Math.max(0, totals.grand - Number(booking.amount_paid || 0)))`} />
+                  <Field label="Balance Amount" value={`KES ${fmt(Math.max(0, totals.grand - Number(booking.amount_paid || 0)))}`} />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
