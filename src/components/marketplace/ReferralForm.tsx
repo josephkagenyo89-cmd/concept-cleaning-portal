@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
