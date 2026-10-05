@@ -6,6 +6,7 @@ const items = [
   { to: '/admin/hr/employees', label: 'Employees' },
   { to: '/admin/hr/departments', label: 'Departments' },
   { to: '/admin/hr/positions', label: 'Positions' },
+  { to: '/admin/hr/payroll', label: 'Payroll' },
 ];
 
 export default function HrSubNav({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {

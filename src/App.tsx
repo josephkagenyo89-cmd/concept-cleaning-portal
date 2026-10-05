@@ -64,6 +64,8 @@ const HrEmployees = lazy(() => import("@/pages/admin/hr/HrEmployees"));
 const HrEmployee360 = lazy(() => import("@/pages/admin/hr/HrEmployee360"));
 const HrDepartments = lazy(() => import("@/pages/admin/hr/HrDepartments"));
 const HrPositions = lazy(() => import("@/pages/admin/hr/HrPositions"));
+const HrPayroll = lazy(() => import("@/pages/admin/hr/HrPayroll"));
+const HrPayrollRun = lazy(() => import("@/pages/admin/hr/HrPayrollRun"));
 
 // Marketplace + customer portal
 const MarketplaceLayout = lazy(() => import("@/components/marketplace/MarketplaceLayout"));
@@ -157,6 +159,8 @@ function AdminGate() {
         <Route path="hr/employees/:id" element={<HrEmployee360 />} />
         <Route path="hr/departments" element={<HrDepartments />} />
         <Route path="hr/positions" element={<HrPositions />} />
+        <Route path="hr/payroll" element={<HrPayroll />} />
+        <Route path="hr/payroll/:id" element={<HrPayrollRun />} />
         <Route path="erp" element={<ErpDashboard />} />
         <Route path="erp/income" element={<ErpIncome />} />
         <Route path="erp/expenses" element={<ErpExpenses />} />
