@@ -41,6 +41,7 @@ const hrNavItems = [
   { to: '/admin/hr/employees', icon: Users, label: 'Employees' },
   { to: '/admin/hr/departments', icon: Building2, label: 'Departments' },
   { to: '/admin/hr/positions', icon: IdCard, label: 'Positions' },
+  { to: '/admin/hr/payroll', icon: Wallet, label: 'Payroll' },
 ];
 const erpNavItems = [
   { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
