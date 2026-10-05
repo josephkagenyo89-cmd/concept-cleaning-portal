@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import EmployeeFormDialog from '@/components/hr/EmployeeFormDialog';
+import CompensationTab from '@/components/hr/CompensationTab';
 import { fmtDate, label, statusClass, type Department, type Employee, type EmploymentRecord, type Position, type TimelineEvent } from '@/lib/hr';
 
-const FUTURE = ['Attendance', 'Leave', 'Payroll', 'Performance', 'Training', 'Documents', 'Disciplinary', 'Assets'];
+const FUTURE = ['Attendance', 'Leave', 'Performance', 'Training', 'Documents', 'Disciplinary', 'Assets'];
 
 export default function HrEmployee360() {
   const { id } = useParams();
@@ -82,6 +83,7 @@ export default function HrEmployee360() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="employment">Employment</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="compensation">Compensation</TabsTrigger>
           {FUTURE.map((f) => <TabsTrigger key={f} value={f} disabled title="Coming in a later phase">{f}</TabsTrigger>)}
         </TabsList>
 
@@ -128,6 +130,7 @@ export default function HrEmployee360() {
             {timeline.length === 0 && <p className="text-center text-sm text-muted-foreground">No events.</p>}
           </CardContent></Card>
         </TabsContent>
+        <TabsContent value="compensation"><CompensationTab employeeId={emp.id} /></TabsContent>
       </Tabs>
 
       <EmployeeFormDialog open={edit} onOpenChange={setEdit} employee={emp} onSaved={load} />
