@@ -64,6 +64,18 @@ export default function AdminImages() {
     setUploadStatus((s) => ({ ...s, [path]: 'starting' }));
     setUploadProgress((p) => ({ ...p, [path]: 0 }));
     try {
+      // Quick check: ensure the `assets` bucket is accessible from the client.
+      try {
+        const { error: chkError } = await supabase.storage.from('assets').list('', { limit: 1 });
+        if (chkError) {
+          throw chkError;
+        }
+      } catch (bucketErr: any) {
+        const msg = bucketErr?.message || String(bucketErr);
+        throw new Error(
+          `Cannot access storage bucket 'assets'. Ensure the bucket exists and is readable from the client. ${msg}`
+        );
+      }
       // Supabase JS client does not expose progress callbacks for browser uploads.
       // We'll upload and then poll for the file to appear in the public listing to monitor completion.
       setUploadStatus((s) => ({ ...s, [path]: 'uploading' }));
@@ -76,10 +88,11 @@ export default function AdminImages() {
       toast({ title: 'Uploaded', description: successMessage || `${file.name} uploaded.` });
       await listFiles();
     } catch (e: any) {
-      console.error('Upload failed', e);
-      setUploadStatus((s) => ({ ...s, [path]: 'failed' }));
+      const errMsg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e));
+      console.error('Upload failed', errMsg, e);
+      setUploadStatus((s) => ({ ...s, [path]: `failed: ${errMsg}` }));
       setUploadProgress((p) => ({ ...p, [path]: 0 }));
-      toast({ title: 'Upload failed', description: e.message || 'Failed to upload file', variant: 'destructive' });
+      toast({ title: 'Upload failed', description: errMsg || 'Failed to upload file', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
