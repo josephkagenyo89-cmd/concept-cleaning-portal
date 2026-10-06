@@ -15,6 +15,13 @@
       "when": 1791118594737,
       "tag": "0001_hr_payroll_phase2",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791302297895,
+      "tag": "0002_create_blog_posts",
+      "breakpoints": true
     }
   ]
 }
