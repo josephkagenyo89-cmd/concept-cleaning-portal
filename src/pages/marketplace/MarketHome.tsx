@@ -185,7 +185,7 @@ export default function MarketHome() {
             </div>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 md:gap-4">
               {grouped.map(([cat]) => (
-                <Link key={cat} to={`/categories/${cat}`}>
+                <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`}>
                   <div className="group relative overflow-hidden rounded-xl">
                     <img src={categoryImage(cat)} alt={cat} className="aspect-square object-cover transition-transform group-hover:scale-105" />
                     <div className="absolute inset-0 bg-black/40 transition-opacity group-hover:bg-black/50" />

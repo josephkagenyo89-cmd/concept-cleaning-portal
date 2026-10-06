@@ -44,7 +44,16 @@ export const CATEGORY_ORDER = [
 ];
 
 export function categoryImage(category: string): string {
-  return CATEGORY_IMAGES[category] || residential;
+  // Prefer images from the Supabase `assets` bucket's public URL if present
+  try {
+    const slug = category ? category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'residential';
+    const path = `categories/${slug}.jpg`;
+    const { data } = supabase.storage.from('assets').getPublicUrl(path as string);
+    const publicUrl = data?.publicUrl || data?.publicURL || null;
+    return publicUrl || CATEGORY_IMAGES[category] || residential;
+  } catch (e) {
+    return CATEGORY_IMAGES[category] || residential;
+  }
 }
 
 export function serviceImage(

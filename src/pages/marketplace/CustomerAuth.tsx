@@ -87,9 +87,21 @@ export default function CustomerAuth() {
           >
             <Chrome className="mr-3 h-5 w-5" />
 
-            {loading
-              ? 'Connecting to Google…'
-              : 'Continue with Google'}
+            {loading ? (
+              'Connecting to Google…'
+            ) : (
+              <>
+                Continue with{' '}
+                <span className="inline-flex items-center" aria-hidden>
+                  <span style={{ color: '#4285F4' }}>G</span>
+                  <span style={{ color: '#EA4335' }}>o</span>
+                  <span style={{ color: '#FBBC05' }}>o</span>
+                  <span style={{ color: '#4285F4' }}>g</span>
+                  <span style={{ color: '#34A853' }}>l</span>
+                  <span style={{ color: '#EA4335' }}>e</span>
+                </span>
+              </>
+            )}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">

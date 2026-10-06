@@ -48,7 +48,8 @@ export default function ReferralForm({ isOpen, onClose }: ReferralFormProps) {
   };
 
   const calculateReward = (serviceName: string): number => {
-    const service = services.find(s => s.name === serviceName);
+    const match = serviceName?.trim().toLowerCase();
+    const service = services.find(s => (s.name || '').toLowerCase() === match);
     if (!service) return 0;
     return service.base_price >= 7000 ? 1000 : 500;
   };
@@ -86,9 +87,11 @@ export default function ReferralForm({ isOpen, onClose }: ReferralFormProps) {
 
     try {
       const reward = calculateReward(formData.selectedService);
-      const selectedServiceObj = services.find(s => s.name === formData.selectedService);
+      const selectedServiceObj = services.find(s => (s.name || '').toLowerCase() === (formData.selectedService || '').trim().toLowerCase());
 
-      const message = `
+        const basePriceText = selectedServiceObj?.base_price ? `KES ${Number(selectedServiceObj.base_price).toLocaleString('en-KE')}` : 'N/A';
+
+        const message = `
 *NEW REFERRAL - Concept Cleaning Services*
 
 *Referrer Information*
@@ -98,7 +101,7 @@ M-Pesa: ${formData.referrerMpesa}
 
 *Service Being Referred*
 Service: ${formData.selectedService}
-Base Price: KES ${selectedServiceObj?.base_price}
+Base Price: ${basePriceText}
 Referrer Reward: *KES ${reward}* (after service completion)
 
 *Client Information*
@@ -208,18 +211,20 @@ Reward will be paid after the referred service is successfully completed.
 
             <div>
               <label className="block text-sm font-medium mb-1">Which Service Are You Referring? *</label>
-              <select
+              <input
+                list="services-list"
+                type="text"
                 value={formData.selectedService}
                 onChange={(e) => setFormData({ ...formData, selectedService: e.target.value })}
+                placeholder="Type the service name"
                 className="w-full border rounded px-3 py-2"
-              >
-                <option value="">-- Select a service --</option>
+              />
+
+              <datalist id="services-list">
                 {services.map((service) => (
-                  <option key={service.id} value={service.name}>
-                    {service.name} (KES {service.base_price})
-                  </option>
+                  <option key={service.id} value={service.name} />
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div className="mt-3">

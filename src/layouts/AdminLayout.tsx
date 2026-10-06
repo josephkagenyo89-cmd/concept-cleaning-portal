@@ -31,6 +31,7 @@ const navItems = [
   { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
   { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
   { to: '/admin/services', icon: Settings, label: 'Services' },
+  { to: '/admin/images', icon: FolderOpen, label: 'Images' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
