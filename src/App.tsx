@@ -82,13 +82,21 @@ const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport")
 const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
+const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
+const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
+const BlogPostPage = lazy(() => import("@/pages/public/BlogPostPage"));
+const AdminBlog = lazy(() => import("@/pages/admin/AdminBlog"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const marketplaceRoutes = (
+  <>
+  <Route path="/" element={<LandingPage />} />
+  <Route path="/blog" element={<BlogIndex />} />
+  <Route path="/blog/:slug" element={<BlogPostPage />} />
   <Route element={<MarketplaceLayout />}>
     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
     <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-    <Route path="/" element={<MarketHome />} />
+    <Route path="/marketplace" element={<MarketHome />} />
     <Route path="/categories" element={<MarketCategories />} />
     <Route path="/service/:id" element={<MarketServiceDetail />} />
     <Route path="/customer-auth" element={<CustomerAuth />} />
@@ -104,6 +112,7 @@ const marketplaceRoutes = (
 
     <Route path="/my/account" element={<CustomerAccount />} />
   </Route>
+  </>
 );
 
 const queryClient = new QueryClient();
@@ -147,6 +156,7 @@ function AdminGate() {
         <Route path="clients" element={<AdminClients />} />
         <Route path="clients/:id" element={<AdminClientProfile />} />
         <Route path="notices" element={<AdminNotices />} />
+        <Route path="blog" element={<AdminBlog />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="feedback" element={<AdminFeedback />} />
