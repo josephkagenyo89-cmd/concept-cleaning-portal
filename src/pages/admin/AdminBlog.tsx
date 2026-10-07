@@ -127,7 +127,7 @@ export default function AdminBlog() {
             <div><Label>Short summary</Label><Textarea rows={2} value={d.excerpt || ''} onChange={(e) => setD({ ...d, excerpt: e.target.value })} /></div>
             <div><Label>Content *</Label>
               <Textarea rows={14} value={d.content} onChange={(e) => setD({ ...d, content: e.target.value })} className="font-mono text-sm" />
-              <p className="mt-1 text-xs text-muted-foreground">Leave a blank line between paragraphs. Use "## " for headings, "- " for bullet lists, "**bold**" for bold, "> " for a quote.</p></div>
+              <p className="mt-1 text-xs text-muted-foreground">Leave a blank line between paragraphs. Use "## " for headings, "- " for bullet lists, "**bold**" for bold, "&gt; " for a quote.</p></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><Label>Tags (comma separated)</Label><Input value={d.tagsText} onChange={(e) => setD({ ...d, tagsText: e.target.value })} /></div>
               <div><Label>Author</Label><Input value={d.author_name} onChange={(e) => setD({ ...d, author_name: e.target.value })} /></div>
