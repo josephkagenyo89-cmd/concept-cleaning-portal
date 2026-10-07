@@ -21,7 +21,7 @@ const LANGUAGES = [
 ];
 
 const NAV: { to: string; label: string; icon: typeof Home; end?: boolean; badge?: boolean }[] = [
-  { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/marketplace', label: 'Home', icon: Home, end: true },
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
   { to: '/my/bookings', label: 'Bookings', icon: CalendarCheck },
   { to: '/my/notifications', label: 'Alerts', icon: Bell, badge: true },
