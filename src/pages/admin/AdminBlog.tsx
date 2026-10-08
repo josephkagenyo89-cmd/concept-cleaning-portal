@@ -142,7 +142,7 @@ export default function AdminBlog() {
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground"><span className={metaT.length > 60 ? 'text-destructive' : ''}>{metaT.length}/60 title</span><span className={metaD.length > 160 ? 'text-destructive' : ''}>{metaD.length}/160 description</span></div>
               <div className="mt-3 rounded bg-muted/50 p-3">
-                <p className="text-xs text-muted-foreground">conceptcleaningke.lovable.app › blog › {d.slug || 'your-post'}</p>
+                <p className="text-xs text-muted-foreground">www.conceptcleaningservices.co.ke › blog › {d.slug || 'your-post'}</p>
                 <p className="truncate text-base font-medium text-primary">{metaT || 'Post title'}</p>
                 <p className="line-clamp-2 text-sm text-muted-foreground">{metaD || 'Short summary shown in search results.'}</p>
               </div>
