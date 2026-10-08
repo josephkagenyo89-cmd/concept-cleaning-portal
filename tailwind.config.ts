@@ -14,6 +14,20 @@ export default {
     },
     extend: {
       colors: {
+        brand: {
+          forest: "#0E2A27",
+          panel: "#143733",
+          line: "#25504A",
+          outline: "#3C5C56",
+          brass: "#C9A45C",
+          brassDark: "#8A6A2B",
+          paper: "#F6F3EC",
+          sand: "#E4DFD2",
+          ink: "#10231F",
+          slate: "#4E5F5A",
+          mist: "#A9BDB7",
+          cream: "#F4F1EA",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
