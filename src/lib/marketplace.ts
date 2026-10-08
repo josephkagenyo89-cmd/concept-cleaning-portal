@@ -53,7 +53,7 @@ export function categoryImage(category: string): string {
     for (const ext of extensions) {
       const path = `categories/${slug}.${ext}`;
       const { data } = supabase.storage.from('assets').getPublicUrl(path);
-      const publicUrl = data?.publicUrl || data?.publicURL || null;
+      const publicUrl = data?.publicUrl || data?.publicUrl || null;
 
       if (publicUrl) {
         return publicUrl;
