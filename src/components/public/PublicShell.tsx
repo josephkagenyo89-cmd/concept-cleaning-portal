@@ -60,7 +60,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             ))}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Button asChild variant="outline"><Link to="/customer-auth">Customer Login</Link></Button>
-              <Button asChild variant="outline"><a href="https://conceptcleaningke.lovable.app/admin">Staff Login</a></Button>
+              <Button asChild variant="outline"><a href="/admin">Staff Login</a></Button>
             </div>
           </nav>
         )}
@@ -81,7 +81,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               <li><Link to="/blog">Cleaning Blog</Link></li>
               <li><Link to="/privacy-policy">Privacy Policy</Link></li>
               <li><Link to="/terms-and-conditions">Terms</Link></li>
-              <li><a href="https://conceptcleaningke.lovable.app/admin">Staff Login</a></li>
+              <li><a href="/admin">Staff Login</a></li>
             </ul>
           </div>
           <div>
@@ -96,7 +96,6 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         <p className="border-t border-background/10 py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} {company}. All rights reserved.</p>
       </footer>
 
-      {/* Mobile sticky action bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background md:hidden">
         <a href={`tel:${phone}`} className="flex flex-col items-center py-2 text-xs font-medium"><Phone className="h-5 w-5" />Call</a>
         <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center py-2 text-xs font-medium"><MessageCircle className="h-5 w-5" />WhatsApp</a>
