@@ -40,7 +40,7 @@ export default function BlogPostPage() {
     window.scrollTo(0, 0);
   }, [slug]);
 
-  const url = `https://conceptcleaningke.lovable.app/blog/${slug}`;
+  const url = `https://www.conceptcleaningservices.co.ke/blog/${slug}`;
 
   if (loading) return <PublicShell><p className="mx-auto max-w-3xl px-4 py-16 text-muted-foreground">Loading…</p></PublicShell>;
   if (!post) return (
