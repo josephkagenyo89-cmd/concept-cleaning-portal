@@ -69,7 +69,7 @@ export default function LandingPage() {
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={desc} />
-        <link rel="canonical" href="https://conceptcleaningke.lovable.app/" />
+        <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={desc} />
         <script type="application/ld+json">{JSON.stringify({
@@ -84,23 +84,28 @@ export default function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-24">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full bg-brand-panel text-brand-brass px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-              <Star className="h-3.5 w-3.5 fill-current" /> Rated 4.9 by Nairobi clients
+              <Star className="h-3.5 w-3.5 fill-current" /> Trusted cleaning team in Nairobi
             </p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">
-              Spotless spaces. <br className="hidden sm:block" />Healthier living.
+              Cleaner homes. <br className="hidden sm:block" />Healthier businesses.
             </h1>
             <p className="mt-4 max-w-lg text-base text-brand-mist md:text-lg">
-              Nairobi's trusted team for home deep cleaning, office cleaning, carpets, sofas and fumigation — done right the first time.
+              Vetted cleaners, clear pricing, and professional results for homes, offices, carpets, sofas and pest control across Nairobi — with fast booking and easy M-Pesa payment.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
-                <Link to="/marketplace">See Services & Prices <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                <Link to="/marketplace#all-services">Instant booking <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
-                <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp Quote
+                <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a free quote.')} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-1 h-4 w-4" /> Get a free quote
                 </a>
               </Button>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3 text-sm text-brand-mist">
+              <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">4.9★ rated</span>
+              <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">24–48h booking</span>
+              <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">M-Pesa payment</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

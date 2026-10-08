@@ -44,26 +44,9 @@ export const CATEGORY_ORDER = [
 ];
 
 export function categoryImage(category: string): string {
-  // Prefer an image from the Supabase `assets` bucket. Admin Images may store
-  // category images as .jpg, .jpeg, .png, or .webp.
-  try {
-    const slug = category ? category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'residential';
-    const extensions = ['jpg', 'jpeg', 'png', 'webp'];
-
-    for (const ext of extensions) {
-      const path = `categories/${slug}.${ext}`;
-      const { data } = supabase.storage.from('assets').getPublicUrl(path);
-      const publicUrl = data?.publicUrl || data?.publicUrl || null;
-
-      if (publicUrl) {
-        return publicUrl;
-      }
-    }
-
-    return CATEGORY_IMAGES[category] || residential;
-  } catch {
-    return CATEGORY_IMAGES[category] || residential;
-  }
+  // Keep the app visually stable by using the bundled fallback images when the
+  // storage-backed lookup is unavailable.
+  return CATEGORY_IMAGES[category] || residential;
 }
 
 export function serviceImage(

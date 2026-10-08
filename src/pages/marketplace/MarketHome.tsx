@@ -103,6 +103,12 @@ export default function MarketHome() {
           <MapPin className="h-3.5 w-3.5" /> {settings.general.address || 'Nairobi, Kenya'}
         </div>
 
+        <div className="mt-3">
+          <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-sm">
+            <Link to="/marketplace#all-services">Instant booking</Link>
+          </Button>
+        </div>
+
         {/* Refer & Earn Button - Mobile (above search) - Smaller with Blink */}
         <div className="mt-3 md:hidden">
           <Button
@@ -211,7 +217,7 @@ export default function MarketHome() {
           )}
 
           {/* All services */}
-          <section className="mt-6 px-4 pb-6">
+          <section id="all-services" className="mt-6 px-4 pb-6 scroll-mt-24">
             <h2 className="mb-3 text-sm font-bold">All services</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
               {services.map((s) => <ServiceCard key={s.id} service={s} />)}

@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   MapPin,
   Phone,
-  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,14 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+// Dialog removed: instant booking / WhatsApp flow disabled
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -38,6 +30,7 @@ import {
   serviceImage,
   startingPrice,
 } from '@/lib/marketplace';
+// notifyAdminsOfBooking removed: instant booking notifications disabled
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 
@@ -54,11 +47,11 @@ export default function MarketServiceDetail() {
   const [service, setService] = useState<MarketService | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
-  const [whatsappUrl, setWhatsappUrl] = useState('');
+  // instant booking / WhatsApp confirmation removed
 
   const [form, setForm] = useState({
     service_date: '',
+    service_time: '',
     location: '',
     phone: '',
     notes: '',
@@ -147,48 +140,7 @@ export default function MarketServiceDetail() {
    *
    * The WhatsApp destination is Concept Cleaning Services.
    */
-  const buildWhatsAppUrl = () => {
-    const whatsappPhone = '254796563741';
-
-    const message = [
-      'Hello Concept Cleaning Services,',
-      '',
-      'I have submitted a booking request through your website and would like to confirm the details below:',
-      '',
-      `Client Name: ${customerClient?.full_name || 'N/A'}`,
-      `Phone: ${form.phone.trim()}`,
-      `Service: ${service?.name || 'N/A'}`,
-      `Preferred Date: ${form.service_date || 'Not specified'}`,
-      `Service Location: ${form.location.trim()}`,
-      `Amount: ${formatKes(price)}`,
-      form.notes.trim() ? `Notes: ${form.notes.trim()}` : '',
-      '',
-      'Please confirm my booking request.',
-      '',
-      'Concept Cleaning Services',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(
-      message
-    )}`;
-  };
-
-  const handleOpenWhatsApp = () => {
-    if (!whatsappUrl) return;
-
-    window.open(
-      whatsappUrl,
-      '_blank',
-      'noopener,noreferrer'
-    );
-  };
-
-  const handleWhatsAppDialogClose = () => {
-    setWhatsappDialogOpen(false);
-    navigate('/my/bookings');
-  };
+  // WhatsApp helpers removed
 
   const submit = async (mode: 'booking' | 'quotation') => {
     if (!service) return;
@@ -200,6 +152,14 @@ export default function MarketServiceDetail() {
     if (mode === 'booking' && !form.service_date) {
       toast({
         title: 'Select a service date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (mode === 'booking' && !form.service_time.trim()) {
+      toast({
+        title: 'Select a service time',
         variant: 'destructive',
       });
       return;
@@ -247,86 +207,41 @@ export default function MarketServiceDetail() {
         };
 
     try {
-      if (mode === 'booking') {
-        const { error } = await supabase
-          .from('bookings')
-          .insert({
-            agent_id: user.id,
-            client_id: customerClient.id,
-            client_name: customerClient.full_name,
-            client_phone: form.phone.trim(),
-            location: form.location.trim(),
-            service_id: service.id,
-            service_date: form.service_date,
-            price,
-            system_price: pricing.original,
-            status: 'pending',
-            created_by_name: customerClient.full_name,
-            created_by_role: 'customer',
-            line_items: lineItems as any,
-            ...discountFields,
-            ...(pricing.active
-              ? {
-                  discount_type: 'percent',
-                  discount_value: pricing.percentage,
-                  discount_approval_status: 'approved',
-                }
-              : {}),
-          } as any);
+      // Instant booking removed — always create a quotation request
+      let quotationNumber = '';
 
-        if (error) throw error;
+      const { data: num } = await supabase.rpc(
+        'next_quotation_number' as any
+      );
 
-        /*
-         * The booking has successfully been saved.
-         * Only now prepare the WhatsApp confirmation dialog.
-         */
-        setWhatsappUrl(buildWhatsAppUrl());
+      quotationNumber = (num as string) || `QT-${Date.now()}`;
 
-        await refreshProfile();
+      const { error } = await supabase
+        .from('quotations')
+        .insert({
+          quotation_number: quotationNumber,
+          client_name: customerClient.full_name,
+          client_phone: form.phone.trim(),
+          service_name: service.name,
+          service_date: form.service_date || null,
+          price,
+          created_by: user.id,
+          created_by_name: customerClient.full_name,
+          created_by_role: 'customer',
+          line_items: lineItems as any,
+          ...discountFields,
+        } as any);
 
-        toast({
-          title: 'Booking request sent',
-          description: 'Our team will confirm shortly.',
-        });
+      if (error) throw error;
 
-        setWhatsappDialogOpen(true);
-      } else {
-        let quotationNumber = '';
+      toast({
+        title: 'Quotation requested',
+        description: `Reference ${quotationNumber}`,
+      });
 
-        const { data: num } = await supabase.rpc(
-          'next_quotation_number' as any
-        );
+      await refreshProfile();
 
-        quotationNumber =
-          (num as string) || `QT-${Date.now()}`;
-
-        const { error } = await supabase
-          .from('quotations')
-          .insert({
-            quotation_number: quotationNumber,
-            client_name: customerClient.full_name,
-            client_phone: form.phone.trim(),
-            service_name: service.name,
-            service_date: form.service_date || null,
-            price,
-            created_by: user.id,
-            created_by_name: customerClient.full_name,
-            created_by_role: 'customer',
-            line_items: lineItems as any,
-            ...discountFields,
-          } as any);
-
-        if (error) throw error;
-
-        toast({
-          title: 'Quotation requested',
-          description: `Reference ${quotationNumber}`,
-        });
-
-        await refreshProfile();
-
-        navigate('/my/bookings');
-      }
+      navigate('/my/bookings');
     } catch (e: any) {
       console.error('Could not submit request:', e);
 
@@ -532,6 +447,24 @@ export default function MarketServiceDetail() {
               </div>
 
               <div className="space-y-1.5">
+                <Label htmlFor="service_time">
+                  Preferred time
+                </Label>
+
+                <Input
+                  id="service_time"
+                  type="time"
+                  value={form.service_time}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      service_time: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <Label htmlFor="location">
                   <MapPin className="mr-1 inline h-3.5 w-3.5" />
                   Service location
@@ -594,6 +527,16 @@ export default function MarketServiceDetail() {
                   complete your request.
                 </p>
               )}
+
+              <div className="rounded-lg border border-market/20 bg-market-soft/50 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Estimated total</span>
+                  <span className="font-bold text-market">{formatKes(price)}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {form.service_date || 'Select date'}{form.service_time ? ` • ${form.service_time}` : ''} {form.location ? `• ${form.location}` : ''}
+                </p>
+              </div>
 
               <div className="flex gap-2">
                 <Button

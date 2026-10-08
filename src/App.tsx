@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
@@ -231,6 +231,7 @@ function AgentGate() {
 }
 function CustomerGate() {
   const { user, loading, isCustomer, customerClient } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -240,7 +241,11 @@ function CustomerGate() {
     );
   }
 
-  if (!user || !isCustomer) return <Navigate to="/customer-auth" replace />;
+  if (!user || !isCustomer) {
+    const next = `${location.pathname}${location.search}`;
+    return <Navigate to={`/customer-auth?next=${encodeURIComponent(next)}`} replace />;
+  }
+
   const profileIncomplete =
     !customerClient ||
     !customerClient.full_name?.trim() ||

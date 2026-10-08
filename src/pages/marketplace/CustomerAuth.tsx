@@ -15,12 +15,17 @@ import { Chrome, Sparkles } from 'lucide-react';
 import { friendlyAuthError } from '@/lib/customerAuth';
 import CustomerLoginMascot from '@/components/marketplace/CustomerLoginMascot';
 
-function safeNext(next: string | null) {
+export function safeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
     return '/my';
   }
 
   return next;
+}
+
+export function buildCustomerAuthRedirectUrl(next: string | null) {
+  const target = safeNext(next);
+  return `${window.location.origin}/customer-auth?next=${encodeURIComponent(target)}`;
 }
 
 export default function CustomerAuth() {
@@ -42,7 +47,7 @@ export default function CustomerAuth() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/my/account`,
+        redirectTo: buildCustomerAuthRedirectUrl(next),
       },
     });
 

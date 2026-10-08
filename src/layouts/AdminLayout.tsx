@@ -13,6 +13,7 @@ import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
 import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
 import { loadAllSettings } from '@/lib/settings';
 import { setPdfSettings } from '@/lib/documentPdf';
+import { requestBrowserNotificationPermission } from '@/lib/customerNotifications';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
@@ -53,7 +54,7 @@ const erpNavItems = [
 ];
 
 export default function AdminLayout() {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { blockingNotices, refresh } = useBlockingNotices();
 
@@ -61,6 +62,14 @@ export default function AdminLayout() {
   useEffect(() => {
     loadAllSettings(true).then(setPdfSettings).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      requestBrowserNotificationPermission();
+    }
+  }, [isAdmin]);
 
   return (
     <div className="min-h-screen flex bg-background">
