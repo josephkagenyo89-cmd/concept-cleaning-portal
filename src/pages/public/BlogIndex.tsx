@@ -26,7 +26,7 @@ export default function BlogIndex() {
       <Helmet>
         <title>Cleaning Tips & Pest Control Guides | Concept Cleaning Blog</title>
         <meta name="description" content="Expert cleaning tips, stain removal guides and pest control advice for homes and offices in Nairobi, Kenya." />
-        <link rel="canonical" href="https://conceptcleaningke.lovable.app/blog" />
+        <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/blog" />
       </Helmet>
       <section className="bg-market-soft">
         <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
