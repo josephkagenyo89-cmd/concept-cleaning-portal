@@ -65,6 +65,7 @@ export default function LandingPage() {
 
   return (
     <PublicShell>
+      <div className="bg-brand-paper font-['Manrope',sans-serif] text-brand-ink">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={desc} />
@@ -78,24 +79,24 @@ export default function LandingPage() {
       </Helmet>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-market text-market-foreground">
+      <section className="relative overflow-hidden bg-brand-forest text-brand-cream">
         <img src={residential} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-20" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-24">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-market-foreground/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+            <p className="inline-flex items-center gap-2 rounded-full bg-brand-panel text-brand-brass px-3 py-1 text-xs font-semibold uppercase tracking-wide">
               <Star className="h-3.5 w-3.5 fill-current" /> Rated 4.9 by Nairobi clients
             </p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">
               Spotless spaces. <br className="hidden sm:block" />Healthier living.
             </h1>
-            <p className="mt-4 max-w-lg text-base opacity-90 md:text-lg">
+            <p className="mt-4 max-w-lg text-base text-brand-mist md:text-lg">
               Nairobi's trusted team for home deep cleaning, office cleaning, carpets, sofas and fumigation — done right the first time.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90">
+              <Button asChild size="lg" className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
                 <Link to="/marketplace">See Services & Prices <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-market-foreground/60 bg-transparent text-market-foreground hover:bg-market-foreground/10 hover:text-market-foreground">
+              <Button asChild size="lg" variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
                 <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp Quote
                 </a>
@@ -104,8 +105,8 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {PILLARS.map((p) => (
-              <div key={p.title} className="rounded-xl bg-background/95 p-4 text-foreground shadow-lg">
-                <p.icon className="h-6 w-6 text-market" />
+              <div key={p.title} className="rounded-xl border border-brand-line bg-brand-panel p-4 text-brand-cream shadow-lg">
+                <p.icon className="h-6 w-6 text-brand-brass" />
                 <p className="mt-2 text-sm font-semibold">{p.title}</p>
               </div>
             ))}
@@ -114,10 +115,10 @@ export default function LandingPage() {
       </section>
 
       {/* Stats */}
-      <section className="border-b bg-market-soft">
+      <section className="border-b border-brand-line bg-brand-forest">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 text-center md:grid-cols-4 md:px-6">
           {[['5,000+', 'Spaces cleaned'], ['4.9★', 'Google rating'], ['24–48h', 'Typical booking'], ['100%', 'Satisfaction focus']].map(([v, l]) => (
-            <div key={l}><p className="text-2xl font-extrabold text-market md:text-3xl">{v}</p><p className="text-xs text-muted-foreground md:text-sm">{l}</p></div>
+            <div key={l}><p className="text-2xl font-extrabold text-brand-brass md:text-3xl">{v}</p><p className="text-xs text-brand-mist md:text-sm">{l}</p></div>
           ))}
         </div>
       </section>
@@ -126,19 +127,19 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-14 md:px-6" aria-labelledby="services-h">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 id="services-h" className="text-2xl font-bold md:text-3xl">Cleaning & fumigation services in Nairobi</h2>
-            <p className="mt-2 text-muted-foreground">Pick what you need — prices are shown upfront.</p>
+            <h2 id="services-h" className="text-2xl font-bold text-brand-ink md:text-3xl">Cleaning & fumigation services in Nairobi</h2>
+            <p className="mt-2 text-brand-slate">Pick what you need — prices are shown upfront.</p>
           </div>
-          <Link to="/marketplace" className="hidden shrink-0 text-sm font-semibold text-market md:inline-flex">View all →</Link>
+          <Link to="/marketplace" className="hidden shrink-0 text-sm font-semibold text-brand-brassDark md:inline-flex">View all →</Link>
         </div>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {SERVICES.map((s) => (
-            <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border bg-card transition hover:-translate-y-0.5 hover:shadow-lg">
+            <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
               <img src={s.img} alt={`${s.name} in Nairobi`} loading="lazy" className="aspect-[16/10] w-full object-cover" />
               <div className="p-5">
-                <h3 className="font-semibold">{s.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
-                <p className="mt-3 text-sm font-semibold text-market">Book now →</p>
+                <h3 className="font-semibold text-brand-ink">{s.name}</h3>
+                <p className="mt-1 text-sm text-brand-slate">{s.desc}</p>
+                <p className="mt-3 text-sm font-semibold text-brand-brassDark">Book now →</p>
               </div>
             </Link>
           ))}
@@ -146,15 +147,15 @@ export default function LandingPage() {
       </section>
 
       {/* Why us */}
-      <section className="bg-muted/50">
+      <section className="bg-brand-sand/40">
         <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-          <h2 className="text-2xl font-bold md:text-3xl">Why Nairobi chooses Concept Cleaning</h2>
+          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Why Nairobi chooses Concept Cleaning</h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {PILLARS.map((p) => (
-              <div key={p.title} className="rounded-2xl border bg-card p-6">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-market-soft text-market"><p.icon className="h-5 w-5" /></span>
-                <h3 className="mt-4 font-semibold">{p.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{p.text}</p>
+              <div key={p.title} className="rounded-2xl border border-brand-sand bg-white p-6">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-sand text-brand-brassDark"><p.icon className="h-5 w-5" /></span>
+                <h3 className="mt-4 font-semibold text-brand-ink">{p.title}</h3>
+                <p className="mt-1 text-sm text-brand-slate">{p.text}</p>
               </div>
             ))}
           </div>
@@ -163,27 +164,27 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        <h2 className="text-2xl font-bold md:text-3xl">How it works</h2>
+        <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">How it works</h2>
         <ol className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s, i) => (
-            <li key={s.title} className="relative rounded-2xl border p-6">
-              <span className="absolute right-5 top-4 text-4xl font-extrabold text-muted">{i + 1}</span>
-              <s.icon className="h-6 w-6 text-market" />
-              <h3 className="mt-3 font-semibold">{s.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
+            <li key={s.title} className="relative rounded-2xl border border-brand-sand bg-white p-6">
+              <span className="absolute right-5 top-4 text-4xl font-extrabold text-brand-sand">{i + 1}</span>
+              <s.icon className="h-6 w-6 text-brand-brassDark" />
+              <h3 className="mt-3 font-semibold text-brand-ink">{s.title}</h3>
+              <p className="mt-1 text-sm text-brand-slate">{s.text}</p>
             </li>
           ))}
         </ol>
       </section>
 
       {/* Areas */}
-      <section id="areas" className="bg-market-soft scroll-mt-20">
+      <section id="areas" className="bg-brand-sand/40 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-          <h2 className="text-2xl font-bold md:text-3xl">Areas we serve in Nairobi</h2>
-          <p className="mt-2 text-muted-foreground">Same professional service across the city and nearby towns.</p>
+          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Areas we serve in Nairobi</h2>
+          <p className="mt-2 text-brand-slate">Same professional service across the city and nearby towns.</p>
           <ul className="mt-6 flex flex-wrap gap-2">
             {AREAS.map((a) => (
-              <li key={a} className="inline-flex items-center gap-1 rounded-full border bg-background px-3 py-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-market" />{a}</li>
+              <li key={a} className="inline-flex items-center gap-1 rounded-full border border-brand-sand bg-white text-brand-ink px-3 py-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-brand-brassDark" />{a}</li>
             ))}
           </ul>
         </div>
@@ -191,11 +192,11 @@ export default function LandingPage() {
 
       {/* Reviews */}
       <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        <div className="rounded-3xl border bg-card p-8 text-center md:p-12">
-          <div className="flex justify-center gap-1 text-market">{[...Array(5)].map((_, i) => <Star key={i} className="h-6 w-6 fill-current" />)}</div>
-          <h2 className="mt-4 text-2xl font-bold md:text-3xl">Loved by homes & businesses across Nairobi</h2>
-          <p className="mx-auto mt-2 max-w-xl text-muted-foreground">Read what our clients say on Google — and share your own experience.</p>
-          <Button asChild variant="outline" className="mt-6"><a href={reviewUrl} target="_blank" rel="noopener noreferrer">Read our Google reviews</a></Button>
+        <div className="rounded-3xl border border-brand-sand bg-white p-8 text-center md:p-12">
+          <div className="flex justify-center gap-1 text-brand-brassDark">{[...Array(5)].map((_, i) => <Star key={i} className="h-6 w-6 fill-current" />)}</div>
+          <h2 className="mt-4 text-2xl font-bold text-brand-ink md:text-3xl">Loved by homes & businesses across Nairobi</h2>
+          <p className="mx-auto mt-2 max-w-xl text-brand-slate">Read what our clients say on Google — and share your own experience.</p>
+          <Button asChild variant="outline" className="mt-6 border-brand-brassDark text-brand-ink hover:bg-brand-sand"><a href={reviewUrl} target="_blank" rel="noopener noreferrer">Read our Google reviews</a></Button>
         </div>
       </section>
 
@@ -203,16 +204,16 @@ export default function LandingPage() {
       {posts.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6">
           <div className="flex items-end justify-between">
-            <h2 className="text-2xl font-bold md:text-3xl">Cleaning tips & guides</h2>
-            <Link to="/blog" className="text-sm font-semibold text-market">All articles →</Link>
+            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Cleaning tips & guides</h2>
+            <Link to="/blog" className="text-sm font-semibold text-brand-brassDark">All articles →</Link>
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
             {posts.map((p) => (
-              <Link key={p.id} to={`/blog/${p.slug}`} className="overflow-hidden rounded-2xl border bg-card hover:shadow-lg transition">
+              <Link key={p.id} to={`/blog/${p.slug}`} className="overflow-hidden rounded-2xl border border-brand-sand bg-white hover:shadow-lg transition">
                 {p.cover_image && <img src={p.cover_image} alt={p.title} loading="lazy" className="aspect-[16/9] w-full object-cover" />}
                 <div className="p-5">
-                  <p className="text-xs text-muted-foreground">{p.category} · {readingTime(p.content)} min read · {fmtBlogDate(p.published_at)}</p>
-                  <h3 className="mt-2 font-semibold leading-snug">{p.title}</h3>
+                  <p className="text-xs text-brand-slate">{p.category} · {readingTime(p.content)} min read · {fmtBlogDate(p.published_at)}</p>
+                  <h3 className="mt-2 font-semibold text-brand-ink leading-snug">{p.title}</h3>
                 </div>
               </Link>
             ))}
@@ -222,12 +223,12 @@ export default function LandingPage() {
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-6 md:px-6">
-        <h2 className="text-2xl font-bold md:text-3xl">Frequently asked questions</h2>
+        <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Frequently asked questions</h2>
         <Accordion type="single" collapsible className="mt-6">
           {FAQS.map((f, i) => (
             <AccordionItem key={i} value={`f${i}`}>
-              <AccordionTrigger className="text-left">{f.q}</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
+              <AccordionTrigger className="text-left text-brand-ink">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-brand-slate">{f.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
@@ -235,17 +236,18 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
-        <div className="rounded-3xl bg-market p-8 text-center text-market-foreground md:p-14">
+        <div className="rounded-3xl bg-brand-forest p-8 text-center text-brand-cream md:p-14">
           <h2 className="text-2xl font-extrabold md:text-4xl">Ready for a cleaner space?</h2>
-          <p className="mx-auto mt-3 max-w-lg opacity-90">Book in minutes or get a free quote on WhatsApp.</p>
+          <p className="mx-auto mt-3 max-w-lg text-brand-mist">Book in minutes or get a free quote on WhatsApp.</p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90"><Link to="/marketplace">Book a Service</Link></Button>
-            <Button asChild size="lg" variant="outline" className="border-market-foreground/60 bg-transparent text-market-foreground hover:bg-market-foreground/10 hover:text-market-foreground">
+            <Button asChild size="lg" className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90"><Link to="/marketplace">Book a Service</Link></Button>
+            <Button asChild size="lg" variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
               <a href={`tel:${phone}`}>Call {phone}</a>
             </Button>
           </div>
         </div>
       </section>
+      </div>
     </PublicShell>
   );
 }
