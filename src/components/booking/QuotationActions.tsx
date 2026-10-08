@@ -6,6 +6,7 @@ import { downloadQuotationPdf, shareQuotationWhatsApp } from '@/lib/quotationPdf
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { saveDocumentRecord } from '@/lib/documentSaver';
+import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 
 interface LineItemInput {
   name: string;
@@ -114,6 +115,26 @@ export default function QuotationActions({
     if (data) {
       downloadQuotationPdf(data);
       toast({ title: 'Quotation generated & saved', description: data.quotationNumber });
+
+      // Notify admins about the new quotation
+      try {
+        const adminIds = await listAdminUserIds();
+        if (adminIds.length) {
+          const body = `Quotation ${data.quotationNumber} created for ${data.clientName} — ${data.serviceName}.`;
+          triggerBrowserNotification('New quotation created', body);
+          await pushNotificationToUsers({
+            user_ids: adminIds,
+            type: 'quotation',
+            title: 'New quotation created',
+            body,
+            client_id: clientId || undefined,
+            link: '/admin/quotations',
+          });
+          window.dispatchEvent(new Event('ccs-notifications-changed'));
+        }
+      } catch (e) {
+        console.warn('Could not notify admins of quotation:', e);
+      }
     }
     setGenerating(false);
   };

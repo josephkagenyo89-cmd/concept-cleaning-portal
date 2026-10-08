@@ -31,6 +31,7 @@ import {
   startingPrice,
 } from '@/lib/marketplace';
 // notifyAdminsOfBooking removed: instant booking notifications disabled
+import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 
@@ -233,6 +234,26 @@ export default function MarketServiceDetail() {
         } as any);
 
       if (error) throw error;
+
+      // Notify admins about the new quotation
+      try {
+        const adminIds = await listAdminUserIds();
+        if (adminIds.length) {
+          const body = `Quotation ${quotationNumber} requested by ${customerClient.full_name} for ${service.name}.`;
+          triggerBrowserNotification('New quotation requested', body);
+          await pushNotificationToUsers({
+            user_ids: adminIds,
+            type: 'quotation',
+            title: 'New quotation requested',
+            body,
+            client_id: customerClient.id,
+            link: '/admin/quotations',
+          });
+          window.dispatchEvent(new Event('ccs-notifications-changed'));
+        }
+      } catch (e) {
+        console.warn('Could not notify admins of quotation:', e);
+      }
 
       toast({
         title: 'Quotation requested',

@@ -18,6 +18,7 @@ import PriceBreakdown from '@/components/booking/PriceBreakdown';
 import QuotationActions from '@/components/booking/QuotationActions';
 import SalespersonSelector from '@/components/booking/SalespersonSelector';
 import { upsertClientForBooking } from '@/lib/clientManager';
+import { notifyAdminsOfBooking } from '@/lib/customerNotifications';
 import ClientSearchSelector, { SelectedClient } from '@/components/booking/ClientSearchSelector';
 import DiscountSection, { DiscountState } from '@/components/booking/DiscountSection';
 import { computeDiscount, needsApproval } from '@/lib/discounts';
@@ -155,6 +156,16 @@ export default function AgentBooking() {
     }
 
     try {
+      // Notify admins of booking
+      try {
+        await notifyAdminsOfBooking({
+          clientName: selectedClient.full_name,
+          serviceName: primaryService?.name || 'Service',
+          date: format(date, 'yyyy-MM-dd'),
+          location: selectedClient.location || payload.location || '',
+          price: finalPrice,
+        });
+      } catch (e) { console.warn('Notify admins failed', e); }
       const { autoCreateQuotationForBooking } = await import('@/lib/autoDocuments');
       await autoCreateQuotationForBooking({
         clientName: selectedClient.full_name,

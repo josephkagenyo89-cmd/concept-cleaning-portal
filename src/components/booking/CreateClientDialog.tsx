@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
 import type { SelectedClient } from './ClientSearchSelector';
+import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 
 type Props = {
   open: boolean;
@@ -88,6 +89,25 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
 
     if (navigateToProfileOnCreate && isAdmin) {
       navigate(`/admin/clients/${created.id}`);
+    }
+
+    // Notify admins of new client registration
+    try {
+      const adminIds = await listAdminUserIds();
+      if (adminIds.length) {
+        const body = `${created.full_name} registered (${created.phone}).`;
+        triggerBrowserNotification('New client registered', body);
+        await pushNotificationToUsers({
+          user_ids: adminIds,
+          type: 'client',
+          title: 'New client registered',
+          body,
+          client_id: created.id,
+        });
+        window.dispatchEvent(new Event('ccs-notifications-changed'));
+      }
+    } catch (e) {
+      console.warn('Could not notify admins of new client:', e);
     }
   };
 
