@@ -35,7 +35,6 @@ const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
 const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
 const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
 const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
-const AdminImages = lazy(() => import("@/pages/admin/AdminImages"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
@@ -160,7 +159,6 @@ function AdminGate() {
         <Route path="blog" element={<AdminBlog />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="settings" element={<AdminSettings />} />
-        <Route path="images" element={<AdminImages />} />
         <Route path="feedback" element={<AdminFeedback />} />
         <Route path="pest" element={<AdminPestJobs />} />
         <Route path="pest/chemicals" element={<AdminPestChemicals />} />
