@@ -25,7 +25,6 @@ export default function AdminBlog() {
   const [d, setD] = useState<Draft>(EMPTY);
   const [slugTouched, setSlugTouched] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState(false);
 
   const load = async () => {
     const { data, error } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
