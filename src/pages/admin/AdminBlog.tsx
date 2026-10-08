@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, ExternalLink, Search } from 'lucide-react';
+import MediaPicker from '@/components/admin/MediaPicker';
 import { BLOG_CATEGORIES, BlogPost, fmtBlogDate, slugify } from '@/lib/blog';
 
 type Draft = Partial<BlogPost> & { tagsText?: string };
@@ -24,6 +25,7 @@ export default function AdminBlog() {
   const [d, setD] = useState<Draft>(EMPTY);
   const [slugTouched, setSlugTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   const load = async () => {
     const { data, error } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
@@ -37,7 +39,7 @@ export default function AdminBlog() {
     setOpen(true);
   };
 
-  const save = async () => {
+  const save = async (publishOverride?: boolean) => {
     if (!d.title?.trim() || !d.content?.trim()) return toast.error('Title and content are required');
     const slug = slugify(d.slug || d.title);
     if (!slug) return toast.error('Invalid URL slug');
@@ -46,7 +48,7 @@ export default function AdminBlog() {
       title: d.title.trim(), slug, excerpt: d.excerpt || null, content: d.content,
       cover_image: d.cover_image || null, category: d.category || BLOG_CATEGORIES[0],
       tags: (d.tagsText || '').split(',').map((t) => t.trim()).filter(Boolean),
-      author_name: d.author_name || 'Concept Cleaning Team', is_published: !!d.is_published,
+      author_name: d.author_name || 'Concept Cleaning Team', is_published: publishOverride ?? !!d.is_published,
       meta_title: d.meta_title || null, meta_description: d.meta_description || null,
     };
     const res = d.id
@@ -122,8 +124,9 @@ export default function AdminBlog() {
                   <SelectContent>{BLOG_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select></div>
             </div>
-            <div><Label>Cover image URL</Label><Input value={d.cover_image || ''} onChange={(e) => setD({ ...d, cover_image: e.target.value })} placeholder="https://…" />
-              {d.cover_image && <img src={d.cover_image} alt="" className="mt-2 h-32 rounded object-cover" />}</div>
+            <div><Label>Cover image</Label>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><MediaPicker value={d.cover_image || ''} onChange={(url) => setD({ ...d, cover_image: url })} />{d.cover_image && <Button type="button" variant="ghost" onClick={() => setD({ ...d, cover_image: '' })}>Remove</Button>}</div>
+              {d.cover_image && <img src={d.cover_image} alt="Selected cover" className="mt-3 h-40 w-full rounded object-cover" />}</div>
             <div><Label>Short summary</Label><Textarea rows={2} value={d.excerpt || ''} onChange={(e) => setD({ ...d, excerpt: e.target.value })} /></div>
             <div><Label>Content *</Label>
               <Textarea rows={14} value={d.content} onChange={(e) => setD({ ...d, content: e.target.value })} className="font-mono text-sm" />
@@ -138,6 +141,7 @@ export default function AdminBlog() {
                 <div><Label>SEO title ({metaT.length}/60)</Label><Input value={d.meta_title || ''} onChange={(e) => setD({ ...d, meta_title: e.target.value })} placeholder={d.title} /></div>
                 <div><Label>SEO description ({metaD.length}/160)</Label><Input value={d.meta_description || ''} onChange={(e) => setD({ ...d, meta_description: e.target.value })} placeholder={d.excerpt || ''} /></div>
               </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground"><span className={metaT.length > 60 ? 'text-destructive' : ''}>{metaT.length}/60 title</span><span className={metaD.length > 160 ? 'text-destructive' : ''}>{metaD.length}/160 description</span></div>
               <div className="mt-3 rounded bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground">conceptcleaningke.lovable.app › blog › {d.slug || 'your-post'}</p>
                 <p className="truncate text-base font-medium text-primary">{metaT || 'Post title'}</p>
@@ -148,7 +152,8 @@ export default function AdminBlog() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+            <Button variant="secondary" onClick={() => save(false)} disabled={saving}>{saving ? 'Saving…' : 'Save Draft'}</Button>
+            <Button onClick={() => save(true)} disabled={saving}>{saving ? 'Saving…' : 'Publish'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
