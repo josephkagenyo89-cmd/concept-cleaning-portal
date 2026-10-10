@@ -15,6 +15,7 @@ export default function CookieBanner() {
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, 'accepted');
     setVisible(false);
+    window.dispatchEvent(new Event('ccs-cookie-consent-updated'));
   };
 
   if (!visible) return null;
