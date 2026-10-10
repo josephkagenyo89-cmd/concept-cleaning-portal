@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Cookie } from 'lucide-react';
 
-const CONSENT_KEY = 'ccs_cookie_consent';
+const CONSENT_KEY = 'ccs_cookie_consent_v2';
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
