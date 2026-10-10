@@ -235,6 +235,24 @@ export default function MarketServiceDetail() {
 
       if (error) throw error;
 
+      // Track a successful customer enquiry only when optional Meta tracking was accepted.
+      // Do not send customer-identifying details to Meta.
+      try {
+        if (localStorage.getItem('ccs_cookie_consent_v2') === 'accepted') {
+          const pixel = (window as any).fbq;
+          if (typeof pixel === 'function') {
+            pixel('track', 'Lead', {
+              content_name: service.name,
+              content_category: service.category,
+              value: price,
+              currency: 'KES',
+            });
+          }
+        }
+      } catch (trackingError) {
+        console.warn('Meta Pixel Lead tracking failed:', trackingError);
+      }
+
       // Notify admins about the new quotation
       try {
         const adminIds = await listAdminUserIds();
