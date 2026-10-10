@@ -264,7 +264,7 @@ function MetaPixelPageView() {
 
   useEffect(() => {
     const trackPageView = () => {
-      if (localStorage.getItem("ccs_cookie_consent") !== "accepted") return;
+      if (localStorage.getItem("ccs_cookie_consent_v2") !== "accepted") return;
 
       const pixelWindow = window as any;
       if (!pixelWindow.fbq) {
