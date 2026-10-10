@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -259,6 +259,55 @@ function CustomerGate() {
     </>
   );
  }
+function MetaPixelPageView() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const trackPageView = () => {
+      if (localStorage.getItem("ccs_cookie_consent_v2") !== "accepted") return;
+
+      const pixelWindow = window as any;
+      if (!pixelWindow.fbq) {
+        const fbq = function (...args: any[]) {
+          if ((fbq as any).callMethod) {
+            (fbq as any).callMethod.apply(fbq, args);
+          } else {
+            (fbq as any).queue.push(args);
+          }
+        } as any;
+        pixelWindow.fbq = fbq;
+        if (!pixelWindow._fbq) pixelWindow._fbq = fbq;
+        fbq.push = fbq;
+        fbq.loaded = true;
+        fbq.version = "2.0";
+        fbq.queue = [];
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = "https://connect.facebook.net/en_US/fbevents.js";
+        const firstScript = document.getElementsByTagName("script")[0];
+        if (firstScript?.parentNode) {
+          firstScript.parentNode.insertBefore(script, firstScript);
+        } else {
+          document.head.appendChild(script);
+        }
+        fbq("init", "1436547675288965");
+      }
+
+      const pageKey = location.pathname + location.search;
+      if (pixelWindow.__ccsMetaLastPageView === pageKey) return;
+      pixelWindow.__ccsMetaLastPageView = pageKey;
+      pixelWindow.fbq("track", "PageView");
+    };
+
+    trackPageView();
+    window.addEventListener("ccs-cookie-consent-updated", trackPageView);
+    return () => window.removeEventListener("ccs-cookie-consent-updated", trackPageView);
+  }, [location.pathname, location.search]);
+
+  return null;
+}
+
 function UTMTracker() {
   captureUTMParams();
   return null;
@@ -309,6 +358,7 @@ const App = () => (
       <Sonner />
       <NetworkStatus />
       <BrowserRouter>
+        <MetaPixelPageView />
         <UTMTracker />
         <ScrollProgress />
         <ScrollToTop />

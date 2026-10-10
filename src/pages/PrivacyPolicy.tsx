@@ -11,13 +11,14 @@ export default function PrivacyPolicy() {
 
       <article className="prose prose-slate max-w-none">
         <h1>Privacy Policy</h1>
-        <p className="text-muted-foreground">Last updated: September 16, 2026</p>
+        <p className="text-muted-foreground">Last updated: October 10, 2026</p>
 
         <h2>1. Introduction</h2>
         <p>
           Concept Cleaning Services respects your privacy and is committed to handling
-          customer information responsibly. This Privacy Policy explains what information
-          we collect, how we use it, and how customers can contact us about their information.
+          personal information responsibly. This Privacy Policy explains what information
+          we may collect, how we use and share it, and the choices available to you when
+          you use our website and services.
         </p>
 
         <h2>2. Information We Collect</h2>
@@ -25,7 +26,8 @@ export default function PrivacyPolicy() {
           Depending on how you use our website and services, we may collect information such
           as your name, email address, phone number, WhatsApp number, location, booking details,
           service requests, quotations, invoices, payment-related information, and messages
-          or notes that you provide to us.
+          or notes that you provide to us. Website technologies may also process technical
+          information such as your browser, device, IP address, and activity on pages you visit.
         </p>
 
         <h2>3. Customer Accounts</h2>
@@ -46,35 +48,59 @@ export default function PrivacyPolicy() {
         <p>
           We may use customer information to provide and manage cleaning and fumigation
           services, process bookings, prepare quotations and invoices, communicate with
-          customers, provide customer support, maintain customer records, and improve our
-          services and website.
+          customers, provide customer support, maintain customer records, secure and operate
+          our website, and improve our services and advertising measurement where you have
+          given the required consent.
         </p>
 
-        <h2>6. Information Sharing</h2>
+        <h2>6. Information Sharing and Third-Party Services</h2>
         <p>
           We do not sell customer information. Information may be shared where reasonably
           necessary to provide requested services, operate our website and systems, communicate
-          with customers, or comply with applicable legal requirements.
+          with customers, or comply with applicable legal requirements. Third-party providers,
+          including authentication or advertising measurement providers, may process information
+          under their own privacy terms when their services are used.
         </p>
 
-        <h2>7. Cookies and Website Technologies</h2>
+        <h2>7. Cookies, Local Storage, and Meta Pixel</h2>
         <p>
           Our website may use cookies, local storage, authentication technologies, and similar
           technical mechanisms to maintain sessions, remember preferences, support security,
-          and provide website functionality.
+          and provide website functionality. We store your optional tracking choice in your
+          browser's local storage so the website can remember whether you accepted or rejected
+          optional tracking.
+        </p>
+        <p>
+          If you select “Accept all” in our cookie notice, we enable Meta Pixel, an advertising
+          measurement tool provided by Meta. When enabled, Meta Pixel may receive information
+          about your browser or device, IP address, pages viewed, and interactions with our
+          website, along with identifiers stored by browser technologies. This can help us
+          measure the performance of our advertising and understand activity following an ad.
+          Meta may process this information under its own terms and privacy policies. Depending
+          on the services and settings involved, information may be processed in other countries.
+        </p>
+        <p>
+          If you select “Reject optional cookies,” our website saves that choice and does not
+          enable Meta Pixel through this consent feature. Essential website functions may still
+          use necessary technical storage. You can change your saved choice by clearing this
+          website's local storage or site data in your browser and revisiting the website; the
+          consent notice will then be shown again. Clearing site data may also sign you out or
+          remove other saved preferences.
         </p>
 
         <h2>8. Data Security</h2>
         <p>
-          We take reasonable measures to protect customer information against unauthorized
+          We take reasonable measures to protect personal information against unauthorized
           access, alteration, disclosure, or loss. However, no internet-based system can be
           guaranteed to be completely secure.
         </p>
 
-        <h2>9. Customer Rights and Choices</h2>
+        <h2>9. Your Rights and Choices</h2>
         <p>
-          Customers may contact us regarding their personal information, request correction
-          of inaccurate information, or ask questions about how their information is handled.
+          Subject to applicable law, you may contact us to ask about your personal information,
+          request correction of inaccurate information, object to or ask about certain uses, or
+          make another privacy-related request. You can also use the cookie choices described
+          above to accept or reject optional Meta Pixel tracking.
         </p>
 
         <h2>10. Account and Data Deletion</h2>
