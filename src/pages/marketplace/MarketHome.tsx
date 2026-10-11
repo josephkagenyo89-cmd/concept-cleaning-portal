@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, ShieldCheck, Star, Sparkles, ArrowDownUp, Gift } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, Star, Sparkles, ArrowDownUp, Gift, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,12 +10,12 @@ import {
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import ReferralForm from '@/components/marketplace/ReferralForm';
 import {
-  MarketService, buildRecommendations, categoryImage, fetchMarketServices, groupByCategory, startingPrice,
+  MarketService, buildRecommendations, categoryImage, categoryVideo, fetchMarketServices, groupByCategory, startingPrice,
 } from '@/lib/marketplace';
+import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type SortKey = 'recommended' | 'price_asc' | 'price_desc' | 'name';
 
@@ -45,7 +45,6 @@ export default function MarketHome() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Booking history powers the cross-sell recommendations.
   useEffect(() => {
     if (!isCustomer) { setHistory({ categories: [], names: [] }); return; }
     (async () => {
@@ -83,78 +82,44 @@ export default function MarketHome() {
   );
 
   return (
-    <div>
+    <div className="bg-slate-50 pb-10">
       <style>{`
         @keyframes blink {
           0%, 49%, 100% { opacity: 1; }
           50%, 99% { opacity: 0.5; }
         }
-        .blink-animation {
-          animation: blink 1s infinite;
-        }
+        .blink-animation { animation: blink 1s infinite; }
       `}</style>
 
-      {/* Hero */}
-      <section className="bg-market px-4 pb-6 pt-4 text-market-foreground">
-        <h1 className="text-lg font-bold leading-snug">
-          Book trusted cleaning &amp; fumigation services in Nairobi, Kenya
-        </h1>
-        <div className="mt-3 flex items-center gap-1 text-xs opacity-90">
-          <MapPin className="h-3.5 w-3.5" /> {settings.general.address || 'Nairobi, Kenya'}
-        </div>
-
-        <div className="mt-3">
-          <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-sm">
-            <Link to="/marketplace#all-services">Instant booking</Link>
-          </Button>
-        </div>
-
-        {/* Refer & Earn Button - Mobile (above search) - Smaller with Blink */}
-        <div className="mt-3 md:hidden">
-          <Button
-            onClick={() => setReferralFormOpen(true)}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1 text-sm blink-animation"
-          >
-            <Gift size={16} />
-            💰 Refer & Earn
-          </Button>
-        </div>
-
-        {/* Search Field */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="mx-auto max-w-6xl px-4 pt-6 md:px-6">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="What cleaning service are you looking for?"
-            className="h-12 rounded-xl border-0 bg-card pl-9 text-sm text-foreground shadow-lg"
+            placeholder="Search services, categories or cleaning needs..."
+            className="h-12 rounded-2xl border border-slate-200 bg-white pl-11 text-sm text-slate-700 shadow-sm placeholder:text-slate-400"
           />
         </div>
-        <div className="mt-3 flex gap-3 text-[11px] font-medium opacity-90">
-          <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Vetted staff</span>
-          <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5" /> Rated 4.8/5</span>
-          <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Same-day options</span>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+            <ShieldCheck className="h-3.5 w-3.5" /> Trusted service
+          </div>
+          <Button onClick={() => setReferralFormOpen(true)} className="h-10 bg-sky-900 px-4 text-xs font-semibold text-white hover:bg-sky-800">
+            <span className="inline-flex items-center gap-2">
+              <Gift size={14} /> Refer & Earn
+            </span>
+          </Button>
         </div>
-      </section>
+      </div>
 
-      {/* Refer & Earn Button - Desktop (in header area) */}
-      <section className="hidden md:block px-4 pt-4">
-        <Button
-          onClick={() => setReferralFormOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-lg flex items-center gap-2"
-        >
-          <Gift size={18} />
-          💰 Refer & Earn
-        </Button>
-      </section>
-
-      {/* Search results */}
       {query.trim() && (
-        <section className="p-4 md:p-6">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold">Results for "{query.trim()}"</h2>
+        <section className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-base font-bold text-slate-900">Results for “{query.trim()}”</h2>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-              <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectTrigger className="h-9 w-[170px] text-xs">
                 <ArrowDownUp className="mr-1 h-3.5 w-3.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -166,13 +131,14 @@ export default function MarketHome() {
               </SelectContent>
             </Select>
           </div>
+
           {results.length === 0 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">No services matched your search.</p>
-              <Button variant="outline" size="sm" onClick={() => setQuery('')}>Clear search</Button>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+              <p className="text-sm text-slate-600">No services matched your search.</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => setQuery('')}>Clear search</Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
               {results.map((s) => <ServiceCard key={s.id} service={s} />)}
             </div>
           )}
@@ -181,22 +147,25 @@ export default function MarketHome() {
 
       {!query.trim() && (
         <>
-          {/* Categories */}
-          <section className="px-4 pt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold">Browse categories</h2>
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs text-market" onClick={() => navigate('/categories')}>
-                See all
+          <section className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Browse</p>
+                <h2 className="text-xl font-bold text-slate-900">Popular categories</h2>
+              </div>
+              <Button variant="link" size="sm" className="h-auto p-0 text-sm font-semibold text-sky-900" onClick={() => navigate('/categories')}>
+                View all
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 md:gap-4">
-              {grouped.map(([cat]) => (
-                <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`}>
-                  <div className="group relative overflow-hidden rounded-xl">
-                    <img src={categoryImage(cat)} alt={cat} className="aspect-square object-cover transition-transform group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-black/40 transition-opacity group-hover:bg-black/50" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <p className="text-center text-xs font-bold text-white">{cat}</p>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {grouped.map(([cat, items]) => (
+                <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`} className="group block">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
+                    <ServiceVisual video={categoryVideo(cat)} image={categoryImage(cat)} alt={cat} className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                    <div className="flex items-center justify-between gap-2 px-3 py-3">
+                      <span className="text-sm font-semibold text-slate-800">{cat}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{items.length}</span>
                     </div>
                   </div>
                 </Link>
@@ -204,29 +173,37 @@ export default function MarketHome() {
             </div>
           </section>
 
-          {/* Recommendations */}
           {recommendation.length > 0 && (
-            <section className="mt-6 px-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-bold">Recommended for you</h2>
+            <section className="mx-auto max-w-6xl px-4 py-2 md:px-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">For you</p>
+                  <h2 className="text-xl font-bold text-slate-900">Recommended services</h2>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
                 {recommendation.map((s) => <ServiceCard key={s.id} service={s} />)}
               </div>
             </section>
           )}
 
-          {/* All services */}
-          <section id="all-services" className="mt-6 px-4 pb-6 scroll-mt-24">
-            <h2 className="mb-3 text-sm font-bold">All services</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
+          <section id="all-services" className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Catalogue</p>
+                <h2 className="text-xl font-bold text-slate-900">All services</h2>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> {services.length} available
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
               {services.map((s) => <ServiceCard key={s.id} service={s} />)}
             </div>
           </section>
         </>
       )}
 
-      {/* Referral Form Modal */}
       <ReferralForm isOpen={referralFormOpen} onClose={() => setReferralFormOpen(false)} />
     </div>
   );

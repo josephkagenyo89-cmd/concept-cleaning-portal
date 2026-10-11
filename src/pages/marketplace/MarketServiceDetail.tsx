@@ -28,8 +28,10 @@ import {
   displayRating,
   formatKes,
   serviceImage,
+  serviceVideo,
   startingPrice,
 } from '@/lib/marketplace';
+import ServiceVisual from '@/components/marketplace/ServiceVisual';
 // notifyAdminsOfBooking removed: instant booking notifications disabled
 import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
@@ -355,11 +357,10 @@ export default function MarketServiceDetail() {
 
       <div className="pb-6">
         <div className="relative">
-          <img
-            src={serviceImage(service)}
+          <ServiceVisual
+            video={serviceVideo(service)}
+            image={serviceImage(service)}
             alt={service.name}
-            width={800}
-            height={600}
             className="h-52 w-full object-cover"
           />
 
@@ -405,29 +406,18 @@ export default function MarketServiceDetail() {
             </div>
 
             <p className="mt-2 text-xl font-bold text-market">
-              {price > 0 ? (
-                <>
-                  From {formatKes(price)}{' '}
-                  <span className="text-xs font-medium text-muted-foreground">
-                    /{service.pricing_unit}
-                  </span>
-                </>
+              {pricing.original > 0 ? (
+                <>From {formatKes(pricing.original)}</>
               ) : (
                 'Price on quotation'
               )}
             </p>
 
-            {pricing.active && (
-              <p className="text-xs text-muted-foreground">
-                <span className="line-through">
-                  {formatKes(pricing.original)}
-                </span>{' '}
-                <span className="font-semibold text-destructive">
-                  -{pricing.percentage}% ({globalDiscount.label})
-                </span>{' '}
-                · you save {formatKes(pricing.discountAmount)}
+            {pricing.active ? (
+              <p className="mt-1 text-sm font-semibold text-emerald-700">
+                Book now to save {formatKes(pricing.discountAmount)}
               </p>
-            )}
+            ) : null}
           </div>
 
           {(service.description ||
@@ -570,8 +560,14 @@ export default function MarketServiceDetail() {
               <div className="rounded-lg border border-market/20 bg-market-soft/50 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Estimated total</span>
-                  <span className="font-bold text-market">{formatKes(price)}</span>
+                  <span className="font-bold text-market">{formatKes(pricing.original)}</span>
                 </div>
+                {pricing.active ? (
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <span className="font-semibold text-emerald-700">Book now to save</span>
+                    <span className="font-semibold text-emerald-700">{formatKes(pricing.discountAmount)}</span>
+                  </div>
+                ) : null}
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {form.service_date || 'Select date'}{form.service_time ? ` • ${form.service_time}` : ''} {form.location ? `• ${form.location}` : ''}
                 </p>

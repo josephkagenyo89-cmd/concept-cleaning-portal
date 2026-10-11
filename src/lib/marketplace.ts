@@ -55,6 +55,15 @@ export function serviceImage(
   return service.image_url || categoryImage(service.category);
 }
 
+/** Demo clips are opt-in per category or specific service, not per fallback image. */
+export function categoryVideo(category: string): string | null {
+  return category === 'Residential Cleaning' ? '/home-deep-cleaning-demo.mp4' : null;
+}
+
+export function serviceVideo(service: Pick<MarketService, 'name'>): string | null {
+  return service.name.trim().toLowerCase() === 'home deep cleaning' ? '/home-deep-cleaning-demo.mp4' : null;
+}
+
 export function formatKes(amount: number): string {
   return `KES ${Number(amount || 0).toLocaleString('en-KE', {
     maximumFractionDigits: 0,

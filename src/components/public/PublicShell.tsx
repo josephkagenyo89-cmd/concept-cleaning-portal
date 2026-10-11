@@ -4,6 +4,7 @@ import { Menu, X, Sparkles, Phone, MessageCircle, Mail, MapPin } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/hooks/useSettings';
 import { cn } from '@/lib/utils';
+import conceptLogo from '@/assets/concept-cleaning-logo.png';
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -29,13 +30,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground pb-16 md:pb-0">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <Link to="/" className="flex items-center gap-2 min-w-0" aria-label={company}>
+          <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
             {settings.general.logo_url ? (
-              <img src={settings.general.logo_url} alt={`${company} logo`} className="h-10 w-10 rounded-lg object-contain" />
+              <img src={settings.general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
             ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-market text-market-foreground"><Sparkles className="h-5 w-5" /></span>
+              <img src={conceptLogo} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain bg-white/0" />
             )}
-            <span className="truncate text-sm font-bold leading-tight md:text-base">{company}</span>
+            <span className="truncate text-lg font-bold leading-tight md:text-2xl">{company}</span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
             {NAV.map((n) => (

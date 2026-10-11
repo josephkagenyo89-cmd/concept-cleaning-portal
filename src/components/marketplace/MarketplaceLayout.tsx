@@ -1,9 +1,9 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText, Sun, Moon } from 'lucide-react';
+import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ const LANGUAGES = [
 ];
 
 const NAV: { to: string; label: string; icon: typeof Home; end?: boolean; badge?: boolean }[] = [
-  { to: '/marketplace', label: 'Home', icon: Home, end: true },
+  { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
   { to: '/my/bookings', label: 'Bookings', icon: CalendarCheck },
   { to: '/my/notifications', label: 'Alerts', icon: Bell, badge: true },
@@ -40,6 +40,9 @@ export default function MarketplaceLayout() {
   const location = useLocation();
   const [lang, setLang] = useState(() => localStorage.getItem('ccs_market_lang') || 'en');
   const [unread, setUnread] = useState(0);
+  const [promoVisible, setPromoVisible] = useState(() => localStorage.getItem('ccs_market_promo_dismissed') !== '1');
+  const [promoDrag, setPromoDrag] = useState(0);
+  const promoDragStart = useRef<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem('ccs_market_lang', lang);
@@ -63,24 +66,51 @@ export default function MarketplaceLayout() {
   const company = settings.general.company_name || 'Concept Cleaning Services';
   const activeLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
 
+  const dismissPromo = () => {
+    setPromoVisible(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ccs_market_promo_dismissed', '1');
+    }
+  };
+
+  const handlePromoPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    promoDragStart.current = event.clientX;
+  };
+
+  const handlePromoPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (promoDragStart.current === null) return;
+    const delta = event.clientX - promoDragStart.current;
+    setPromoDrag(Math.max(-180, Math.min(180, delta)));
+  };
+
+  const handlePromoPointerEnd = () => {
+    if (Math.abs(promoDrag) > 110) {
+      dismissPromo();
+    } else {
+      setPromoDrag(0);
+    }
+    promoDragStart.current = null;
+  };
+
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-10">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-market text-market-foreground shadow-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
-          <Link to="/" className="flex items-center gap-2 min-w-0">
-            {settings.general.logo_url ? (
-              <img src={settings.general.logo_url} alt={company} className="h-9 w-9 rounded-lg bg-white/10 object-contain md:h-11 md:w-11" />
-            ) : (
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 md:h-11 md:w-11">
-                <Sparkles className="h-5 w-5" />
-              </span>
+          <div className="flex min-w-0 items-center gap-2">
+            {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 rounded-full bg-white/10 px-0 text-market-foreground hover:bg-white/15 md:h-10 md:w-10"
+                onClick={() => navigate(-1)}
+                aria-label="Go back"
+                title="Go back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
             )}
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-bold leading-tight md:text-base">{company}</span>
-              <span className="block text-[11px] leading-tight opacity-80 md:text-xs">Trusted cleaning marketplace</span>
-            </span>
-          </Link>
+          </div>
 
           {/* Desktop primary navigation */}
           <nav className="hidden items-center gap-1 md:flex">
@@ -165,6 +195,42 @@ export default function MarketplaceLayout() {
           </div>
         </div>
       </header>
+
+      {promoVisible && (
+        <div className="px-4 pt-3 md:px-6">
+          <div
+            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 py-3 text-white shadow-lg shadow-emerald-600/20"
+            style={{
+              transform: `translateX(${promoDrag}px)`,
+              transition: promoDrag === 0 ? 'transform 0.22s ease' : 'none',
+              touchAction: 'pan-y',
+            }}
+            onPointerDown={handlePromoPointerDown}
+            onPointerMove={handlePromoPointerMove}
+            onPointerUp={handlePromoPointerEnd}
+            onPointerLeave={handlePromoPointerEnd}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold">%</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold leading-tight md:text-base">Enjoy up to KES 2,000 off a service</p>
+                  <p className="text-[11px] text-emerald-50/90 md:text-xs">Swipe to dismiss</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={dismissPromo}
+                className="shrink-0 rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-white/20"
+                aria-label="Dismiss promotion"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-6xl">
         <Outlet />

@@ -10,8 +10,10 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
 import PublicShell, { waLink } from '@/components/public/PublicShell';
+import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useSettings } from '@/hooks/useSettings';
 import { BlogPost, fetchPublishedPosts, fmtBlogDate, readingTime } from '@/lib/blog';
+import { MarketService, fetchMarketServices, serviceImage } from '@/lib/marketplace';
 import residential from '@/assets/market/residential.jpg';
 import commercial from '@/assets/market/commercial.jpg';
 import carpet from '@/assets/market/carpet.jpg';
@@ -57,8 +59,55 @@ export default function LandingPage() {
   const phone = settings.general.phone || '+254796563741';
   const reviewUrl = (settings as any).feedback?.google_review_url || 'https://g.page/r/CYJAstog5dgWEBI/review';
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [quickBookingServices, setQuickBookingServices] = useState<MarketService[]>([]);
 
   useEffect(() => { fetchPublishedPosts(3).then(setPosts); }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchMarketServices()
+      .then((services) => {
+        if (!active) return;
+
+        const preferredCategories = [
+          'Upholstery Cleaning',
+          'Fumigation & Pest Control',
+          'Residential Cleaning',
+          'Carpet & Rug Cleaning',
+        ];
+
+        const selected: MarketService[] = [];
+        const seen = new Set<string>();
+
+        preferredCategories.forEach((category) => {
+          const match = services.find((service) => {
+            if (service.category !== category) return false;
+            const key = `${service.category}:${service.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+          if (match) selected.push(match);
+        });
+
+        if (selected.length < 4) {
+          services.forEach((service) => {
+            const key = `${service.category}:${service.id}`;
+            if (seen.has(key)) return;
+            selected.push(service);
+            seen.add(key);
+            if (selected.length >= 4) return;
+          });
+        }
+
+        setQuickBookingServices(selected.slice(0, 4));
+      })
+      .catch(() => setQuickBookingServices([]));
+
+    return () => { active = false; };
+  }, []);
 
   const title = 'Concept Cleaning Services | Professional Cleaning in Nairobi, Kenya';
   const desc = 'Trusted home, office, carpet, sofa and fumigation services in Nairobi. Vetted crews, clear prices, M-Pesa payment. Book online or get a WhatsApp quote today.';
@@ -80,7 +129,20 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-forest text-brand-cream">
-        <img src={residential} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-20" />
+        <img src={residential} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+        <video
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          poster={residential}
+        >
+          <source src="/homepage-hero.mp4" type="video/mp4" media="(prefers-reduced-motion: no-preference)" />
+        </video>
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-brand-forest/90 via-brand-forest/75 to-brand-forest/65" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-24">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full bg-brand-panel text-brand-brass px-3 py-1 text-xs font-semibold uppercase tracking-wide">
@@ -108,7 +170,50 @@ export default function LandingPage() {
               <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">M-Pesa payment</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="rounded-[28px] border border-brand-line bg-white/10 p-4 shadow-2xl backdrop-blur-sm">
+            <div className="rounded-2xl bg-brand-panel px-4 py-3 text-brand-cream">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-brass">Quick booking</p>
+              <h2 className="mt-2 text-xl font-bold">Book your next clean in under 2 minutes</h2>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {quickBookingServices.length > 0 ? (
+                quickBookingServices.map((service) => {
+                  const directLink = `/service/${service.slug || service.id}`;
+
+                  return (
+                    <Link
+                      key={`${service.category}:${service.id}`}
+                      to={directLink}
+                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream transition hover:bg-white/10"
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full bg-brand-brass" />
+                      <span className="line-clamp-1">{service.name}</span>
+                    </Link>
+                  );
+                })
+              ) : (
+                ['Home cleaning', 'Office disinfection', 'Carpet care', 'Fumigation'].map((service) => (
+                  <div key={service} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream">
+                    <span className="h-2.5 w-2.5 rounded-full bg-brand-brass" />
+                    {service}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button asChild className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
+                <Link to="/marketplace#all-services">Book now</Link>
+              </Button>
+              <Button asChild variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
+                <a href={waLink(phone, 'Hello Concept Cleaning Services, I need a quick quote.')} target="_blank" rel="noopener noreferrer">WhatsApp quote</a>
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
             {PILLARS.map((p) => (
               <div key={p.title} className="rounded-xl border border-brand-line bg-brand-panel p-4 text-brand-cream shadow-lg">
                 <p.icon className="h-6 w-6 text-brand-brass" />
@@ -140,7 +245,7 @@ export default function LandingPage() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {SERVICES.map((s) => (
             <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
-              <img src={s.img} alt={`${s.name} in Nairobi`} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+              <ServiceVisual video={s.name === 'Home Deep Cleaning' ? '/home-deep-cleaning-demo.mp4' : null} image={s.img} alt={`${s.name} in Nairobi`} className="aspect-[16/10] w-full object-cover" />
               <div className="p-5">
                 <h3 className="font-semibold text-brand-ink">{s.name}</h3>
                 <p className="mt-1 text-sm text-brand-slate">{s.desc}</p>
