@@ -92,6 +92,29 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
   })) as MarketService[];
 }
 
+/** Optimized for landing page: fetch only N services instead of all 191. Reduces Supabase query load by ~97%. */
+export async function fetchMarketServicesLimited(limit: number = 6): Promise<MarketService[]> {
+  const { data, error } = await supabase
+    .from('services')
+    .select('*')
+    .eq('is_active', true)
+    .order('category')
+    .order('name')
+    .limit(limit);
+
+  if (error) throw error;
+
+  return ((data || []) as any[]).map((s) => ({
+    ...s,
+    slug: s.slug || null,
+    base_price: Number(s.base_price) || 0,
+    price_per_sqm: Number(s.price_per_sqm) || 0,
+    service_features: Array.isArray(s.service_features)
+      ? s.service_features
+      : [],
+  })) as MarketService[];
+}
+
 export function groupByCategory(
   services: MarketService[]
 ): [string, MarketService[]][] {

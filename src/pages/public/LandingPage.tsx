@@ -13,7 +13,7 @@ import PublicShell, { waLink } from '@/components/public/PublicShell';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useSettings } from '@/hooks/useSettings';
 import { BlogPost, fetchPublishedPosts, fmtBlogDate, readingTime } from '@/lib/blog';
-import { MarketService, fetchMarketServices, serviceImage } from '@/lib/marketplace';
+import { MarketService, fetchMarketServices, fetchMarketServicesLimited, serviceImage } from '@/lib/marketplace';
 import residential from '@/assets/market/residential.jpg';
 import commercial from '@/assets/market/commercial.jpg';
 import carpet from '@/assets/market/carpet.jpg';
@@ -66,7 +66,7 @@ export default function LandingPage() {
   useEffect(() => {
     let active = true;
 
-    fetchMarketServices()
+    fetchMarketServicesLimited(6)
       .then((services) => {
         if (!active) return;
 
@@ -130,18 +130,6 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-forest text-brand-cream">
         <img src={residential} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-        <video
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-          poster={residential}
-        >
-          <source src="/homepage-hero.mp4" type="video/mp4" media="(prefers-reduced-motion: no-preference)" />
-        </video>
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-brand-forest/90 via-brand-forest/75 to-brand-forest/65" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-24">
           <div>
@@ -245,7 +233,7 @@ export default function LandingPage() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {SERVICES.map((s) => (
             <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
-              <ServiceVisual video={s.name === 'Home Deep Cleaning' ? '/home-deep-cleaning-demo.mp4' : null} image={s.img} alt={`${s.name} in Nairobi`} className="aspect-[16/10] w-full object-cover" />
+              <ServiceVisual image={s.img} alt={`${s.name} in Nairobi`} className="aspect-[16/10] w-full object-cover" />
               <div className="p-5">
                 <h3 className="font-semibold text-brand-ink">{s.name}</h3>
                 <p className="mt-1 text-sm text-brand-slate">{s.desc}</p>
