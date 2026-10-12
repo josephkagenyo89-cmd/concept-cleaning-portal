@@ -407,7 +407,11 @@ export default function MarketServiceDetail() {
 
             <p className="mt-2 text-xl font-bold text-market">
               {pricing.original > 0 ? (
-                <>From {formatKes(pricing.original)}</>
+                pricing.active ? (
+                  <span>From {formatKes(pricing.final)} <span className="ml-2 text-sm font-medium text-muted-foreground line-through">{formatKes(pricing.original)}</span></span>
+                ) : (
+                  <>From {formatKes(pricing.original)}</>
+                )
               ) : (
                 'Price on quotation'
               )}
