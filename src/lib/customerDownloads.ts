@@ -105,12 +105,12 @@ export function downloadCustomerDocument(doc: any) {
       amount,
     ),
     totalAmount: amount,
-    subtotal: (() => {
-      const match = String(doc.description || '').match(/Discount:\s*([\d.]+)/i);
-      return match ? amount + Number(match[1] || 0) : undefined;
-    })(),
-    discountAmount: Number(String(doc.description || '').match(/Discount:\s*([\d.]+)/i)?.[1]) || 0,
-    discountReason: String(doc.description || '').match(/Discount:\s*[\d.]+\s*\(([^)]+)\)/i)?.[1] || undefined,
+    subtotal: doc.subtotal != null ? Number(doc.subtotal) : undefined,
+    discountAmount: Number(doc.discount_amount) || 0,
+    discountReason: doc.discount_reason || undefined,
+    discountType: doc.discount_type || undefined,
+    discountValue: doc.discount_value != null ? Number(doc.discount_value) : undefined,
+    discountStatus: doc.discount_approval_status || 'not_required',
     paymentStatus: doc.payment_status || undefined,
     notes: doc.description || undefined,
     salespersonName: doc.salesperson_name || undefined,
