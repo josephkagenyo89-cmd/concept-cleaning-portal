@@ -15,6 +15,12 @@ export interface CertificateRecord {
   services: string | null;
   line_items: any[];
   amount_paid: number;
+  subtotal?: number | null;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  discount_type?: string | null;
+  discount_value?: number | null;
+  discount_approval_status?: string | null;
   mpesa_code: string | null;
   payment_method: string | null;
   payment_reference: string | null;
@@ -45,6 +51,7 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
           description: i.description || i.serviceCode || undefined,
           quantity: i.quantity || 1,
           unitPrice: i.unitPrice || i.total,
+          discount: Number(i.discount_amount ?? i.discount) || 0,
           total: i.total,
         }))
       : [{ name: c.services || 'Cleaning Service', quantity: 1, unitPrice: c.amount_paid, total: c.amount_paid }];
@@ -60,6 +67,12 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
     clientLocation: c.client_location || undefined,
     lineItems: items,
     totalAmount: Number(c.amount_paid),
+    subtotal: c.subtotal != null ? Number(c.subtotal) : undefined,
+    discountAmount: Number(c.discount_amount) || 0,
+    discountReason: c.discount_reason || undefined,
+    discountType: c.discount_type || undefined,
+    discountValue: c.discount_value != null ? Number(c.discount_value) : undefined,
+    discountStatus: c.discount_approval_status || 'not_required',
     paymentStatus: 'PAID',
     mpesaCode: c.mpesa_code,
     paymentMethod: c.payment_method || undefined,
@@ -193,6 +206,12 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     services,
     line_items: lineItems,
     amount_paid: amountPaid,
+    subtotal: Number(b.subtotal ?? b.price ?? amountPaid),
+    discount_amount: Number(b.discount_amount) || 0,
+    discount_reason: b.discount_reason || null,
+    discount_type: b.discount_type || null,
+    discount_value: b.discount_value ?? null,
+    discount_approval_status: b.discount_approval_status || 'not_required',
     mpesa_code: mpesaCode,
     payment_method: paymentMethod,
     payment_reference: paymentReference,
