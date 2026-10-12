@@ -59,6 +59,8 @@ import {
 import { format } from 'date-fns';
 import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
 import { loadBookingSettings, BookingModuleSettings } from '@/lib/bookingSettings';
+import { loadAllSettings } from '@/lib/settings';
+import { getGlobalDiscount, GlobalDiscountState } from '@/lib/globalDiscount';
 
 interface Client {
   id: string;
@@ -98,6 +100,7 @@ export default function AdminBookService() {
   const [status, setStatus] = useState('DRAFT');
   const [lockStatus, setLockStatus] = useState('UNLOCKED');
   const [bookingSettings, setBookingSettings] = useState<BookingModuleSettings>(() => loadBookingSettings());
+  const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscountState>(() => getGlobalDiscount());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -138,6 +141,9 @@ export default function AdminBookService() {
     loadServices();
     loadAgents();
     generateBookingNo();
+    loadAllSettings().then(settings => setGlobalDiscount(getGlobalDiscount(settings.discount))).catch(error => {
+      console.error('Could not load global discount settings:', error);
+    });
   }, []);
 
   const loadClients = async () => {
@@ -303,8 +309,24 @@ export default function AdminBookService() {
     return matchesCategory && matchesSearch && s.is_active !== false;
   });
   const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-  const totalDiscount = items.reduce((sum, i) => sum + i.discount, 0);
-  const netTotal = items.reduce((sum, i) => sum + i.total, 0);
+  const manualDiscount = items.reduce((sum, i) => sum + Math.max(0, Number(i.discount) || 0), 0);
+  const pricedItems = items.map(i => {
+    const gross = Math.max(0, i.price * i.quantity);
+    const manual = Math.min(gross, Math.max(0, Number(i.discount) || 0));
+    const promo = globalDiscount.active
+      ? Math.round(Math.max(0, gross - manual) * globalDiscount.percentage) / 100
+      : 0;
+    return {
+      ...i,
+      discount: manual + promo,
+      global_discount_amount: promo,
+      global_discount_percentage: promo > 0 ? globalDiscount.percentage : 0,
+      total: Math.max(0, gross - manual - promo),
+    };
+  });
+  const globalDiscountAmount = pricedItems.reduce((sum, i) => sum + (Number(i.global_discount_amount) || 0), 0);
+  const totalDiscount = pricedItems.reduce((sum, i) => sum + (Number(i.discount) || 0), 0);
+  const netTotal = pricedItems.reduce((sum, i) => sum + i.total, 0);
   const vatAmount = bookingSettings.service.enableVat
     ? Math.round(netTotal * bookingSettings.service.defaultVatRate) / 100
     : 0;
@@ -333,9 +355,13 @@ export default function AdminBookService() {
     service_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     quantity: String(items.reduce((sum, i) => sum + i.quantity, 0)),
     status: statusValue,
-    line_items: items,
+    line_items: pricedItems,
     subtotal,
     discount_amount: totalDiscount,
+    discount_reason: [
+      globalDiscountAmount > 0 ? globalDiscount.label : '',
+      manualDiscount > 0 ? 'Manual booking discount' : '',
+    ].filter(Boolean).join(' + ') || null,
     price: grandTotal,
     salesperson_name: salesperson || null,
   });
@@ -375,10 +401,13 @@ export default function AdminBookService() {
         salesperson_id: user?.id || null,
         salesperson_name: salesperson || profile?.full_name || null,
         salesperson_role: currentRole,
-        line_items: items,
+        line_items: pricedItems,
         subtotal,
         discount_amount: totalDiscount,
-        discount_reason: totalDiscount > 0 ? 'Booking discount' : null,
+        discount_reason: [
+          globalDiscountAmount > 0 ? globalDiscount.label : '',
+          manualDiscount > 0 ? 'Manual booking discount' : '',
+        ].filter(Boolean).join(' + ') || null,
         local_id: bookingCode,
       };
       const { error: qError } = await supabase.from('quotations').insert(quotationPayload);
