@@ -19,7 +19,6 @@ export function safeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
     return '/my';
   }
-
   return next;
 }
 
@@ -37,12 +36,23 @@ export default function CustomerAuth() {
 
   useEffect(() => {
     if (isCustomer) {
-      navigate(next, { replace: true });
+      // Check if we saved a redirect target during OAuth flow
+      const savedTarget = localStorage.getItem('ccs_auth_redirect_target');
+      const redirectTarget = savedTarget || next;
+      
+      if (savedTarget) {
+        localStorage.removeItem('ccs_auth_redirect_target');
+      }
+      
+      navigate(redirectTarget, { replace: true });
     }
   }, [isCustomer, next, navigate]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+
+    // Save the redirect target to localStorage so we can retrieve it after OAuth callback
+    localStorage.setItem('ccs_auth_redirect_target', next);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -53,6 +63,7 @@ export default function CustomerAuth() {
 
     if (error) {
       setLoading(false);
+      localStorage.removeItem('ccs_auth_redirect_target');
 
       toast({
         title: 'Google sign-in failed',
