@@ -33,6 +33,7 @@ function toLineItems(
       quantity: i.quantity ?? 1,
       unitPrice:
         Number(i.unit_price ?? i.unitPrice ?? i.total ?? amount) || 0,
+      discount: Number(i.discount_amount ?? i.discount) || 0,
       total: Number(i.total ?? amount) || 0,
     }));
   }
@@ -104,6 +105,12 @@ export function downloadCustomerDocument(doc: any) {
       amount,
     ),
     totalAmount: amount,
+    subtotal: (() => {
+      const match = String(doc.description || '').match(/Discount:\s*([\d.]+)/i);
+      return match ? amount + Number(match[1] || 0) : undefined;
+    })(),
+    discountAmount: Number(String(doc.description || '').match(/Discount:\s*([\d.]+)/i)?.[1]) || 0,
+    discountReason: String(doc.description || '').match(/Discount:\s*[\d.]+\s*\(([^)]+)\)/i)?.[1] || undefined,
     paymentStatus: doc.payment_status || undefined,
     notes: doc.description || undefined,
     salespersonName: doc.salesperson_name || undefined,
