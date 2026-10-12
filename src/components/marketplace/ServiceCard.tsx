@@ -87,7 +87,7 @@ export default function ServiceCard({
           {price > 0 ? (
             <>
               <p className="text-sm font-bold text-sky-900">
-                From {formatKes(pricing.original)}
+                From {formatKes(pricing.final)}
               </p>
 
               {pricing.active ? (
