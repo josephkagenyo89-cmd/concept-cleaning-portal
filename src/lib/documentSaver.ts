@@ -28,7 +28,12 @@ export async function saveDocumentRecord(data: DocumentData & {
     quantity: data.lineItems.length === 1 ? String(data.lineItems[0].quantity || 1) : String(data.lineItems.length),
     line_items: data.lineItems as any,
     payment_status: data.paymentStatus || null,
-    description: data.notes || null,
+    description: [
+      data.notes,
+      Number(data.discountAmount) > 0
+        ? `Discount: ${Number(data.discountAmount).toFixed(2)} (${data.discountReason || 'Reason not specified'})`
+        : 'Discount: None applied',
+    ].filter(Boolean).join('\n') || null,
     created_by: data.createdById,
     created_by_name: data.createdBy,
     created_by_role: data.createdByRole,
