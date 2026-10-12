@@ -19,6 +19,9 @@ interface QuotationData {
   subtotal?: number;
   discountAmount?: number;
   discountReason?: string;
+  discountType?: 'percent' | 'fixed' | null;
+  discountValue?: number;
+  discountStatus?: 'pending' | 'approved' | 'rejected' | 'not_required';
   lineItems?: LineItemInput[];
   salespersonName?: string;
 }
@@ -41,6 +44,9 @@ function toDocData(data: QuotationData): DocumentData {
     subtotal: data.subtotal,
     discountAmount: data.discountAmount,
     discountReason: data.discountReason,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    discountStatus: data.discountStatus,
     serviceDate: data.serviceDate,
   };
 }
