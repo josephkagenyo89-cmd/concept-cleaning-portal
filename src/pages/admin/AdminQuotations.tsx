@@ -47,6 +47,7 @@ export default function AdminQuotations() {
         name: i.name || i.service_name || q.service_name,
         quantity: Number(i.quantity) || 1,
         unitPrice: Number(i.unitPrice ?? i.unit_price ?? i.price) || 0,
+        discount: Number(i.discount_amount ?? i.discount) || 0,
         total: Number(i.total) || 0,
       })) : undefined,
     });
