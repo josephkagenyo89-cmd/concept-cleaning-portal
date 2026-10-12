@@ -6,6 +6,7 @@ interface LineItemInput {
   quantity?: number;
   unitPrice?: number;
   total: number;
+  discount?: number;
 }
 
 interface QuotationData {
@@ -28,7 +29,7 @@ interface QuotationData {
 
 function toDocData(data: QuotationData): DocumentData {
   const items = data.lineItems && data.lineItems.length > 0
-    ? data.lineItems.map(i => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
+    ? data.lineItems.map(i => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, discount: i.discount || 0, total: i.total }))
     : [{ name: data.serviceName, quantity: 1, unitPrice: data.price, total: data.price }];
 
   return {
