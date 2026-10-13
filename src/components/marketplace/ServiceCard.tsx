@@ -88,11 +88,16 @@ export default function ServiceCard({
             <>
               <p className="text-sm font-bold text-sky-900">
                 From {formatKes(pricing.final)}
+                {pricing.active ? (
+                  <span className="ml-2 text-[10px] font-medium text-slate-400 line-through">
+                    {formatKes(pricing.original)}
+                  </span>
+                ) : null}
               </p>
 
               {pricing.active ? (
                 <p className="mt-1 text-[10px] font-semibold text-emerald-700">
-                  Book now to save {formatKes(pricing.discountAmount)}
+                  {discount.label} ({pricing.percentage}%) — save {formatKes(pricing.discountAmount)}
                 </p>
               ) : null}
             </>
