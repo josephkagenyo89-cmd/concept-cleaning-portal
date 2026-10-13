@@ -9,11 +9,16 @@ export interface GlobalDiscountState {
 }
 
 function todayIso(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  // Promotions are configured for Concept Cleaning Services in Kenya.
+  // Use Nairobi's calendar date even if the device timezone differs.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /**
