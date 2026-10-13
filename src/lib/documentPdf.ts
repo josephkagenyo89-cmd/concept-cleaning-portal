@@ -502,26 +502,32 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
   const valueX = boxX + boxW - 4;
 
   const discountAmount = Math.max(0, Number(data.discountAmount) || 0);
-  const subtotal = discountAmount > 0
-    ? (Number(data.subtotal) || (data.totalAmount + discountAmount))
-    : data.totalAmount;
+  const storedTotal = Math.max(0, Number(data.totalAmount) || 0);
+  const subtotal = data.subtotal != null
+    ? Math.max(0, Number(data.subtotal) || 0)
+    : storedTotal + discountAmount;
   const isPending = data.discountStatus === 'pending';
-  const showDiscount = discountAmount > 0 && !isPending;
-  const grandTotal = showDiscount ? subtotal - discountAmount : subtotal;
+  // A pending manual discount must not silently reduce the payable total.
+  const grandTotal = isPending ? subtotal : storedTotal;
 
   const rowH = 8;
   const rows: { label: string; value: string; isTotal?: boolean; pending?: boolean }[] = [
     { label: 'Subtotal', value: `${cur} ${fmt(subtotal)}` },
   ];
   if (discountAmount > 0) {
-    if (isPending) {
-      rows.push({ label: 'Discount', value: 'Awaiting Approval', pending: true });
-    } else {
-      const typeLabel = data.discountType === 'percent'
-        ? `${Number(data.discountValue) || 0}%`
-        : 'Fixed';
-      rows.push({ label: `Discount (${typeLabel})`, value: `- ${cur} ${fmt(discountAmount)}` });
+    const typeLabel = data.discountType === 'percent' && Number(data.discountValue) > 0
+      ? ` (${Number(data.discountValue)}%)`
+      : '';
+    rows.push({
+      label: isPending ? 'Discount requested' : `Discount${typeLabel}`,
+      value: isPending ? 'Awaiting Approval' : `- ${cur} ${fmt(discountAmount)}`,
+      pending: isPending,
+    });
+    if (data.discountReason?.trim()) {
+      rows.push({ label: 'Discount details', value: data.discountReason.trim() });
     }
+  } else {
+    rows.push({ label: 'Discount', value: `${cur} 0.00 — None applied` });
   }
   rows.push({ label: 'Grand Total', value: `${cur} ${fmt(grandTotal)}`, isTotal: true });
 

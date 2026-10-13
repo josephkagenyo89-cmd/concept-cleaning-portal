@@ -59,6 +59,8 @@ import {
 import { format } from 'date-fns';
 import BookingSettingsDialog from '@/components/booking/BookingSettingsDialog';
 import { loadBookingSettings, BookingModuleSettings } from '@/lib/bookingSettings';
+import { loadAllSettings } from '@/lib/settings';
+import { getGlobalDiscount, GlobalDiscountState } from '@/lib/globalDiscount';
 
 interface Client {
   id: string;
@@ -98,6 +100,7 @@ export default function AdminBookService() {
   const [status, setStatus] = useState('DRAFT');
   const [lockStatus, setLockStatus] = useState('UNLOCKED');
   const [bookingSettings, setBookingSettings] = useState<BookingModuleSettings>(() => loadBookingSettings());
+  const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscountState>(() => getGlobalDiscount());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -138,6 +141,9 @@ export default function AdminBookService() {
     loadServices();
     loadAgents();
     generateBookingNo();
+    loadAllSettings().then(settings => setGlobalDiscount(getGlobalDiscount(settings.discount))).catch(error => {
+      console.error('Could not load global discount settings:', error);
+    });
   }, []);
 
   const loadClients = async () => {
@@ -303,8 +309,26 @@ export default function AdminBookService() {
     return matchesCategory && matchesSearch && s.is_active !== false;
   });
   const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-  const totalDiscount = items.reduce((sum, i) => sum + i.discount, 0);
-  const netTotal = items.reduce((sum, i) => sum + i.total, 0);
+  const manualDiscount = items.reduce((sum, i) => sum + Math.max(0, Number(i.discount) || 0), 0);
+  const pricedItems = items.map(i => {
+    const gross = Math.max(0, i.price * i.quantity);
+    const manual = Math.min(gross, Math.max(0, Number(i.discount) || 0));
+    // A manual line discount takes precedence on that line. Do not stack
+    // the global promotion on top of it; undiscounted lines still qualify.
+    const promo = globalDiscount.active && manual <= 0
+      ? Math.round(gross * globalDiscount.percentage) / 100
+      : 0;
+    return {
+      ...i,
+      discount: manual + promo,
+      global_discount_amount: promo,
+      global_discount_percentage: promo > 0 ? globalDiscount.percentage : 0,
+      total: Math.max(0, gross - manual - promo),
+    };
+  });
+  const globalDiscountAmount = pricedItems.reduce((sum, i) => sum + (Number(i.global_discount_amount) || 0), 0);
+  const totalDiscount = pricedItems.reduce((sum, i) => sum + (Number(i.discount) || 0), 0);
+  const netTotal = pricedItems.reduce((sum, i) => sum + i.total, 0);
   const vatAmount = bookingSettings.service.enableVat
     ? Math.round(netTotal * bookingSettings.service.defaultVatRate) / 100
     : 0;
@@ -333,9 +357,15 @@ export default function AdminBookService() {
     service_date: preferredDate ? format(preferredDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     quantity: String(items.reduce((sum, i) => sum + i.quantity, 0)),
     status: statusValue,
-    line_items: items,
+    line_items: pricedItems,
     subtotal,
     discount_amount: totalDiscount,
+    discount_reason: [
+      globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}% global discount)` : '',
+      manualDiscount > 0 ? 'Manual booking discount (global discount not stacked on manually discounted lines)' : '',
+    ].filter(Boolean).join(' + ') || null,
+    discount_type: globalDiscountAmount > 0 && manualDiscount <= 0 ? 'percent' : totalDiscount > 0 ? 'fixed' : null,
+    discount_value: globalDiscountAmount > 0 && manualDiscount <= 0 ? globalDiscount.percentage : totalDiscount,
     price: grandTotal,
     salesperson_name: salesperson || null,
   });
@@ -375,10 +405,15 @@ export default function AdminBookService() {
         salesperson_id: user?.id || null,
         salesperson_name: salesperson || profile?.full_name || null,
         salesperson_role: currentRole,
-        line_items: items,
+        line_items: pricedItems,
         subtotal,
         discount_amount: totalDiscount,
-        discount_reason: totalDiscount > 0 ? 'Booking discount' : null,
+        discount_reason: [
+          globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}% global discount)` : '',
+          manualDiscount > 0 ? 'Manual booking discount (global discount not stacked on manually discounted lines)' : '',
+        ].filter(Boolean).join(' + ') || null,
+        discount_type: globalDiscountAmount > 0 && manualDiscount <= 0 ? 'percent' : totalDiscount > 0 ? 'fixed' : null,
+        discount_value: globalDiscountAmount > 0 && manualDiscount <= 0 ? globalDiscount.percentage : totalDiscount,
         local_id: bookingCode,
       };
       const { error: qError } = await supabase.from('quotations').insert(quotationPayload);
@@ -617,16 +652,16 @@ export default function AdminBookService() {
           </div>
 
           <div className="hidden overflow-x-auto rounded border sm:block">
-            <Table className="min-w-[1050px] text-xs"><TableHeader><TableRow className="bg-primary hover:bg-primary"><TableHead className="w-10 text-primary-foreground">#</TableHead><TableHead className="text-primary-foreground">Service</TableHead><TableHead className="text-primary-foreground">Description</TableHead><TableHead className="text-center text-primary-foreground">Qty</TableHead><TableHead className="text-primary-foreground">Unit</TableHead><TableHead className="text-right text-primary-foreground">Unit Price</TableHead><TableHead className="text-right text-primary-foreground">Discount %</TableHead><TableHead className="text-right text-primary-foreground">Discount KES</TableHead><TableHead className="text-right text-primary-foreground">VAT</TableHead><TableHead className="text-right text-primary-foreground">Line Total</TableHead><TableHead className="text-center text-primary-foreground">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>{items.length === 0 ? <TableRow><TableCell colSpan={11} className="h-20 text-center text-muted-foreground">No services added. Select Add Service to begin.</TableCell></TableRow> : items.map((item, index) => { const itemNet = Math.max(0, item.price * item.quantity - item.discount); const itemVat = bookingSettings.service.enableVat ? itemNet * bookingSettings.service.defaultVatRate / 100 : 0; return <TableRow key={item.id}><TableCell>{index + 1}</TableCell><TableCell><p className="font-semibold">{item.name}</p><p className="font-mono text-[9px] text-muted-foreground">{item.code}</p></TableCell><TableCell className="max-w-52 truncate text-muted-foreground">{item.description}</TableCell><TableCell><Input type="number" min="1" placeholder="Qty" className="mx-auto h-7 w-14 text-center text-xs" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /></TableCell><TableCell>{bookingSettings.service.defaultUnit}</TableCell><TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell><TableCell className="text-right font-mono">{item.price * item.quantity > 0 ? ((item.discount / (item.price * item.quantity)) * 100).toFixed(1) : '0.0'}</TableCell><TableCell><Input type="number" min="0" className="ml-auto h-7 w-20 text-right text-xs" value={item.discount} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></TableCell><TableCell className="text-right font-mono">{itemVat.toLocaleString()}</TableCell><TableCell className="text-right font-mono font-bold">{(itemNet + itemVat).toLocaleString()}</TableCell><TableCell><div className="flex justify-center"><Button variant="ghost" size="icon" className="h-7 w-7" title="Edit service"><Edit3 className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete service" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody>
+            <Table className="min-w-[1050px] text-xs"><TableHeader><TableRow className="bg-primary hover:bg-primary"><TableHead className="w-10 text-primary-foreground">#</TableHead><TableHead className="text-primary-foreground">Service</TableHead><TableHead className="text-primary-foreground">Description</TableHead><TableHead className="text-center text-primary-foreground">Qty</TableHead><TableHead className="text-primary-foreground">Unit</TableHead><TableHead className="text-right text-primary-foreground">Unit Price</TableHead><TableHead className="text-right text-primary-foreground">Discount %</TableHead><TableHead className="text-right text-primary-foreground">Manual Discount KES</TableHead><TableHead className="text-right text-primary-foreground">VAT</TableHead><TableHead className="text-right text-primary-foreground">Line Total</TableHead><TableHead className="text-center text-primary-foreground">Actions</TableHead></TableRow></TableHeader>
+              <TableBody>{items.length === 0 ? <TableRow><TableCell colSpan={11} className="h-20 text-center text-muted-foreground">No services added. Select Add Service to begin.</TableCell></TableRow> : pricedItems.map((item, index) => { const manualItem = items[index] || item; const itemNet = item.total; const itemVat = bookingSettings.service.enableVat ? itemNet * bookingSettings.service.defaultVatRate / 100 : 0; return <TableRow key={item.id}><TableCell>{index + 1}</TableCell><TableCell><p className="font-semibold">{item.name}</p><p className="font-mono text-[9px] text-muted-foreground">{item.code}</p></TableCell><TableCell className="max-w-52 truncate text-muted-foreground">{item.description}</TableCell><TableCell><Input type="number" min="1" placeholder="Qty" className="mx-auto h-7 w-14 text-center text-xs" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /></TableCell><TableCell>{bookingSettings.service.defaultUnit}</TableCell><TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell><TableCell className="text-right font-mono">{item.price * item.quantity > 0 ? ((item.discount / (item.price * item.quantity)) * 100).toFixed(1) : '0.0'}</TableCell><TableCell><Input type="number" min="0" className="ml-auto h-7 w-20 text-right text-xs" value={manualItem.discount} onChange={(e) => updateDiscount(manualItem.id, Number(e.target.value) || 0)} /></TableCell><TableCell className="text-right font-mono">{itemVat.toLocaleString()}</TableCell><TableCell className="text-right font-mono font-bold">{(itemNet + itemVat).toLocaleString()}</TableCell><TableCell><div className="flex justify-center"><Button variant="ghost" size="icon" className="h-7 w-7" title="Edit service"><Edit3 className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete service" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody>
             </Table>
           </div>
-          <div className="space-y-2 sm:hidden">{items.length === 0 ? <div className="rounded border bg-card p-6 text-center text-sm text-muted-foreground">No services added yet. Tap <strong>Add Service</strong> to begin.</div> : items.map((item) => <div key={item.id} className="rounded border bg-card p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><Badge variant="outline" className="font-mono text-[9px]">{item.code}</Badge><p className="mt-1 text-sm font-semibold leading-tight">{item.name}</p><p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{item.description}</p></div><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button></div><div className="mt-3 flex items-end gap-3"><div className="flex-1"><Label className="text-[10px]">Quantity</Label><div className="mt-1 flex items-center gap-1.5"><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" disabled={item.quantity <= 1} onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button><Input type="number" inputMode="numeric" min="1" placeholder="Qty" className="h-10 flex-1 text-center text-base font-semibold" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button></div></div><div className="w-28"><Label className="text-[10px]">Discount (KES)</Label><Input type="number" inputMode="numeric" min="0" placeholder="0" className="mt-1 h-10" value={item.discount || ''} onChange={(e) => updateDiscount(item.id, Number(e.target.value) || 0)} /></div></div><div className="mt-3 flex justify-between border-t pt-2 text-xs"><span className="text-muted-foreground">{money(item.price)} × {item.quantity || 0}</span><strong className="text-sm">{money(item.total)}</strong></div></div>)}</div>
+          <div className="space-y-2 sm:hidden">{items.length === 0 ? <div className="rounded border bg-card p-6 text-center text-sm text-muted-foreground">No services added yet. Tap <strong>Add Service</strong> to begin.</div> : pricedItems.map((item, index) => { const manualItem = items[index] || item; return <div key={item.id} className="rounded border bg-card p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><Badge variant="outline" className="font-mono text-[9px]">{item.code}</Badge><p className="mt-1 text-sm font-semibold leading-tight">{item.name}</p><p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{item.description}</p></div><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button></div><div className="mt-3 flex items-end gap-3"><div className="flex-1"><Label className="text-[10px]">Quantity</Label><div className="mt-1 flex items-center gap-1.5"><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" disabled={item.quantity <= 1} onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button><Input type="number" inputMode="numeric" min="1" placeholder="Qty" className="h-10 flex-1 text-center text-base font-semibold" value={item.quantity || ''} onChange={(e) => updateQuantity(item.id, Math.max(0, Number(e.target.value) || 0))} /><Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button></div></div><div className="w-28"><Label className="text-[10px]">Discount (KES)</Label><Input type="number" inputMode="numeric" min="0" placeholder="0" className="mt-1 h-10" value={manualItem.discount || ''} onChange={(e) => updateDiscount(manualItem.id, Number(e.target.value) || 0)} /></div></div><div className="mt-3 flex justify-between border-t pt-2 text-xs"><span className="text-muted-foreground">{money(item.price)} × {item.quantity || 0}</span><strong className="text-sm">{money(item.total)}</strong></div></div>; })}</div>
           <div className="mt-3 flex flex-col gap-1 text-xs sm:flex-row sm:justify-between"><span className="font-semibold">Total Items: {items.length}</span><span className="font-semibold">Subtotal Before Discount: <strong className="ml-2 text-sm">{money(subtotal)}</strong></span></div>
         </section>
 
         <div className="grid grid-cols-1 divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
-          <section className="p-4"><h2 className={sectionTitle}>Discount Information</h2><div className="mt-3 space-y-2"><div><Label className="text-[10px]">Discount Type</Label><Select value="fixed" disabled><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Line Discount (KES)</SelectItem></SelectContent></Select></div><div><Label className="text-[10px]">Discount Amount</Label><Input className={fieldClass} value={totalDiscount.toFixed(2)} readOnly /></div><div><Label className="text-[10px]">Discount Reason</Label><Textarea className="min-h-16 text-xs" placeholder="Required when a discount is applied" /></div><Button variant="outline" size="sm" className="w-full" disabled={totalDiscount <= 0}>Request Discount</Button></div></section>
+          <section className="p-4"><h2 className={sectionTitle}>Discount Information</h2><div className="mt-3 space-y-2"><div><Label className="text-[10px]">Discount Type</Label><Select value="fixed" disabled><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Line Discount (KES)</SelectItem></SelectContent></Select></div><div><Label className="text-[10px]">Total Discount (KES)</Label><Input className={fieldClass} value={totalDiscount.toFixed(2)} readOnly /></div>{globalDiscount.active && <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-800"><strong>{globalDiscount.label} ({globalDiscount.percentage}%)</strong><p>Global discount applied to lines without a manual discount.</p><p>Global discount total: {money(globalDiscountAmount)}</p></div>}<div><Label className="text-[10px]">Discount Details</Label><p className="text-[11px] text-muted-foreground">{[globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}%)` : '', manualDiscount > 0 ? 'Manual line discount' : ''].filter(Boolean).join(' + ') || 'No discount applied'}</p></div><Button variant="outline" size="sm" className="w-full" disabled={totalDiscount <= 0}>Request Discount</Button></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Discount Approval</h2><div className="mt-3 rounded border bg-muted/30 p-3 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="text-[9px]">NOT REQUESTED</Badge></div><div className="mt-3"><Label className="text-[10px]">Approval Comment</Label><Textarea className="mt-1 min-h-16 bg-background text-xs" disabled={!canApproveDiscount} /></div><div className="mt-3 grid grid-cols-2 gap-2"><Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" disabled={!canApproveDiscount || totalDiscount <= 0}>Approve</Button><Button variant="destructive" size="sm" disabled={!canApproveDiscount || totalDiscount <= 0}>Reject</Button></div></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Price Breakdown</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(subtotal)}</span></div><div className="flex justify-between text-destructive"><span>Discount</span><span>− {money(totalDiscount)}</span></div><div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">VAT ({bookingSettings.service.enableVat ? bookingSettings.service.defaultVatRate : 0}%)</span><span>+ {money(vatAmount)}</span></div><div className="flex items-baseline justify-between border-t pt-2"><strong className="text-sm">Grand Total</strong><strong className="text-lg text-primary">{money(displayedTotal)}</strong></div><div className="rounded border border-success/20 bg-success/10 p-2"><p className="text-[9px] font-bold uppercase text-success">Amount in Words</p><p className="mt-1 text-[10px]">Kenya Shillings {displayedTotal.toLocaleString()} only</p></div></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Payment Summary</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Payment Terms</span><strong>{paymentTerms}</strong></div>{bookingSettings.payment.allowDeposits && <div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Deposit</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={deposit || ''} onChange={(e) => setDeposit(Number(e.target.value) || 0)} /></div>}<div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Amount Paid</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={amountPaid || ''} onChange={(e) => setAmountPaid(Number(e.target.value) || 0)} /></div><div className="flex items-baseline justify-between border-t pt-3"><strong>Balance</strong><strong className="text-lg text-destructive">{money(balance)}</strong></div></div></section>

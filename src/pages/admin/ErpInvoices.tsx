@@ -40,6 +40,11 @@ interface Invoice {
   booking_id: string | null;
   mpesa_code?: string | null;
   payment_date?: string | null;
+  subtotal?: number | null;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  discount_type?: string | null;
+  discount_value?: number | null;
 }
 
 const STATUS_OPTIONS = ['unpaid', 'pending_approval', 'approved', 'paid', 'partial', 'overdue', 'cancelled'];
@@ -120,6 +125,11 @@ export default function ErpInvoices() {
       clientPhone: inv.client_phone || undefined,
       lineItems: items,
       totalAmount: Number(inv.amount),
+      subtotal: inv.subtotal != null ? Number(inv.subtotal) : undefined,
+      discountAmount: Number(inv.discount_amount) || 0,
+      discountReason: inv.discount_reason || undefined,
+      discountType: inv.discount_type || undefined,
+      discountValue: inv.discount_value != null ? Number(inv.discount_value) : undefined,
       paymentStatus: STATUS_LABEL[inv.payment_status] || inv.payment_status,
       notes: inv.notes || undefined,
     };
@@ -163,6 +173,9 @@ export default function ErpInvoices() {
       created_by: user!.id,
       client_id: clientId,
       line_items: lineItemsData,
+      subtotal: totalAmount,
+      discount_amount: 0,
+      discount_reason: null,
       salesperson_id: salesperson.id,
       salesperson_name: salesperson.name,
       salesperson_role: salesperson.role,
@@ -179,6 +192,9 @@ export default function ErpInvoices() {
       clientPhone: form.client_phone || undefined,
       lineItems: lineItemsData.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
       totalAmount,
+      subtotal: totalAmount,
+      discountAmount: 0,
+      discountReason: undefined,
       paymentStatus: form.payment_status,
       notes: form.notes || undefined,
       createdById: user!.id,
@@ -269,6 +285,11 @@ export default function ErpInvoices() {
         clientPhone: inv.client_phone || undefined,
         lineItems: lineItemsData,
         totalAmount: Number(inv.amount),
+        subtotal: inv.subtotal != null ? Number(inv.subtotal) : Number(inv.amount) + (Number(inv.discount_amount) || 0),
+        discountAmount: Number(inv.discount_amount) || 0,
+        discountReason: inv.discount_reason || undefined,
+        discountType: inv.discount_type || undefined,
+        discountValue: inv.discount_value != null ? Number(inv.discount_value) : undefined,
         paymentStatus: 'PAID',
         mpesaCode: code,
         paymentDate: fmtDate(new Date(paymentDate), 'PPP'),

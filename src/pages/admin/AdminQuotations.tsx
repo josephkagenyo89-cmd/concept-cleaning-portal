@@ -37,6 +37,19 @@ export default function AdminQuotations() {
       serviceName: q.service_name,
       serviceDate: q.service_date ? format(new Date(q.service_date), 'PPP') : 'N/A',
       price: Number(q.price),
+      subtotal: q.subtotal != null ? Number(q.subtotal) : undefined,
+      discountAmount: Number(q.discount_amount) || 0,
+      discountReason: q.discount_reason || undefined,
+      discountType: q.discount_type || undefined,
+      discountValue: q.discount_value != null ? Number(q.discount_value) : undefined,
+      discountStatus: q.discount_approval_status || 'not_required',
+      lineItems: Array.isArray(q.line_items) ? q.line_items.map((i: any) => ({
+        name: i.name || i.service_name || q.service_name,
+        quantity: Number(i.quantity) || 1,
+        unitPrice: Number(i.unitPrice ?? i.unit_price ?? i.price) || 0,
+        discount: Number(i.discount_amount ?? i.discount) || 0,
+        total: Number(i.total) || 0,
+      })) : undefined,
     });
   };
 

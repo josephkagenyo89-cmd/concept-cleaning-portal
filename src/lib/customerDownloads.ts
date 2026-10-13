@@ -32,7 +32,8 @@ function toLineItems(
         i.description || i.serviceCode || i.notes || undefined,
       quantity: i.quantity ?? 1,
       unitPrice:
-        Number(i.unit_price ?? i.unitPrice ?? i.total ?? amount) || 0,
+        Number(i.unit_price ?? i.unitPrice ?? i.price ?? i.total ?? amount) || 0,
+      discount: Number(i.discount_amount ?? i.discount) || 0,
       total: Number(i.total ?? amount) || 0,
     }));
   }
@@ -74,6 +75,9 @@ export function downloadCustomerInvoice(inv: any) {
       inv.subtotal != null ? Number(inv.subtotal) : undefined,
     discountAmount: Number(inv.discount_amount) || 0,
     discountReason: inv.discount_reason || undefined,
+    discountType: inv.discount_type || undefined,
+    discountValue: inv.discount_value != null ? Number(inv.discount_value) : undefined,
+    discountStatus: inv.discount_approval_status || 'not_required',
     paymentStatus: inv.payment_status,
     notes: inv.notes || undefined,
     salespersonName: inv.salesperson_name || undefined,
@@ -104,6 +108,12 @@ export function downloadCustomerDocument(doc: any) {
       amount,
     ),
     totalAmount: amount,
+    subtotal: doc.subtotal != null ? Number(doc.subtotal) : undefined,
+    discountAmount: Number(doc.discount_amount) || 0,
+    discountReason: doc.discount_reason || undefined,
+    discountType: doc.discount_type || undefined,
+    discountValue: doc.discount_value != null ? Number(doc.discount_value) : undefined,
+    discountStatus: doc.discount_approval_status || 'not_required',
     paymentStatus: doc.payment_status || undefined,
     notes: doc.description || undefined,
     salespersonName: doc.salesperson_name || undefined,
@@ -127,6 +137,9 @@ export function downloadCustomerQuotation(q: any) {
       q.subtotal != null ? Number(q.subtotal) : undefined,
     discountAmount: Number(q.discount_amount) || 0,
     discountReason: q.discount_reason || undefined,
+    discountType: q.discount_type || undefined,
+    discountValue: q.discount_value != null ? Number(q.discount_value) : undefined,
+    discountStatus: q.discount_approval_status || 'not_required',
     lineItems:
       Array.isArray(q.line_items) && q.line_items.length
         ? q.line_items.map((i: any) => ({
@@ -137,6 +150,7 @@ export function downloadCustomerQuotation(q: any) {
               Number(
                 i.unit_price ?? i.unitPrice ?? i.total,
               ) || 0,
+            discount: Number(i.discount_amount ?? i.discount) || 0,
             total: Number(i.total) || 0,
           }))
         : undefined,

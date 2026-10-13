@@ -202,11 +202,15 @@ export default function MarketServiceDetail() {
       ? {
           subtotal: pricing.original,
           discount_amount: pricing.discountAmount,
-          discount_reason: globalDiscount.label,
+          discount_type: 'percent',
+          discount_value: pricing.percentage,
+          discount_reason: `${globalDiscount.label} (${pricing.percentage}% global discount)`,
         }
       : {
           subtotal: pricing.original,
           discount_amount: 0,
+          discount_type: null,
+          discount_value: 0,
         };
 
     try {
@@ -407,7 +411,11 @@ export default function MarketServiceDetail() {
 
             <p className="mt-2 text-xl font-bold text-market">
               {pricing.original > 0 ? (
-                <>From {formatKes(pricing.original)}</>
+                pricing.active ? (
+                  <span>From {formatKes(pricing.final)} <span className="ml-2 text-sm font-medium text-muted-foreground line-through">{formatKes(pricing.original)}</span></span>
+                ) : (
+                  <>From {formatKes(pricing.original)}</>
+                )
               ) : (
                 'Price on quotation'
               )}

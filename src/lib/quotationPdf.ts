@@ -6,6 +6,7 @@ interface LineItemInput {
   quantity?: number;
   unitPrice?: number;
   total: number;
+  discount?: number;
 }
 
 interface QuotationData {
@@ -19,13 +20,16 @@ interface QuotationData {
   subtotal?: number;
   discountAmount?: number;
   discountReason?: string;
+  discountType?: 'percent' | 'fixed' | null;
+  discountValue?: number;
+  discountStatus?: 'pending' | 'approved' | 'rejected' | 'not_required';
   lineItems?: LineItemInput[];
   salespersonName?: string;
 }
 
 function toDocData(data: QuotationData): DocumentData {
   const items = data.lineItems && data.lineItems.length > 0
-    ? data.lineItems.map(i => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
+    ? data.lineItems.map(i => ({ name: i.name, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, discount: i.discount || 0, total: i.total }))
     : [{ name: data.serviceName, quantity: 1, unitPrice: data.price, total: data.price }];
 
   return {
@@ -41,6 +45,9 @@ function toDocData(data: QuotationData): DocumentData {
     subtotal: data.subtotal,
     discountAmount: data.discountAmount,
     discountReason: data.discountReason,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    discountStatus: data.discountStatus,
     serviceDate: data.serviceDate,
   };
 }
