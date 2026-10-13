@@ -202,11 +202,15 @@ export default function MarketServiceDetail() {
       ? {
           subtotal: pricing.original,
           discount_amount: pricing.discountAmount,
-          discount_reason: globalDiscount.label,
+          discount_type: 'percent',
+          discount_value: pricing.percentage,
+          discount_reason: `${globalDiscount.label} (${pricing.percentage}% global discount)`,
         }
       : {
           subtotal: pricing.original,
           discount_amount: 0,
+          discount_type: null,
+          discount_value: 0,
         };
 
     try {
