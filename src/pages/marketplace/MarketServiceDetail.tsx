@@ -202,47 +202,148 @@ export default function MarketServiceDetail() {
       ? {
           subtotal: pricing.original,
           discount_amount: pricing.discountAmount,
-          discount_type: 'percent',
-          discount_value: pricing.percentage,
-          discount_reason: `${globalDiscount.label} (${pricing.percentage}% global discount)`,
+          discount_reason: globalDiscount.label,
         }
       : {
           subtotal: pricing.original,
           discount_amount: 0,
-          discount_type: null,
-          discount_value: 0,
         };
 
     try {
-      // Instant booking removed — always create a quotation request
-      let quotationNumber = '';
+      // Create Lead record (for ALL requests - booking or quotation)
+      let leadCode = '';
+      const { data: leadNum } = await supabase.rpc('next_lead_code' as any);
+      leadCode = (leadNum as string) || `LD-${Date.now()}`;
 
-      const { data: num } = await supabase.rpc(
-        'next_quotation_number' as any
-      );
+      const leadData = {
+        lead_code: leadCode,
+        full_name: customerClient.full_name,
+        phone: form.phone.trim(),
+        email: customerClient.email || null,
+        location: form.location.trim(),
+        service_interest: service.name,
+        source: 'website',
+        status: 'new',
+        priority: 'medium',
+        estimated_value: price,
+        notes: form.notes || null,
+        created_at: new Date().toISOString(),
+      };
 
-      quotationNumber = (num as string) || `QT-${Date.now()}`;
+      const { data: leadResult, error: leadError } = await supabase
+        .from('leads')
+        .insert(leadData as any)
+        .select('id')
+        .single();
 
-      const { error } = await supabase
-        .from('quotations')
-        .insert({
-          quotation_number: quotationNumber,
-          client_name: customerClient.full_name,
-          client_phone: form.phone.trim(),
-          service_name: service.name,
-          service_date: form.service_date || null,
-          price,
-          created_by: user.id,
-          created_by_name: customerClient.full_name,
-          created_by_role: 'customer',
-          line_items: lineItems as any,
-          ...discountFields,
-        } as any);
+      if (leadError) throw leadError;
+      const leadId = leadResult?.id;
 
-      if (error) throw error;
+      // Branch based on mode
+      if (mode === 'booking') {
+        // Create Booking
+        const { error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            client_id: customerClient.id,
+            client_name: customerClient.full_name,
+            client_phone: form.phone.trim(),
+            service_id: service.id,
+            service_date: form.service_date,
+            location: form.location.trim(),
+            price,
+            status: 'pending',
+            created_by_name: customerClient.full_name,
+            created_by_role: 'customer',
+            line_items: lineItems as any,
+            ...discountFields,
+          } as any);
 
-      // Track a successful customer enquiry only when optional Meta tracking was accepted.
-      // Do not send customer-identifying details to Meta.
+        if (bookingError) throw bookingError;
+
+        // Link lead to booking
+        if (leadId) {
+          await supabase
+            .from('leads')
+            .update({ status: 'converted', converted_client_id: customerClient.id })
+            .eq('id', leadId);
+        }
+
+        // Notify admins of booking
+        try {
+          const adminIds = await listAdminUserIds();
+          if (adminIds.length) {
+            const body = `New booking from ${customerClient.full_name} for ${service.name} on ${form.service_date}`;
+            triggerBrowserNotification('New booking created', body);
+            await pushNotificationToUsers({
+              user_ids: adminIds,
+              type: 'booking',
+              title: 'New booking created',
+              body,
+              client_id: customerClient.id,
+              link: '/admin/bookings',
+            });
+            window.dispatchEvent(new Event('ccs-notifications-changed'));
+          }
+        } catch (e) {
+          console.warn('Could not notify admins of booking:', e);
+        }
+
+        toast({
+          title: 'Booking created successfully',
+          description: `Service scheduled for ${form.service_date}`,
+        });
+      } else {
+        // Create Quotation
+        let quotationNumber = '';
+        const { data: num } = await supabase.rpc('next_quotation_number' as any);
+        quotationNumber = (num as string) || `QT-${Date.now()}`;
+
+        const { error: quotationError } = await supabase
+          .from('quotations')
+          .insert({
+            quotation_number: quotationNumber,
+            client_name: customerClient.full_name,
+            client_phone: form.phone.trim(),
+            service_name: service.name,
+            service_date: form.service_date || null,
+            price,
+            created_by: user.id,
+            created_by_name: customerClient.full_name,
+            created_by_role: 'customer',
+            line_items: lineItems as any,
+            ...discountFields,
+          } as any);
+
+        if (quotationError) throw quotationError;
+
+        // Notify admins of quotation
+        try {
+          const adminIds = await listAdminUserIds();
+          if (adminIds.length) {
+            const body = `Quotation ${quotationNumber} requested by ${customerClient.full_name} for ${service.name}.`;
+            triggerBrowserNotification('New quotation requested', body);
+            await pushNotificationToUsers({
+              user_ids: adminIds,
+              type: 'quotation',
+              title: 'New quotation requested',
+              body,
+              client_id: customerClient.id,
+              link: '/admin/quotations',
+            });
+            window.dispatchEvent(new Event('ccs-notifications-changed'));
+          }
+        } catch (e) {
+          console.warn('Could not notify admins of quotation:', e);
+        }
+
+        toast({
+          title: 'Quotation requested',
+          description: `Reference ${quotationNumber}. PDF will be generated.`,
+        });
+      }
+
+      // Track Meta pixel lead event
       try {
         if (localStorage.getItem('ccs_cookie_consent_v2') === 'accepted') {
           const pixel = (window as any).fbq;
@@ -259,33 +360,7 @@ export default function MarketServiceDetail() {
         console.warn('Meta Pixel Lead tracking failed:', trackingError);
       }
 
-      // Notify admins about the new quotation
-      try {
-        const adminIds = await listAdminUserIds();
-        if (adminIds.length) {
-          const body = `Quotation ${quotationNumber} requested by ${customerClient.full_name} for ${service.name}.`;
-          triggerBrowserNotification('New quotation requested', body);
-          await pushNotificationToUsers({
-            user_ids: adminIds,
-            type: 'quotation',
-            title: 'New quotation requested',
-            body,
-            client_id: customerClient.id,
-            link: '/admin/quotations',
-          });
-          window.dispatchEvent(new Event('ccs-notifications-changed'));
-        }
-      } catch (e) {
-        console.warn('Could not notify admins of quotation:', e);
-      }
-
-      toast({
-        title: 'Quotation requested',
-        description: `Reference ${quotationNumber}`,
-      });
-
       await refreshProfile();
-
       navigate('/my/bookings');
     } catch (e: any) {
       console.error('Could not submit request:', e);
@@ -411,11 +486,7 @@ export default function MarketServiceDetail() {
 
             <p className="mt-2 text-xl font-bold text-market">
               {pricing.original > 0 ? (
-                pricing.active ? (
-                  <span>From {formatKes(pricing.final)} <span className="ml-2 text-sm font-medium text-muted-foreground line-through">{formatKes(pricing.original)}</span></span>
-                ) : (
-                  <>From {formatKes(pricing.original)}</>
-                )
+                <>From {formatKes(pricing.original)}</>
               ) : (
                 'Price on quotation'
               )}
