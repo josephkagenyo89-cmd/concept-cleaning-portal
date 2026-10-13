@@ -313,8 +313,10 @@ export default function AdminBookService() {
   const pricedItems = items.map(i => {
     const gross = Math.max(0, i.price * i.quantity);
     const manual = Math.min(gross, Math.max(0, Number(i.discount) || 0));
-    const promo = globalDiscount.active
-      ? Math.round(Math.max(0, gross - manual) * globalDiscount.percentage) / 100
+    // A manual line discount takes precedence on that line. Do not stack
+    // the global promotion on top of it; undiscounted lines still qualify.
+    const promo = globalDiscount.active && manual <= 0
+      ? Math.round(gross * globalDiscount.percentage) / 100
       : 0;
     return {
       ...i,
@@ -359,9 +361,11 @@ export default function AdminBookService() {
     subtotal,
     discount_amount: totalDiscount,
     discount_reason: [
-      globalDiscountAmount > 0 ? globalDiscount.label : '',
-      manualDiscount > 0 ? 'Manual booking discount' : '',
+      globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}% global discount)` : '',
+      manualDiscount > 0 ? 'Manual booking discount (global discount not stacked on manually discounted lines)' : '',
     ].filter(Boolean).join(' + ') || null,
+    discount_type: globalDiscountAmount > 0 && manualDiscount <= 0 ? 'percent' : totalDiscount > 0 ? 'fixed' : null,
+    discount_value: globalDiscountAmount > 0 && manualDiscount <= 0 ? globalDiscount.percentage : totalDiscount,
     price: grandTotal,
     salesperson_name: salesperson || null,
   });
@@ -405,9 +409,11 @@ export default function AdminBookService() {
         subtotal,
         discount_amount: totalDiscount,
         discount_reason: [
-          globalDiscountAmount > 0 ? globalDiscount.label : '',
-          manualDiscount > 0 ? 'Manual booking discount' : '',
+          globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}% global discount)` : '',
+          manualDiscount > 0 ? 'Manual booking discount (global discount not stacked on manually discounted lines)' : '',
         ].filter(Boolean).join(' + ') || null,
+        discount_type: globalDiscountAmount > 0 && manualDiscount <= 0 ? 'percent' : totalDiscount > 0 ? 'fixed' : null,
+        discount_value: globalDiscountAmount > 0 && manualDiscount <= 0 ? globalDiscount.percentage : totalDiscount,
         local_id: bookingCode,
       };
       const { error: qError } = await supabase.from('quotations').insert(quotationPayload);
@@ -655,7 +661,7 @@ export default function AdminBookService() {
         </section>
 
         <div className="grid grid-cols-1 divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
-          <section className="p-4"><h2 className={sectionTitle}>Discount Information</h2><div className="mt-3 space-y-2"><div><Label className="text-[10px]">Discount Type</Label><Select value="fixed" disabled><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Line Discount (KES)</SelectItem></SelectContent></Select></div><div><Label className="text-[10px]">Discount Amount</Label><Input className={fieldClass} value={totalDiscount.toFixed(2)} readOnly /></div><div><Label className="text-[10px]">Discount Reason</Label><Textarea className="min-h-16 text-xs" placeholder="Required when a discount is applied" /></div><Button variant="outline" size="sm" className="w-full" disabled={totalDiscount <= 0}>Request Discount</Button></div></section>
+          <section className="p-4"><h2 className={sectionTitle}>Discount Information</h2><div className="mt-3 space-y-2"><div><Label className="text-[10px]">Discount Type</Label><Select value="fixed" disabled><SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Line Discount (KES)</SelectItem></SelectContent></Select></div><div><Label className="text-[10px]">Total Discount (KES)</Label><Input className={fieldClass} value={totalDiscount.toFixed(2)} readOnly /></div>{globalDiscount.active && <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-800"><strong>{globalDiscount.label} ({globalDiscount.percentage}%)</strong><p>Global discount applied to lines without a manual discount.</p><p>Global discount total: {money(globalDiscountAmount)}</p></div>}<div><Label className="text-[10px]">Discount Details</Label><p className="text-[11px] text-muted-foreground">{[globalDiscountAmount > 0 ? `${globalDiscount.label} (${globalDiscount.percentage}%)` : '', manualDiscount > 0 ? 'Manual line discount' : ''].filter(Boolean).join(' + ') || 'No discount applied'}</p></div><Button variant="outline" size="sm" className="w-full" disabled={totalDiscount <= 0}>Request Discount</Button></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Discount Approval</h2><div className="mt-3 rounded border bg-muted/30 p-3 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="text-[9px]">NOT REQUESTED</Badge></div><div className="mt-3"><Label className="text-[10px]">Approval Comment</Label><Textarea className="mt-1 min-h-16 bg-background text-xs" disabled={!canApproveDiscount} /></div><div className="mt-3 grid grid-cols-2 gap-2"><Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" disabled={!canApproveDiscount || totalDiscount <= 0}>Approve</Button><Button variant="destructive" size="sm" disabled={!canApproveDiscount || totalDiscount <= 0}>Reject</Button></div></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Price Breakdown</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(subtotal)}</span></div><div className="flex justify-between text-destructive"><span>Discount</span><span>− {money(totalDiscount)}</span></div><div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">VAT ({bookingSettings.service.enableVat ? bookingSettings.service.defaultVatRate : 0}%)</span><span>+ {money(vatAmount)}</span></div><div className="flex items-baseline justify-between border-t pt-2"><strong className="text-sm">Grand Total</strong><strong className="text-lg text-primary">{money(displayedTotal)}</strong></div><div className="rounded border border-success/20 bg-success/10 p-2"><p className="text-[9px] font-bold uppercase text-success">Amount in Words</p><p className="mt-1 text-[10px]">Kenya Shillings {displayedTotal.toLocaleString()} only</p></div></div></section>
           <section className="p-4"><h2 className={sectionTitle}>Payment Summary</h2><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><span className="text-muted-foreground">Payment Terms</span><strong>{paymentTerms}</strong></div>{bookingSettings.payment.allowDeposits && <div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Deposit</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={deposit || ''} onChange={(e) => setDeposit(Number(e.target.value) || 0)} /></div>}<div className="flex items-center justify-between gap-3"><Label className="text-xs text-muted-foreground">Amount Paid</Label><Input type="number" min="0" className="h-7 w-28 text-right text-xs" value={amountPaid || ''} onChange={(e) => setAmountPaid(Number(e.target.value) || 0)} /></div><div className="flex items-baseline justify-between border-t pt-3"><strong>Balance</strong><strong className="text-lg text-destructive">{money(balance)}</strong></div></div></section>
