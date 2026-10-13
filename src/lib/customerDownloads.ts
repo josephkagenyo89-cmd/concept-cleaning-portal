@@ -137,6 +137,9 @@ export function downloadCustomerQuotation(q: any) {
       q.subtotal != null ? Number(q.subtotal) : undefined,
     discountAmount: Number(q.discount_amount) || 0,
     discountReason: q.discount_reason || undefined,
+    discountType: q.discount_type || undefined,
+    discountValue: q.discount_value != null ? Number(q.discount_value) : undefined,
+    discountStatus: q.discount_approval_status || 'not_required',
     lineItems:
       Array.isArray(q.line_items) && q.line_items.length
         ? q.line_items.map((i: any) => ({
