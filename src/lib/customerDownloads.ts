@@ -32,7 +32,7 @@ function toLineItems(
         i.description || i.serviceCode || i.notes || undefined,
       quantity: i.quantity ?? 1,
       unitPrice:
-        Number(i.unit_price ?? i.unitPrice ?? i.total ?? amount) || 0,
+        Number(i.unit_price ?? i.unitPrice ?? i.price ?? i.total ?? amount) || 0,
       discount: Number(i.discount_amount ?? i.discount) || 0,
       total: Number(i.total ?? amount) || 0,
     }));
