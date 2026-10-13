@@ -75,6 +75,9 @@ export function downloadCustomerInvoice(inv: any) {
       inv.subtotal != null ? Number(inv.subtotal) : undefined,
     discountAmount: Number(inv.discount_amount) || 0,
     discountReason: inv.discount_reason || undefined,
+    discountType: inv.discount_type || undefined,
+    discountValue: inv.discount_value != null ? Number(inv.discount_value) : undefined,
+    discountStatus: inv.discount_approval_status || 'not_required',
     paymentStatus: inv.payment_status,
     notes: inv.notes || undefined,
     salespersonName: inv.salesperson_name || undefined,
@@ -144,6 +147,7 @@ export function downloadCustomerQuotation(q: any) {
               Number(
                 i.unit_price ?? i.unitPrice ?? i.total,
               ) || 0,
+            discount: Number(i.discount_amount ?? i.discount) || 0,
             total: Number(i.total) || 0,
           }))
         : undefined,
