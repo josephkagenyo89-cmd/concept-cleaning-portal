@@ -185,12 +185,14 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
   const lineItems =
     Array.isArray(b.line_items) && b.line_items.length > 0
       ? b.line_items.map((i: any) => ({
-          name: i.name,
+          name: i.service_name || i.name || 'Cleaning Service',
+          description: i.description || i.serviceCode || i.notes || undefined,
           quantity: i.quantity || 1,
-          unitPrice: i.unitPrice || i.total,
-          total: i.total,
+          unitPrice: Number(i.unit_price ?? i.unitPrice ?? i.price ?? i.total) || 0,
+          discount: Number(i.discount_amount ?? i.discount) || 0,
+          total: Number(i.total) || 0,
         }))
-      : [{ name: 'Cleaning Service', quantity: 1, unitPrice: amountPaid || Number(b.price), total: amountPaid || Number(b.price) }];
+      : [{ name: 'Cleaning Service', quantity: 1, unitPrice: amountPaid || Number(b.price), discount: 0, total: amountPaid || Number(b.price) }];
 
   const services = lineItems.map((i: any) => i.name).join(', ');
 
