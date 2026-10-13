@@ -568,7 +568,7 @@ export default function MarketServiceDetail() {
               <div className="rounded-lg border border-market/20 bg-market-soft/50 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Estimated total</span>
-                  <span className="font-bold text-market">{formatKes(pricing.original)}</span>
+                  <span className="font-bold text-market">{formatKes(pricing.final)}</span>
                 </div>
                 {pricing.active ? (
                   <div className="mt-1 flex items-center justify-between gap-3">
