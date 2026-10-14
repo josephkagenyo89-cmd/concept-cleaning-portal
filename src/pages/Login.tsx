@@ -188,7 +188,7 @@ export default function Login() {
         <CardFooter className="flex flex-col space-y-3">
           <p className="text-sm text-muted-foreground text-center">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-primary hover:underline font-medium">
+            <Link to={next ? `/signup?next=${encodeURIComponent(next)}` : '/signup'} className="text-primary hover:underline font-medium">
               Sign up
             </Link>
           </p>
