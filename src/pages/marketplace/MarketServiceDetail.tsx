@@ -224,8 +224,8 @@ export default function MarketServiceDetail() {
         service_interest: service.name,
         source: 'website',
         status: 'new',
-        priority: 'high',
-        estimated_value: price,
+        priority: 'normal',
+        estimated_value: Math.max(0, price || 0),
         notes: form.notes || null,
         created_by: user.id,
       };
