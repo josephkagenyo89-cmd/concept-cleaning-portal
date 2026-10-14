@@ -227,6 +227,7 @@ export default function MarketServiceDetail() {
         priority: 'medium',
         estimated_value: price,
         notes: form.notes || null,
+        created_by: user.id,
         created_at: new Date().toISOString(),
       };
 
