@@ -245,7 +245,9 @@ export default function MarketServiceDetail() {
         const { error: bookingError } = await supabase
           .from('bookings')
           .insert({
+            agent_id: customerClient.id,
             client_id: customerClient.id,
+            agent_id: customerClient.id,
             client_name: customerClient.full_name,
             client_phone: form.phone.trim(),
             service_id: service.id,
@@ -280,7 +282,9 @@ export default function MarketServiceDetail() {
               type: 'booking',
               title: 'New booking created',
               body,
-              client_id: customerClient.id,
+              agent_id: customerClient.id,
+            client_id: customerClient.id,
+            agent_id: customerClient.id,
               link: '/admin/bookings',
             });
             window.dispatchEvent(new Event('ccs-notifications-changed'));
@@ -328,7 +332,9 @@ export default function MarketServiceDetail() {
               type: 'quotation',
               title: 'New quotation requested',
               body,
-              client_id: customerClient.id,
+              agent_id: customerClient.id,
+            client_id: customerClient.id,
+            agent_id: customerClient.id,
               link: '/admin/quotations',
             });
             window.dispatchEvent(new Event('ccs-notifications-changed'));
