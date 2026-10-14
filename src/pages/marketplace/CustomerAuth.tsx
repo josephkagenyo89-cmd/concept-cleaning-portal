@@ -29,7 +29,8 @@ export function buildCustomerAuthRedirectUrl(next: string | null) {
 
 export default function CustomerAuth() {
   const [params] = useSearchParams();
-  const next = safeNext(params.get('next'));
+  const requestedNext = params.get('next');
+  const next = safeNext(requestedNext);
   const navigate = useNavigate();
   const { isCustomer } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,8 @@ export default function CustomerAuth() {
     if (isCustomer) {
       // Check if we saved a redirect target during OAuth flow
       const savedTarget = localStorage.getItem('ccs_auth_redirect_target');
-      const redirectTarget = savedTarget || next;
+      // Prefer the explicit callback URL; only use storage as a fallback.
+      const redirectTarget = requestedNext ? next : savedTarget || next;
       
       if (savedTarget) {
         localStorage.removeItem('ccs_auth_redirect_target');
@@ -46,7 +48,7 @@ export default function CustomerAuth() {
       
       navigate(redirectTarget, { replace: true });
     }
-  }, [isCustomer, next, navigate]);
+  }, [isCustomer, requestedNext, next, navigate]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
