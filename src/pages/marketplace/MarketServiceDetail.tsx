@@ -224,11 +224,10 @@ export default function MarketServiceDetail() {
         service_interest: service.name,
         source: 'website',
         status: 'new',
-        priority: 'medium',
+        priority: 'high',
         estimated_value: price,
         notes: form.notes || null,
         created_by: user.id,
-        created_at: new Date().toISOString(),
       };
 
       const { data: leadResult, error: leadError } = await supabase
