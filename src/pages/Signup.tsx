@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,16 @@ const lockMessage = (seconds: number) => {
   return `Too many signup attempts. Please try again in ${m} minute${m > 1 ? 's' : ''}.`;
 };
 
+function safeNext(next: string | null): string | null {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return null;
+  return next;
+}
+
+function customerAuthUrl(next: string | null) {
+  const target = safeNext(next);
+  return target ? `/customer-auth?next=${encodeURIComponent(target)}` : '/customer-auth';
+}
+
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,14 +34,16 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [lockSeconds, setLockSeconds] = useState(0);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
   const { user, loading } = useAuth();
   const config = RATE_LIMIT_CONFIG.SIGNUP;
   const locked = lockSeconds > 0;
 
   useEffect(() => {
     if (loading || !user) return;
-    navigate('/', { replace: true });
-  }, [user, loading, navigate]);
+    navigate(customerAuthUrl(next), { replace: true });
+  }, [user, loading, next, navigate]);
 
   // On mount: look only, do not count an attempt
   useEffect(() => {
@@ -99,7 +111,7 @@ export default function Signup() {
         title: 'Signup successful',
         description: 'Please check your email to confirm your account',
       });
-      navigate('/customer-auth', { replace: true });
+      navigate(customerAuthUrl(next), { replace: true });
     } catch {
       setSubmitting(false);
       toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
@@ -198,7 +210,7 @@ export default function Signup() {
         <CardFooter className="flex flex-col space-y-3">
           <p className="text-sm text-muted-foreground text-center">
             Already have an account?{' '}
-            <Link to="/customer-auth" className="text-primary hover:underline font-medium">
+            <Link to={customerAuthUrl(next)} className="text-primary hover:underline font-medium">
               Login
             </Link>
           </p>
