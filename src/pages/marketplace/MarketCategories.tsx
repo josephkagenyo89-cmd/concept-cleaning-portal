@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
-import { MarketService, categoryImage, categoryVideo, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
+import { MarketService, categoryImage, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
 
 export default function MarketCategories() {
   const [services, setServices] = useState<MarketService[]>([]);
@@ -71,7 +71,6 @@ export default function MarketCategories() {
                 className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
               >
                 <ServiceVisual
-                  video={categoryVideo(cat)}
                   image={categoryImage(cat)}
                   alt={cat}
                   className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"

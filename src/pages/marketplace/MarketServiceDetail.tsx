@@ -28,7 +28,6 @@ import {
   displayRating,
   formatKes,
   serviceImage,
-  serviceVideo,
   startingPrice,
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
@@ -443,7 +442,6 @@ export default function MarketServiceDetail() {
       <div className="pb-6">
         <div className="relative">
           <ServiceVisual
-            video={serviceVideo(service)}
             image={serviceImage(service)}
             alt={service.name}
             className="h-52 w-full object-cover"

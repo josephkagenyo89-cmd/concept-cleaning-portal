@@ -10,7 +10,7 @@ import {
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import ReferralForm from '@/components/marketplace/ReferralForm';
 import {
-  MarketService, buildRecommendations, categoryImage, categoryVideo, fetchMarketServices, groupByCategory, startingPrice,
+  MarketService, buildRecommendations, categoryImage, fetchMarketServices, groupByCategory, startingPrice,
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useSettings } from '@/hooks/useSettings';
@@ -162,7 +162,7 @@ export default function MarketHome() {
               {grouped.map(([cat, items]) => (
                 <Link key={cat} to={`/categories?c=${encodeURIComponent(cat)}`} className="group block">
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
-                    <ServiceVisual video={categoryVideo(cat)} image={categoryImage(cat)} alt={cat} className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                    <ServiceVisual image={categoryImage(cat)} alt={cat} className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
                     <div className="flex items-center justify-between gap-2 px-3 py-3">
                       <span className="text-sm font-semibold text-slate-800">{cat}</span>
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{items.length}</span>

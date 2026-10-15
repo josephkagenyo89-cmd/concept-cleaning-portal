@@ -6,7 +6,6 @@ import {
   displayRating,
   formatKes,
   serviceImage,
-  serviceVideo,
   startingPrice,
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
@@ -39,7 +38,6 @@ export default function ServiceCard({
     >
       <Link to={servicePath} className="block overflow-hidden">
         <ServiceVisual
-          video={serviceVideo(service)}
           image={serviceImage(service)}
           alt={service.name}
           loading={priority ? 'eager' : 'lazy'}
