@@ -29,3 +29,7 @@ update-*.sh
 .vercel
 .env*
 supabase/.temp/
+
+# Removed assets: never commit these
+public/homepage-hero.mp4
+public/home-deep-cleaning-demo.mp4
