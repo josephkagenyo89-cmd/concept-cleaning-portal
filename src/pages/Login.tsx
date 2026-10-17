@@ -60,7 +60,10 @@ export default function Login() {
     } else if (isAgent) {
       navigate('/agent', { replace: true });
     } else {
-      navigate('/', { replace: true });
+      const saved = localStorage.getItem('ccs_auth_redirect_target');
+      if (saved) localStorage.removeItem('ccs_auth_redirect_target');
+      const safe = saved && saved.startsWith('/') && !saved.startsWith('//') ? saved : '/';
+      navigate(safe, { replace: true });
     }
   }, [user, loading, isAdmin, isAgent, next, navigate]);
 
