@@ -68,3 +68,10 @@ export function applyGlobalDiscount(basePrice: number, state: GlobalDiscountStat
     active: true,
   };
 }
+
+export const GLOBAL_DISCOUNT_REASON_PREFIX = 'Global discount: ';
+
+/** Reason saved on quotations and invoices when a global discount applied. */
+export function globalDiscountReason(state: GlobalDiscountState): string {
+  return `${GLOBAL_DISCOUNT_REASON_PREFIX}${state.label}`;
+}

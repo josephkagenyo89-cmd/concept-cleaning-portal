@@ -1,3 +1,4 @@
+import { GLOBAL_DISCOUNT_REASON_PREFIX } from './globalDiscount';
 import jsPDF from 'jspdf';
 import { DEFAULT_SETTINGS, type AllSettings } from '@/lib/settings';
 import {
