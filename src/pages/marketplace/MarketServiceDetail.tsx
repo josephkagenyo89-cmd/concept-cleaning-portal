@@ -34,7 +34,7 @@ import ServiceVisual from '@/components/marketplace/ServiceVisual';
 // notifyAdminsOfBooking removed: instant booking notifications disabled
 import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
-import { applyGlobalDiscount } from '@/lib/globalDiscount';
+import { applyGlobalDiscount, globalDiscountReason } from '@/lib/globalDiscount';
 
 export default function MarketServiceDetail() {
   const { id } = useParams();
@@ -201,7 +201,9 @@ export default function MarketServiceDetail() {
       ? {
           subtotal: pricing.original,
           discount_amount: pricing.discountAmount,
-          discount_reason: globalDiscount.label,
+          discount_type: 'percent',
+          discount_value: pricing.percentage,
+          discount_reason: globalDiscountReason(globalDiscount),
         }
       : {
           subtotal: pricing.original,
@@ -490,7 +492,14 @@ export default function MarketServiceDetail() {
 
             <p className="mt-2 text-xl font-bold text-market">
               {pricing.original > 0 ? (
-                <>From {formatKes(pricing.original)}</>
+                pricing.active ? (
+                  <>
+                    From {formatKes(pricing.final)}{' '}
+                    <span className="text-sm font-normal text-muted-foreground line-through">{formatKes(pricing.original)}</span>
+                  </>
+                ) : (
+                  <>From {formatKes(pricing.original)}</>
+                )
               ) : (
                 'Price on quotation'
               )}
@@ -498,7 +507,7 @@ export default function MarketServiceDetail() {
 
             {pricing.active ? (
               <p className="mt-1 text-sm font-semibold text-emerald-700">
-                Book now to save {formatKes(pricing.discountAmount)}
+                {globalDiscount.label} · you save {formatKes(pricing.discountAmount)}
               </p>
             ) : null}
           </div>

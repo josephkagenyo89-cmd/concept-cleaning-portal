@@ -519,13 +519,17 @@ function drawSummary(doc: jsPDF, w: number, y: number, data: DocumentData): numb
     const typeLabel = data.discountType === 'percent' && Number(data.discountValue) > 0
       ? ` (${Number(data.discountValue)}%)`
       : '';
+    const reason = data.discountReason?.trim() || '';
+    const isGlobal = reason.startsWith(GLOBAL_DISCOUNT_REASON_PREFIX);
     rows.push({
-      label: isPending ? 'Discount requested' : `Discount${typeLabel}`,
+      label: isPending ? 'Discount requested' : isGlobal ? `Global discount${typeLabel}` : `Discount${typeLabel}`,
       value: isPending ? 'Awaiting Approval' : `- ${cur} ${fmt(discountAmount)}`,
       pending: isPending,
     });
-    if (data.discountReason?.trim()) {
-      rows.push({ label: 'Discount details', value: data.discountReason.trim() });
+    if (isGlobal) {
+      rows.push({ label: 'Promotion', value: reason.slice(GLOBAL_DISCOUNT_REASON_PREFIX.length).trim() });
+    } else if (reason) {
+      rows.push({ label: 'Discount details', value: reason });
     }
   } else {
     rows.push({ label: 'Discount', value: `${cur} 0.00 — None applied` });
