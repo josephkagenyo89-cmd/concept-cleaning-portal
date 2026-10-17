@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
+import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
+import { applyGlobalDiscount, globalDiscountReason } from '@/lib/globalDiscount';
 import ShareDocumentMenu from '@/components/documents/ShareDocumentMenu';
 import { saveDocumentRecord } from '@/lib/documentSaver';
 import GenerateCertificateButton from '@/components/booking/GenerateCertificateButton';
@@ -59,6 +61,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function ErpInvoices() {
+  const globalDiscount = useGlobalDiscount();
   const { user, profile, isAdmin, isSuperAdmin } = useAuth();
   const canApprove = isAdmin || isSuperAdmin;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -143,7 +146,9 @@ export default function ErpInvoices() {
       toast({ title: 'Client name, phone and at least one service are required', variant: 'destructive' });
       return;
     }
-    const totalAmount = lineItems.reduce((s, i) => s + i.total, 0);
+    const grossTotal = lineItems.reduce((s, i) => s + i.total, 0);
+    const invDiscount = applyGlobalDiscount(grossTotal, globalDiscount);
+    const totalAmount = invDiscount.final;
     const invNum = await generateInvoiceNumber();
     const clientId = await upsertClientForBooking({
       clientName: form.client_name,
@@ -173,9 +178,11 @@ export default function ErpInvoices() {
       created_by: user!.id,
       client_id: clientId,
       line_items: lineItemsData,
-      subtotal: totalAmount,
-      discount_amount: 0,
-      discount_reason: null,
+      subtotal: grossTotal,
+      discount_amount: invDiscount.discountAmount,
+      discount_reason: invDiscount.active ? globalDiscountReason(globalDiscount) : null,
+      discount_type: invDiscount.active ? 'percent' : null,
+      discount_value: invDiscount.active ? invDiscount.percentage : null,
       salesperson_id: salesperson.id,
       salesperson_name: salesperson.name,
       salesperson_role: salesperson.role,
@@ -192,9 +199,11 @@ export default function ErpInvoices() {
       clientPhone: form.client_phone || undefined,
       lineItems: lineItemsData.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
       totalAmount,
-      subtotal: totalAmount,
-      discountAmount: 0,
-      discountReason: undefined,
+      subtotal: grossTotal,
+      discountAmount: invDiscount.discountAmount,
+      discountReason: invDiscount.active ? globalDiscountReason(globalDiscount) : undefined,
+      discountType: invDiscount.active ? 'percent' : undefined,
+      discountValue: invDiscount.active ? invDiscount.percentage : undefined,
       paymentStatus: form.payment_status,
       notes: form.notes || undefined,
       createdById: user!.id,
