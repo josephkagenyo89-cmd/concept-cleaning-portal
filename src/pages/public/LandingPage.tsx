@@ -12,6 +12,7 @@ import {
 import PublicShell, { waLink } from '@/components/public/PublicShell';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useSettings } from '@/hooks/useSettings';
+import { globalDiscountFromSettings } from '@/lib/globalDiscount';
 import { BlogPost, fetchPublishedPosts, fmtBlogDate, readingTime } from '@/lib/blog';
 import { MarketService, fetchMarketServices, fetchMarketServicesLimited, serviceImage } from '@/lib/marketplace';
 import residential from '@/assets/market/residential.jpg';
@@ -58,6 +59,7 @@ export default function LandingPage() {
   const { settings } = useSettings();
   const phone = settings.general.phone || '+254796563741';
   const reviewUrl = (settings as any).feedback?.google_review_url || 'https://g.page/r/CYJAstog5dgWEBI/review';
+  const globalDiscount = globalDiscountFromSettings(settings);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [quickBookingServices, setQuickBookingServices] = useState<MarketService[]>([]);
 
@@ -221,26 +223,65 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6" aria-labelledby="services-h">
+      {/* Compact auto-scrolling service categories */}
+      <section className="mx-auto max-w-6xl px-4 py-9 md:px-6" aria-labelledby="services-h">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 id="services-h" className="text-2xl font-bold text-brand-ink md:text-3xl">Cleaning & fumigation services in Nairobi</h2>
-            <p className="mt-2 text-brand-slate">Pick what you need — prices are shown upfront.</p>
+            <h2 id="services-h" className="text-xl font-bold text-brand-ink md:text-2xl">Explore our services</h2>
+            <p className="mt-1 text-sm text-brand-slate">Find the right service for your space.</p>
+            {globalDiscount.active && (
+              <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-brand-brass/20 px-3 py-1.5 text-sm font-bold text-brand-forest" aria-label={`Current promotion: ${globalDiscount.label}`}>
+                <span className="rounded-full bg-brand-forest px-2 py-0.5 text-xs font-extrabold text-brand-cream">{globalDiscount.percentage}% OFF</span>
+                <span>{globalDiscount.label}</span>
+              </p>
+            )}
           </div>
-          <Link to="/marketplace" className="hidden shrink-0 text-sm font-semibold text-brand-brassDark md:inline-flex">View all →</Link>
+          <Link to="/marketplace" className="shrink-0 text-sm font-semibold text-brand-brassDark">View all →</Link>
         </div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((s) => (
-            <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
-              <ServiceVisual image={s.img} alt={`${s.name} in Nairobi`} className="aspect-[16/10] w-full object-cover" />
-              <div className="p-5">
-                <h3 className="font-semibold text-brand-ink">{s.name}</h3>
-                <p className="mt-1 text-sm text-brand-slate">{s.desc}</p>
-                <p className="mt-3 text-sm font-semibold text-brand-brassDark">Book now →</p>
+        <style>{`
+          @keyframes concept-category-marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+          }
+          .concept-category-track {
+            display: flex;
+            width: max-content;
+            animation: concept-category-marquee 46s linear infinite;
+          }
+          .concept-category-marquee:hover .concept-category-track,
+          .concept-category-marquee:focus-within .concept-category-track {
+            animation-play-state: paused;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .concept-category-track { animation: none; }
+            .concept-category-marquee { overflow-x: auto; }
+          }
+        `}</style>
+        <div className="concept-category-marquee mt-6 overflow-hidden" aria-label="Service categories scrolling right to left">
+          <div className="concept-category-track">
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex shrink-0 gap-3 pr-3" aria-hidden={copy === 1 ? true : undefined}>
+                {SERVICES.map((s) => (
+                  <Link
+                    key={`${copy}-${s.name}`}
+                    to="/marketplace"
+                    tabIndex={copy === 1 ? -1 : undefined}
+                    className="flex w-[205px] shrink-0 items-center gap-3 rounded-2xl border border-brand-sand bg-white p-3 transition hover:border-brand-brassDark hover:shadow-md sm:w-[232px] sm:p-3.5"
+                    aria-label={`Browse ${s.name}`}
+                  >
+                    <span className="relative block shrink-0">
+                      <ServiceVisual image={s.img} alt="" className="h-[72px] w-[72px] rounded-xl object-cover sm:h-20 sm:w-20" />
+                      {globalDiscount.active && <span className="absolute -right-1 -top-1 rounded-full bg-brand-forest px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-brand-cream shadow-sm">{globalDiscount.percentage}% OFF</span>}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block line-clamp-2 text-sm font-semibold leading-snug text-brand-ink">{s.name}</span>
+                      <span className="mt-1 block text-xs font-medium text-brand-brassDark">Explore services →</span>
+                    </span>
+                  </Link>
+                ))}
               </div>
-            </Link>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
