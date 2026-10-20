@@ -32,7 +32,7 @@ export default function ServiceCard({
 
   return (
     <div
-      className={`group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(12,74,110,0.08)] ${
+      className={`group overflow-hidden rounded-2xl border border-brand-sand bg-white transition-shadow duration-200 hover:shadow-md dark:bg-card ${
         variant === 'carousel' ? 'w-[190px] shrink-0' : ''
       }`}
     >
@@ -47,29 +47,29 @@ export default function ServiceCard({
 
       <div className="space-y-2.5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+          <span className="rounded-full bg-brand-paper dark:bg-muted px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-brand-brassDark">
             {service.category}
           </span>
           {service.service_code && (
-            <span className="font-mono text-[9px] font-semibold text-slate-500">
+            <span className="font-mono text-[9px] font-semibold text-brand-slate dark:text-muted-foreground">
               {service.service_code}
             </span>
           )}
         </div>
 
         <Link to={servicePath} className="block">
-          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-900">
+          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-brand-ink dark:text-card-foreground">
             {service.name}
           </h3>
         </Link>
 
-        <p className="line-clamp-2 text-[11px] leading-4 text-slate-600">
+        <p className="line-clamp-2 text-[11px] leading-4 text-brand-slate dark:text-muted-foreground">
           {service.short_description || service.description || service.category}
         </p>
 
-        <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1 font-medium text-slate-700">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+        <div className="flex items-center justify-between gap-2 text-[10px] text-brand-slate dark:text-muted-foreground">
+          <span className="flex items-center gap-1 font-medium text-brand-ink dark:text-card-foreground">
+            <Star className="h-3 w-3 fill-brand-brass text-brand-brass" />
             {rating.toFixed(1)}
           </span>
 
@@ -81,37 +81,37 @@ export default function ServiceCard({
           )}
         </div>
 
-        <div className="border-t border-slate-100 pt-2">
+        <div className="border-t border-brand-sand pt-2">
           {price > 0 ? (
             <>
-              <p className="text-sm font-bold text-sky-900">
+              <p className="text-sm font-bold text-brand-forest">
                 From {formatKes(pricing.final)}
                 {pricing.active ? (
-                  <span className="ml-2 text-[10px] font-medium text-slate-400 line-through">
+                  <span className="ml-2 text-[10px] font-medium text-brand-slate dark:text-muted-foreground/60 line-through">
                     {formatKes(pricing.original)}
                   </span>
                 ) : null}
               </p>
 
               {pricing.active ? (
-                <p className="mt-1 text-[10px] font-semibold text-emerald-700">
+                <p className="mt-1 text-[10px] font-semibold text-brand-brassDark">
                   {discount.label} ({pricing.percentage}%) — save {formatKes(pricing.discountAmount)}
                 </p>
               ) : null}
             </>
           ) : (
-            <p className="text-sm font-bold text-sky-900">On quotation</p>
+            <p className="text-sm font-bold text-brand-forest">On quotation</p>
           )}
         </div>
 
         <div className="flex gap-2 pt-0.5">
-          <Button asChild size="sm" className="h-8 flex-1 bg-sky-900 text-[11px] text-white hover:bg-sky-800">
+          <Button asChild size="sm" className="h-8 flex-1 bg-brand-forest text-[11px] text-brand-cream hover:bg-brand-panel">
             <Link to={servicePath} className="inline-flex items-center justify-center gap-1">
               Book Now <ArrowRight className="h-3 w-3" />
             </Link>
           </Button>
 
-          <Button asChild size="sm" variant="outline" className="h-8 flex-1 border-slate-200 text-[11px] text-slate-700 hover:bg-slate-50">
+          <Button asChild size="sm" variant="outline" className="h-8 flex-1 border-brand-sand text-[11px] text-brand-forest hover:bg-brand-paper dark:hover:bg-muted">
             <Link to={`${servicePath}?mode=quote`} className="inline-flex items-center justify-center gap-1">
               Quote
             </Link>
