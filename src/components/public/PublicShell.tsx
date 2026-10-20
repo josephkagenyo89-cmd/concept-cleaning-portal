@@ -7,11 +7,12 @@ import { cn } from '@/lib/utils';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
 
 const NAV = [
-  { to: '/', label: 'Home', end: true },
+  { to: '/', label: 'App Home', end: true },
   { to: '/marketplace', label: 'Services & Prices' },
+  { to: '/about', label: 'About' },
   { to: '/blog', label: 'Blog' },
-  { to: '/#areas', label: 'Areas' },
-  { to: '/#faq', label: 'FAQ' },
+  { to: '/about#areas', label: 'Areas' },
+  { to: '/about#faq', label: 'FAQ' },
 ];
 
 export function waLink(phone: string, msg: string) {

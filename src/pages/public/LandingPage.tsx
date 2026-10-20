@@ -70,7 +70,7 @@ export default function LandingPage() {
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={desc} />
-        <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/" />
+        <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/about" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={desc} />
         <script type="application/ld+json">{JSON.stringify({

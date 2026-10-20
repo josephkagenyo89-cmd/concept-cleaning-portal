@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Search, ShieldCheck, ArrowDownUp, Gift, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -81,8 +82,16 @@ export default function MarketHome() {
 
   return (
     <div className="bg-brand-paper pb-10 dark:bg-background">
+      <Helmet>
+        <title>Cleaning &amp; pest control services in Nairobi | Concept</title>
+        <meta name="description" content="Browse cleaning, fumigation, carpet and upholstery services in Nairobi. Compare clear prices and book a vetted local team." />
+      </Helmet>
 
       <div className="mx-auto max-w-6xl px-4 pt-6 md:px-6">
+        <div className="mb-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-brassDark">Concept · Nairobi</p>
+          <h1 className="mt-1 text-xl font-bold text-brand-forest md:text-2xl">What do you need help with?</h1>
+        </div>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-slate/60" />
           <Input

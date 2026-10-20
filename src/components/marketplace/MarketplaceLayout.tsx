@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText, Sun, Moon, ArrowLeft } from 'lucide-react';
+import { Home, LayoutGrid, CalendarCheck, Bell, User, Globe, LogIn, Building2, FileText, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CustomerCareButton from '@/components/marketplace/CustomerCareButton';
+import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import InstallAppPrompt from '@/components/marketplace/InstallAppPrompt';
 import { countUnread } from '@/lib/customerNotifications';
 
@@ -98,11 +99,11 @@ export default function MarketplaceLayout() {
       <header className="sticky top-0 z-40 bg-brand-forest text-brand-cream shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2">
-            {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
+            {location.pathname !== '/' && location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 rounded-full bg-white/10 px-0 text-brand-cream hover:bg-white/15 md:h-10 md:w-10"
+                className="h-9 w-9 shrink-0 rounded-full bg-white/10 px-0 text-brand-cream hover:bg-white/15 md:h-10 md:w-10"
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
                 title="Go back"
@@ -110,6 +111,13 @@ export default function MarketplaceLayout() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
+            <Link to="/" className="flex min-w-0 items-center gap-2" aria-label={company + ' home'}>
+              <img src={settings.general.logo_url || conceptLogo} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-white p-1 object-contain" />
+              <span className="hidden min-w-0 sm:block">
+                <span className="block max-w-[160px] truncate text-sm font-bold leading-tight">{company}</span>
+                <span className="block text-[10px] font-medium text-brand-mist">Nairobi, Kenya</span>
+              </span>
+            </Link>
           </div>
 
           {/* Desktop primary navigation */}
