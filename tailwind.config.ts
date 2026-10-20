@@ -15,18 +15,18 @@ export default {
     extend: {
       colors: {
         brand: {
-          forest: "#0E2A27",
-          panel: "#143733",
-          line: "#25504A",
-          outline: "#3C5C56",
-          brass: "#C9A45C",
-          brassDark: "#8A6A2B",
+          forest: "#203C32",
+          panel: "#29483D",
+          line: "#476157",
+          outline: "#63786D",
+          brass: "#C6A66B",
+          brassDark: "#755A2D",
           paper: "#F6F3EC",
-          sand: "#E4DFD2",
-          ink: "#10231F",
-          slate: "#4E5F5A",
-          mist: "#A9BDB7",
-          cream: "#F4F1EA",
+          sand: "#E9E2D4",
+          ink: "#343832",
+          slate: "#555B54",
+          mist: "#D5DED8",
+          cream: "#F6F3EC",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -66,13 +66,10 @@ export default {
           foreground: "hsl(var(--market-foreground))",
           soft: "hsl(var(--market-soft))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
+        tier: {
+          bronze: "hsl(var(--tier-bronze))",
+          silver: "hsl(var(--tier-silver))",
+          gold: "hsl(var(--tier-gold))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -104,7 +101,7 @@ export default {
             height: "var(--radix-accordion-content-height)",
           },
           to: {
-            height: "0",
+            height: "var(--radix-accordion-content-height)",
           },
         },
       },
