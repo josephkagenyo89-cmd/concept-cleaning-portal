@@ -261,7 +261,7 @@ export default function LandingPage() {
                     className="flex w-[154px] shrink-0 items-center gap-3 rounded-xl border border-brand-sand bg-white p-2.5 transition hover:border-brand-brassDark hover:shadow-sm sm:w-[176px] sm:p-3"
                     aria-label={`Browse ${s.name}`}
                   >
-                    <ServiceVisual image={s.img} alt="" aria-hidden="true" className="h-14 w-14 shrink-0 rounded-lg object-cover sm:h-16 sm:w-16" />
+                    <ServiceVisual image={s.img} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover sm:h-16 sm:w-16" />
                     <span className="min-w-0">
                       <span className="block line-clamp-2 text-sm font-semibold leading-snug text-brand-ink">{s.name}</span>
                       <span className="mt-1 block text-xs font-medium text-brand-brassDark">Explore →</span>
