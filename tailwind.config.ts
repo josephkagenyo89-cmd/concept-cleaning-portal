@@ -66,11 +66,9 @@ export default {
           foreground: "hsl(var(--market-foreground))",
           soft: "hsl(var(--market-soft))",
         },
-        tier: {
-          bronze: "hsl(var(--tier-bronze))",
-          silver: "hsl(var(--tier-silver))",
-          gold: "hsl(var(--tier-gold))",
-        },
+        "tier-bronze": "hsl(var(--tier-bronze))",
+        "tier-silver": "hsl(var(--tier-silver))",
+        "tier-gold": "hsl(var(--tier-gold))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -101,7 +99,7 @@ export default {
             height: "var(--radix-accordion-content-height)",
           },
           to: {
-            height: "var(--radix-accordion-content-height)",
+            height: "0",
           },
         },
       },
