@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Building2, FileText, Sun, Moon, ArrowLeft } from 'lucide-react';
+import { Home, LayoutGrid, CalendarCheck, Bell, User, Globe, LogIn, Building2, FileText, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CustomerCareButton from '@/components/marketplace/CustomerCareButton';
+import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import InstallAppPrompt from '@/components/marketplace/InstallAppPrompt';
 import { countUnread } from '@/lib/customerNotifications';
 
@@ -93,16 +94,16 @@ export default function MarketplaceLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 md:pb-10">
+    <div className="min-h-screen bg-brand-paper pb-32 md:pb-10 dark:bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-market text-market-foreground shadow-md">
+      <header className="sticky top-0 z-40 bg-brand-forest text-brand-cream shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2">
-            {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
+            {location.pathname !== '/' && location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 rounded-full bg-white/10 px-0 text-market-foreground hover:bg-white/15 md:h-10 md:w-10"
+                className="h-9 w-9 shrink-0 rounded-full bg-white/10 px-0 text-brand-cream hover:bg-white/15 md:h-10 md:w-10"
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
                 title="Go back"
@@ -110,6 +111,13 @@ export default function MarketplaceLayout() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
+            <Link to="/" className="flex min-w-0 items-center gap-2" aria-label={company + ' home'}>
+              <img src={settings.general.logo_url || conceptLogo} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-white p-1 object-contain" />
+              <span className="hidden min-w-0 sm:block">
+                <span className="block max-w-[160px] truncate text-sm font-bold leading-tight">{company}</span>
+                <span className="block text-[10px] font-medium text-brand-mist">Nairobi, Kenya</span>
+              </span>
+            </Link>
           </div>
 
           {/* Desktop primary navigation */}
@@ -139,7 +147,7 @@ export default function MarketplaceLayout() {
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-market-foreground hover:bg-white/15">
+                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-brand-cream hover:bg-white/15">
                   <Globe className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">{activeLang.code}</span>
                 </Button>
@@ -156,7 +164,7 @@ export default function MarketplaceLayout() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 px-0 text-market-foreground hover:bg-white/15"
+              className="h-9 w-9 px-0 text-brand-cream hover:bg-white/15"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -168,7 +176,7 @@ export default function MarketplaceLayout() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 gap-1 px-2 text-market-foreground hover:bg-white/15"
+                className="h-9 gap-1 px-2 text-brand-cream hover:bg-white/15"
                 onClick={() => navigate('/my')}
               >
                 <User className="h-4 w-4" />
@@ -179,7 +187,7 @@ export default function MarketplaceLayout() {
             ) : (
               <Button
                 size="sm"
-                className="h-9 bg-white/15 px-3 text-xs font-semibold text-market-foreground hover:bg-white/25"
+                className="h-9 bg-white/15 px-3 text-xs font-semibold text-brand-cream hover:bg-white/25"
                 onClick={() => navigate(`/customer-auth?next=${encodeURIComponent(location.pathname)}`)}
               >
                 <LogIn className="mr-1 h-4 w-4" /> Login
@@ -199,7 +207,7 @@ export default function MarketplaceLayout() {
       {promoVisible && (
         <div className="px-4 pt-3 md:px-6">
           <div
-            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 py-3 text-white shadow-lg shadow-emerald-600/20"
+            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-brand-line bg-brand-forest px-4 py-3 text-brand-cream"
             style={{
               transform: `translateX(${promoDrag}px)`,
               transition: promoDrag === 0 ? 'transform 0.22s ease' : 'none',
@@ -212,10 +220,10 @@ export default function MarketplaceLayout() {
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold">%</span>
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-brass text-sm font-bold text-brand-forest">%</span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold leading-tight md:text-base">Enjoy up to KES 2,000 off a service</p>
-                  <p className="text-[11px] text-emerald-50/90 md:text-xs">Swipe to dismiss</p>
+                  <p className="text-[11px] text-brand-mist md:text-xs">Swipe to dismiss</p>
                 </div>
               </div>
 
@@ -249,7 +257,7 @@ export default function MarketplaceLayout() {
               end={item.end}
               className={({ isActive }) =>
                 `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-                  isActive ? 'text-market' : 'text-muted-foreground'
+                  isActive ? 'text-brand-forest' : 'text-muted-foreground'
                 }`
               }
             >
