@@ -80,7 +80,7 @@ export default function MarketServiceDetail() {
         );
 
       const { data, error } = await ((supabase.from('services') as any)
-        .select('*')
+        .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
         .eq(isUuid ? 'id' : 'slug', id)
         .maybeSingle());
 
@@ -379,7 +379,7 @@ export default function MarketServiceDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
+      <div className="p-6 text-sm text-brand-slate">
         Loading service…
       </div>
     );
@@ -387,7 +387,7 @@ export default function MarketServiceDetail() {
 
   if (!service) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
+      <div className="p-6 text-sm text-brand-slate">
         Service not found.
       </div>
     );
@@ -446,7 +446,7 @@ export default function MarketServiceDetail() {
 
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-3 top-3 rounded-full bg-card/90 p-2 shadow"
+            className="absolute left-3 top-3 rounded-full bg-white/90 p-2 shadow"
             aria-label="Go back"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -456,12 +456,12 @@ export default function MarketServiceDetail() {
         <div className="space-y-4 p-4 md:space-y-6 md:p-6">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-market">
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-forest">
                 {service.category}
               </p>
 
               {service.service_code && (
-                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-brand-slate">
                   {service.service_code}
                 </span>
               )}
@@ -471,7 +471,7 @@ export default function MarketServiceDetail() {
               {service.name}
             </h1>
 
-            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="mt-1 flex items-center gap-3 text-xs text-brand-slate">
               <span className="flex items-center gap-1 font-medium text-foreground">
                 <Star className="h-3.5 w-3.5 fill-warning text-warning" />
                 {displayRating(service.id).toFixed(1)}
@@ -485,12 +485,12 @@ export default function MarketServiceDetail() {
               )}
             </div>
 
-            <p className="mt-2 text-xl font-bold text-market">
+            <p className="mt-2 text-xl font-bold text-brand-forest">
               {pricing.original > 0 ? (
                 pricing.active ? (
                   <>
                     From {formatKes(pricing.final)}{' '}
-                    <span className="text-sm font-normal text-muted-foreground line-through">{formatKes(pricing.original)}</span>
+                    <span className="text-sm font-normal text-brand-slate line-through">{formatKes(pricing.original)}</span>
                   </>
                 ) : (
                   <>From {formatKes(pricing.original)}</>
@@ -509,7 +509,7 @@ export default function MarketServiceDetail() {
 
           {(service.description ||
             service.short_description) && (
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-relaxed text-brand-slate">
               {service.description ||
                 service.short_description}
             </p>
@@ -522,7 +522,7 @@ export default function MarketServiceDetail() {
                   key={i}
                   className="flex items-start gap-2 text-sm"
                 >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-market" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-brand-forest" />
                   {f}
                 </li>
               ))}
@@ -543,7 +543,7 @@ export default function MarketServiceDetail() {
                 <Label htmlFor="service_date">
                   Preferred date{' '}
                   {quoteMode && (
-                    <span className="text-muted-foreground">
+                    <span className="text-brand-slate">
                       (optional)
                     </span>
                   )}
@@ -638,16 +638,16 @@ export default function MarketServiceDetail() {
               </div>
 
               {!isCustomer && (
-                <p className="rounded-lg bg-market-soft p-2 text-xs text-foreground">
+                <p className="rounded-lg bg-brand-forest-soft p-2 text-xs text-foreground">
                   Sign in or create a customer account to
                   complete your request.
                 </p>
               )}
 
-              <div className="rounded-lg border border-market/20 bg-market-soft/50 p-3 text-sm">
+              <div className="rounded-lg border border-market/20 bg-brand-forest-soft/50 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Estimated total</span>
-                  <span className="font-bold text-market">{formatKes(pricing.original)}</span>
+                  <span className="text-brand-slate">Estimated total</span>
+                  <span className="font-bold text-brand-forest">{formatKes(pricing.original)}</span>
                 </div>
                 {pricing.active ? (
                   <div className="mt-1 flex items-center justify-between gap-3">
@@ -655,14 +655,14 @@ export default function MarketServiceDetail() {
                     <span className="font-semibold text-emerald-700">{formatKes(pricing.discountAmount)}</span>
                   </div>
                 ) : null}
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-[11px] text-brand-slate">
                   {form.service_date || 'Select date'}{form.service_time ? ` • ${form.service_time}` : ''} {form.location ? `• ${form.location}` : ''}
                 </p>
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  className="flex-1 bg-market text-market-foreground hover:bg-market/90"
+                  className="flex-1 bg-brand-forest text-white hover:bg-brand-panel"
                   disabled={saving}
                   onClick={() =>
                     submit(
