@@ -93,7 +93,7 @@ export default function MarketplaceLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 md:pb-10">
+    <div className="min-h-screen bg-[#F6F3EC] pb-32 md:pb-10">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-market text-market-foreground shadow-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
@@ -199,7 +199,7 @@ export default function MarketplaceLayout() {
       {promoVisible && (
         <div className="px-4 pt-3 md:px-6">
           <div
-            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 py-3 text-white shadow-lg shadow-emerald-600/20"
+            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-[#C6A66B] bg-[#333333] px-4 py-3 text-[#F6F3EC] shadow-lg shadow-[#333333]/10"
             style={{
               transform: `translateX(${promoDrag}px)`,
               transition: promoDrag === 0 ? 'transform 0.22s ease' : 'none',
@@ -215,7 +215,7 @@ export default function MarketplaceLayout() {
                 <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold">%</span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold leading-tight md:text-base">Enjoy up to KES 2,000 off a service</p>
-                  <p className="text-[11px] text-emerald-50/90 md:text-xs">Swipe to dismiss</p>
+                  <p className="text-[11px] text-[#D8D1C4] md:text-xs">Swipe to dismiss</p>
                 </div>
               </div>
 
