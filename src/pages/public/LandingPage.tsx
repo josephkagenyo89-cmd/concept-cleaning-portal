@@ -8,6 +8,9 @@ import GlobalDiscountBanner from '@/components/marketplace/GlobalDiscountBanner'
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { BlogPost, fetchPublishedPosts, readingTime } from '@/lib/blog';
+import ReferralForm from '@/components/marketplace/ReferralForm';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { fetchMarketCategories } from '@/lib/marketplace';
 
 const SOFT_KEY = 'ccs_soft_signin_dismissed';
 
@@ -18,17 +21,10 @@ const FLOW = [
   { title: 'Pay after the job', text: 'M-Pesa, with an official invoice and receipt.', to: '/my/bookings' },
 ];
 
-const CATEGORIES = [
-  { title: 'Home cleaning', text: 'Deep and move-in cleans' },
-  { title: 'Sofa and carpet', text: 'Fabric-safe shampoo' },
-  { title: 'Fumigation', text: 'Pests with warranty revisit' },
-  { title: 'Office', text: 'Priced by quote' },
-];
-
 const FAQS = [
-  { q: 'How soon can you come?', a: 'Most bookings are served within 24 to 48 hours.' },
+  { q: 'How soon can you come?', a: 'Availability depends on your location, service and schedule. We will confirm the date when reviewing your request.' },
   { q: 'Is fumigation safe for children and pets?', a: 'We use approved products and tell you how long to keep people and pets out.' },
-  { q: 'How do I pay?', a: 'By M-Pesa after the job. You receive an official invoice and receipt.' },
+  { q: 'How do I pay?', a: 'Your booking or quotation will confirm the amount and payment instructions. We issue an official receipt after payment is recorded.' },
   { q: 'Can I change my date?', a: 'Yes. Message us at least one day before.' },
 ];
 
@@ -91,12 +87,14 @@ function AccountSheet({ open, onClose, signedIn }: { open: boolean; onClose: () 
 }
 
 export default function LandingPage() {
-  const { settings } = useSettings();
+  const { general } = usePublicSettings();
   const { user, isCustomer } = useAuth();
-  const phone = settings.general.phone || '+254796563741';
+  const phone = general.phone || '+254796563741';
   const waHome = waLink(phone, 'Hello Concept Cleaning Services, I would like to book a cleaning.');
   const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like a free quote.');
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [referralOpen, setReferralOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [softOpen, setSoftOpen] = useState(false);
   const [softHidden, setSoftHidden] = useState<boolean>(() => {
@@ -105,6 +103,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     fetchPublishedPosts(3).then(setPosts).catch(() => setPosts([]));
+    fetchMarketCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
   const dismissSoft = () => {
@@ -143,7 +142,7 @@ export default function LandingPage() {
       <GlobalDiscountBanner />
 
       <div className="min-h-screen bg-brand-paper pb-28 text-brand-ink md:pb-10 md:pt-8">
-        <div className="mx-auto max-w-[430px] bg-white md:max-w-3xl md:rounded-3xl md:border md:border-brand-sand md:shadow-sm">
+        <div className="mx-auto max-w-[430px] bg-white md:max-w-5xl md:rounded-3xl md:border md:border-brand-sand md:shadow-sm">
           <div className="space-y-6 px-4 pb-6 pt-4 md:space-y-8 md:px-8 md:pb-8 md:pt-6">
 
             {/* Soft sign-in suggestion: a suggestion, never a gate */}
@@ -210,14 +209,25 @@ export default function LandingPage() {
             {/* Categories */}
             <section>
               <h2 className="mb-3 text-[17px] font-extrabold">What do you need cleaned?</h2>
-              <div className="grid grid-cols-2 gap-2.5">
-                {CATEGORIES.map((c) => (
-                  <Link key={c.title} to="/categories" className="rounded-2xl border border-brand-sand bg-white p-3.5 text-sm font-bold">
-                    {c.title}
-                    <span className="mt-0.5 block text-xs font-medium text-brand-slate">{c.text}</span>
-                  </Link>
-                ))}
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+                {categories.map((category) => {
+                  const descriptions: Record<string, string> = {
+                    'Residential Cleaning': 'Deep, regular and move-in cleaning',
+                    'Upholstery Cleaning': 'Sofas, mattresses and upholstery',
+                    'Carpet & Rug Cleaning': 'Professional carpet and rug care',
+                    'Car Interior Cleaning': 'Refresh your vehicle interior',
+                    'Commercial Cleaning': 'Offices and business premises',
+                    'Fumigation & Pest Control': 'Targeted pest control services',
+                  };
+                  return (
+                    <Link key={category} to={`/categories?c=${encodeURIComponent(category)}`} className="rounded-2xl border border-brand-sand bg-white p-3.5 text-sm font-bold transition hover:border-brand-brass">
+                      {category}
+                      <span className="mt-0.5 block text-xs font-medium text-brand-slate">{descriptions[category] || 'Explore available services'}</span>
+                    </Link>
+                  );
+                })}
               </div>
+              {!categories.length && <p className="text-xs text-brand-slate">Browse all available services to see current categories.</p>}
             </section>
 
             {/* Referral */}
@@ -225,9 +235,9 @@ export default function LandingPage() {
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-sand text-brand-brassDark"><Gift className="h-5 w-5" /></span>
               <div className="flex-1">
                 <p className="text-[15px] font-bold">Refer a friend</p>
-                <p className="text-xs text-brand-slate">Share your code and both of you save on the next clean.</p>
+                <p className="text-xs text-brand-slate">Refer a client and earn KES 500–1,000 after their service is completed.</p>
               </div>
-              <Link to="/marketplace" className="shrink-0 rounded-xl bg-brand-forest px-3 py-2.5 text-[13px] font-bold text-white">Refer</Link>
+              <button type="button" onClick={() => setReferralOpen(true)} className="shrink-0 rounded-xl bg-brand-forest px-3 py-2.5 text-[13px] font-bold text-white">Refer</button>
             </section>
 
             {/* Blog: live posts from the database */}
@@ -247,8 +257,14 @@ export default function LandingPage() {
               </section>
             )}
 
+            {/* Service areas */}
+            <section id="areas" className="scroll-mt-24 rounded-2xl bg-[#faf9f5] p-4">
+              <h2 className="text-[17px] font-extrabold">Where we serve</h2>
+              <p className="mt-2 text-sm text-brand-slate">Nairobi and surrounding areas, including selected locations in Kiambu, Kajiado and Machakos. Contact us to confirm availability in your estate.</p>
+            </section>
+
             {/* Questions */}
-            <section>
+            <section id="faq" className="scroll-mt-24">
               <h2 className="mb-2 text-[17px] font-extrabold">Questions</h2>
               {FAQS.map((f, i) => (
                 <details key={f.q} open={i === 0} className="border-b border-brand-sand py-3">
@@ -269,6 +285,7 @@ export default function LandingPage() {
 
       <BottomTabs onAccount={() => setAccountOpen(true)} waHref={waHome} />
       <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} signedIn={!!user && isCustomer} />
+      <ReferralForm isOpen={referralOpen} onClose={() => setReferralOpen(false)} />
     </PublicShell>
   );
 }
