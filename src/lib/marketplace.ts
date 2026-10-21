@@ -128,6 +128,20 @@ export function groupByCategory(
   return sorted;
 }
 
+/** Lightweight landing-page query: fetch category names only, not full service records. */
+export async function fetchMarketCategories(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('services')
+    .select('category')
+    .eq('is_active', true)
+    .not('category', 'is', null)
+    .order('category')
+    .limit(191);
+
+  if (error) throw error;
+  return Array.from(new Set((data || []).map((row: any) => String(row.category || '').trim()).filter(Boolean)));
+}
+
 /** Deterministic pseudo-rating so cards look complete without inventing stored data. */
 export function displayRating(id: string): number {
   let h = 0;
