@@ -377,7 +377,7 @@ export default function MarketServiceDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 text-sm text-brand-slate">
+      <div className="p-6 text-sm text-[#5A5752]">
         Loading service…
       </div>
     );
@@ -385,7 +385,7 @@ export default function MarketServiceDetail() {
 
   if (!service) {
     return (
-      <div className="p-6 text-sm text-brand-slate">
+      <div className="p-6 text-sm text-[#5A5752]">
         Service not found.
       </div>
     );
@@ -454,12 +454,12 @@ export default function MarketServiceDetail() {
         <div className="space-y-4 p-4 md:space-y-6 md:p-6">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-brand-forest">
+              <p className="text-xs font-medium uppercase tracking-wide text-[#333333]">
                 {service.category}
               </p>
 
               {service.service_code && (
-                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-brand-slate">
+                <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[#5A5752]">
                   {service.service_code}
                 </span>
               )}
@@ -470,18 +470,18 @@ export default function MarketServiceDetail() {
             </h1>
 
             {service.estimated_duration && (
-              <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-slate">
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-[#5A5752]">
                 <Clock className="h-3.5 w-3.5" />
                 Estimated duration: {service.estimated_duration}
               </p>
             )}
 
-            <p className="mt-2 text-xl font-bold text-brand-forest">
+            <p className="mt-2 text-xl font-bold text-[#333333]">
               {pricing.original > 0 ? (
                 pricing.active ? (
                   <>
                     From {formatKes(pricing.final)}{' '}
-                    <span className="text-sm font-normal text-brand-slate line-through">{formatKes(pricing.original)}</span>
+                    <span className="text-sm font-normal text-[#5A5752] line-through">{formatKes(pricing.original)}</span>
                   </>
                 ) : (
                   <>From {formatKes(pricing.original)}</>
@@ -492,7 +492,7 @@ export default function MarketServiceDetail() {
             </p>
 
             {pricing.active ? (
-              <p className="mt-1 text-sm font-semibold text-brand-forest">
+              <p className="mt-1 text-sm font-semibold text-[#333333]">
                 {globalDiscount.label} · you save {formatKes(pricing.discountAmount)}
               </p>
             ) : null}
@@ -500,7 +500,7 @@ export default function MarketServiceDetail() {
 
           {(service.description ||
             service.short_description) && (
-            <p className="text-sm leading-relaxed text-brand-slate">
+            <p className="text-sm leading-relaxed text-[#5A5752]">
               {service.description ||
                 service.short_description}
             </p>
@@ -513,7 +513,7 @@ export default function MarketServiceDetail() {
                   key={i}
                   className="flex items-start gap-2 text-sm"
                 >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-brand-forest" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#333333]" />
                   {f}
                 </li>
               ))}
@@ -534,7 +534,7 @@ export default function MarketServiceDetail() {
                 <Label htmlFor="service_date">
                   Preferred date{' '}
                   {quoteMode && (
-                    <span className="text-brand-slate">
+                    <span className="text-[#5A5752]">
                       (optional)
                     </span>
                   )}
@@ -629,31 +629,31 @@ export default function MarketServiceDetail() {
               </div>
 
               {!isCustomer && (
-                <p className="rounded-lg bg-brand-paper p-2 text-xs text-foreground">
+                <p className="rounded-lg bg-[#F6F3EC] p-2 text-xs text-foreground">
                   Sign in or create a customer account to
                   complete your request.
                 </p>
               )}
 
-              <div className="rounded-lg border border-brand-sand bg-brand-paper p-3 text-sm">
+              <div className="rounded-lg border border-[#E4DFD2] bg-[#F6F3EC] p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-brand-slate">Estimated total</span>
-                  <span className="font-bold text-brand-forest">{formatKes(pricing.original)}</span>
+                  <span className="text-[#5A5752]">Estimated total</span>
+                  <span className="font-bold text-[#333333]">{formatKes(pricing.original)}</span>
                 </div>
                 {pricing.active ? (
                   <div className="mt-1 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-brand-forest">Book now to save</span>
-                    <span className="font-semibold text-brand-forest">{formatKes(pricing.discountAmount)}</span>
+                    <span className="font-semibold text-[#333333]">Book now to save</span>
+                    <span className="font-semibold text-[#333333]">{formatKes(pricing.discountAmount)}</span>
                   </div>
                 ) : null}
-                <p className="mt-1 text-[11px] text-brand-slate">
+                <p className="mt-1 text-[11px] text-[#5A5752]">
                   {form.service_date || 'Select date'}{form.service_time ? ` • ${form.service_time}` : ''} {form.location ? `• ${form.location}` : ''}
                 </p>
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  className="flex-1 bg-brand-forest text-white hover:bg-brand-panel"
+                  className="flex-1 bg-[#333333] text-white hover:bg-[#45413B]"
                   disabled={saving}
                   onClick={() =>
                     submit(
