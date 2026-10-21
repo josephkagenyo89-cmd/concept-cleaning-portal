@@ -50,7 +50,7 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
             {general.logo_url ? (
-              <img src={settings.general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
+              <img src={general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
             ) : (
               <img src={conceptLogo} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain bg-white/0" />
             )}
