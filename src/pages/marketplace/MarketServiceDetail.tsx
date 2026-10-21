@@ -500,14 +500,14 @@ export default function MarketServiceDetail() {
 
           {(service.description ||
             service.short_description) && (
-            <p className="text-sm leading-relaxed text-[#5A5752]">
+            <p className="text-sm leading-relaxed text-[#5A5752] md:col-start-1">
               {service.description ||
                 service.short_description}
             </p>
           )}
 
           {service.service_features.length > 0 && (
-            <ul className="space-y-1.5">
+            <ul className="space-y-1.5 md:col-start-1">
               {service.service_features.map((f, i) => (
                 <li
                   key={i}
@@ -520,7 +520,7 @@ export default function MarketServiceDetail() {
             </ul>
           )}
 
-          <Card className="h-fit border-[#E4DFD2] bg-white shadow-[0_10px_30px_rgba(51,51,51,0.05)]">
+          <Card className="h-fit border-[#E4DFD2] bg-white shadow-[0_10px_30px_rgba(51,51,51,0.05)] md:col-start-2 md:row-start-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">
                 {quoteMode
