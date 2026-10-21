@@ -80,7 +80,7 @@ export default function MarketHome() {
             <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
               <SelectTrigger className="h-9 w-[180px] rounded-full border-brand-sand bg-white text-xs"><ArrowDownUp className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="recommended">Best match</SelectItem>
+                <SelectItem value="recommended">Default order</SelectItem>
                 <SelectItem value="price_asc">Price: low to high</SelectItem>
                 <SelectItem value="price_desc">Price: high to low</SelectItem>
                 <SelectItem value="name">Name A–Z</SelectItem>
