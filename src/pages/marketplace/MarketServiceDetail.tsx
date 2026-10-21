@@ -434,12 +434,12 @@ export default function MarketServiceDetail() {
         </script>
       </Helmet>
 
-      <div className="pb-6">
-        <div className="relative">
+      <div className="mx-auto max-w-6xl pb-8">
+        <div className="relative mx-4 mt-4 overflow-hidden rounded-3xl border border-[#E4DFD2] shadow-[0_12px_32px_rgba(51,51,51,0.08)] md:mx-6 md:mt-6">
           <ServiceVisual
             image={serviceImage(service)}
             alt={service.name}
-            className="h-52 w-full object-cover"
+            className="h-64 w-full object-cover md:h-[380px]"
           />
 
           <button
@@ -451,10 +451,10 @@ export default function MarketServiceDetail() {
           </button>
         </div>
 
-        <div className="space-y-4 p-4 md:space-y-6 md:p-6">
+        <div className="mx-auto grid max-w-5xl gap-6 p-4 md:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] md:gap-10 md:p-8">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-[#333333]">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A6A2B]">
                 {service.category}
               </p>
 
@@ -465,7 +465,7 @@ export default function MarketServiceDetail() {
               )}
             </div>
 
-            <h1 className="text-lg font-bold leading-snug">
+            <h1 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight text-[#333333] md:text-3xl">
               {service.name}
             </h1>
 
@@ -476,7 +476,7 @@ export default function MarketServiceDetail() {
               </p>
             )}
 
-            <p className="mt-2 text-xl font-bold text-[#333333]">
+            <p className="mt-3 text-2xl font-extrabold tracking-tight text-[#333333]">
               {pricing.original > 0 ? (
                 pricing.active ? (
                   <>
@@ -513,14 +513,14 @@ export default function MarketServiceDetail() {
                   key={i}
                   className="flex items-start gap-2 text-sm"
                 >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#333333]" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#8A6A2B]" />
                   {f}
                 </li>
               ))}
             </ul>
           )}
 
-          <Card>
+          <Card className="h-fit border-[#E4DFD2] bg-white shadow-[0_10px_30px_rgba(51,51,51,0.05)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">
                 {quoteMode
