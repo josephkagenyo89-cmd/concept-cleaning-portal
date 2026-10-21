@@ -17,7 +17,7 @@ const FLOW = [
   { title: 'Choose a service', text: 'Browse by type of clean or fumigation.', to: '/marketplace' },
   { title: 'See the price', text: 'Discounts are shown on every service.', to: '/marketplace' },
   { title: 'Book or request a quote', text: 'Sign in with Google once, then confirm.', to: '/marketplace' },
-  { title: 'Pay after the job', text: 'M-Pesa, with an official invoice and receipt.', to: '/my/bookings' },
+  { title: 'Payment and receipt', text: 'Follow the payment instructions on your invoice and keep your official receipt.', to: '/my/bookings' },
 ];
 
 const FAQS = [
@@ -175,7 +175,7 @@ export default function LandingPage() {
             {/* Hero */}
             <section className="rounded-2xl bg-brand-forest p-5 text-brand-cream">
               <h1 className="text-2xl font-extrabold leading-tight">Book a clean in Nairobi</h1>
-              <p className="mt-2 text-sm text-brand-mist">See the price first, choose a date, and pay with M-Pesa after the job. Quotations are free.</p>
+              <p className="mt-2 text-sm text-brand-mist">See the price first, choose a date, and receive clear payment instructions. Quotations are free.</p>
               <Button asChild size="lg" className="mt-4 w-full bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
                 <Link to="/marketplace">Browse services and prices</Link>
               </Button>
