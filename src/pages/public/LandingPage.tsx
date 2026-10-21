@@ -5,7 +5,6 @@ import { Home, LayoutGrid, User, MessageCircle, Gift, Receipt, X, ChevronDown } 
 import { Button } from '@/components/ui/button';
 import PublicShell, { waLink } from '@/components/public/PublicShell';
 import GlobalDiscountBanner from '@/components/marketplace/GlobalDiscountBanner';
-import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { BlogPost, fetchPublishedPosts, readingTime } from '@/lib/blog';
 import ReferralForm from '@/components/marketplace/ReferralForm';
