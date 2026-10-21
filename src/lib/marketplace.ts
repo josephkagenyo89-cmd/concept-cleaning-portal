@@ -65,7 +65,7 @@ export function formatKes(amount: number): string {
 export async function fetchMarketServices(): Promise<MarketService[]> {
   const { data, error } = await supabase
     .from('services')
-    .select('*')
+    .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
     .order('category')
     .order('name');
@@ -87,7 +87,7 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
 export async function fetchMarketServicesLimited(limit: number = 6): Promise<MarketService[]> {
   const { data, error } = await supabase
     .from('services')
-    .select('*')
+    .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
     .order('category')
     .order('name')

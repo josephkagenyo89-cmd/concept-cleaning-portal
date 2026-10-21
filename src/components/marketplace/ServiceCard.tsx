@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Star, Clock, ArrowRight } from 'lucide-react';
+import { Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   MarketService,
-  displayRating,
   formatKes,
   serviceImage,
   startingPrice,
@@ -18,106 +17,64 @@ interface Props {
   priority?: boolean;
 }
 
-export default function ServiceCard({
-  service,
-  variant = 'grid',
-  priority = false,
-}: Props) {
-  const basePrice = startingPrice(service);
+export default function ServiceCard({ service, variant = 'grid', priority = false }: Props) {
   const discount = useGlobalDiscount();
-  const pricing = applyGlobalDiscount(basePrice, discount);
-  const price = pricing.final;
-  const rating = displayRating(service.id);
+  const pricing = applyGlobalDiscount(startingPrice(service), discount);
   const servicePath = `/service/${service.slug || service.id}`;
 
   return (
-    <div
-      className={`group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(12,74,110,0.08)] ${
-        variant === 'carousel' ? 'w-[190px] shrink-0' : ''
-      }`}
-    >
-      <Link to={servicePath} className="block overflow-hidden">
+    <article className={`group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-brand-sand bg-white transition duration-200 hover:-translate-y-0.5 hover:border-brand-brass hover:shadow-md ${variant === 'carousel' ? 'w-[190px] shrink-0' : ''}`}>
+      <Link to={servicePath} className="block overflow-hidden" aria-label={`View ${service.name}`}>
         <ServiceVisual
           image={serviceImage(service)}
           alt={service.name}
           loading={priority ? 'eager' : 'lazy'}
-          className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] sm:h-36"
         />
       </Link>
 
-      <div className="space-y-2.5 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-            {service.category}
-          </span>
-          {service.service_code && (
-            <span className="font-mono text-[9px] font-semibold text-slate-500">
-              {service.service_code}
-            </span>
-          )}
-        </div>
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <span className="mb-2 self-start rounded-full bg-brand-paper px-2.5 py-1 text-[10px] font-bold text-brand-brassDark">
+          {service.category}
+        </span>
 
         <Link to={servicePath} className="block">
-          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-900">
-            {service.name}
-          </h3>
+          <h3 className="line-clamp-2 text-sm font-extrabold leading-snug text-brand-ink sm:text-base">{service.name}</h3>
         </Link>
 
-        <p className="line-clamp-2 text-[11px] leading-4 text-slate-600">
-          {service.short_description || service.description || service.category}
+        <p className="mt-1.5 line-clamp-2 min-h-8 text-xs leading-4 text-brand-slate">
+          {service.short_description || service.description || 'Professional cleaning service tailored to your needs.'}
         </p>
 
-        <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1 font-medium text-slate-700">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            {rating.toFixed(1)}
-          </span>
+        {service.estimated_duration && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-brand-slate">
+            <Clock className="h-3.5 w-3.5" /> {service.estimated_duration}
+          </p>
+        )}
 
-          {service.estimated_duration && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {service.estimated_duration}
-            </span>
-          )}
-        </div>
-
-        <div className="border-t border-slate-100 pt-2">
-          {price > 0 ? (
+        <div className="mt-auto border-t border-brand-sand pt-3">
+          {pricing.original > 0 ? (
             <>
-              <p className="text-sm font-bold text-sky-900">
+              <p className="text-sm font-extrabold text-brand-forest">
                 From {formatKes(pricing.final)}
-                {pricing.active ? (
-                  <span className="ml-2 text-[10px] font-medium text-slate-400 line-through">
-                    {formatKes(pricing.original)}
-                  </span>
-                ) : null}
+                {pricing.active && <span className="ml-1.5 text-[10px] font-medium text-brand-slate line-through">{formatKes(pricing.original)}</span>}
               </p>
-
-              {pricing.active ? (
-                <p className="mt-1 text-[10px] font-semibold text-emerald-700">
-                  {discount.label} ({pricing.percentage}%) — save {formatKes(pricing.discountAmount)}
-                </p>
-              ) : null}
+              {pricing.active && <p className="mt-1 text-[10px] font-bold leading-snug text-brand-brassDark">{discount.label} · save {formatKes(pricing.discountAmount)}</p>}
             </>
           ) : (
-            <p className="text-sm font-bold text-sky-900">On quotation</p>
+            <p className="text-sm font-extrabold text-brand-forest">Price on quotation</p>
           )}
         </div>
 
-        <div className="flex gap-2 pt-0.5">
-          <Button asChild size="sm" className="h-8 flex-1 bg-sky-900 text-[11px] text-white hover:bg-sky-800">
-            <Link to={servicePath} className="inline-flex items-center justify-center gap-1">
-              Book Now <ArrowRight className="h-3 w-3" />
-            </Link>
+        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+          <Button asChild size="sm" className="h-9 rounded-full bg-brand-forest px-3 text-xs font-bold text-white hover:bg-brand-panel">
+            <Link to={servicePath}>View service <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
           </Button>
-
-          <Button asChild size="sm" variant="outline" className="h-8 flex-1 border-slate-200 text-[11px] text-slate-700 hover:bg-slate-50">
-            <Link to={`${servicePath}?mode=quote`} className="inline-flex items-center justify-center gap-1">
-              Quote
-            </Link>
+          <Button asChild size="sm" variant="outline" className="h-9 rounded-full border-brand-sand px-3 text-xs font-bold text-brand-ink hover:bg-brand-paper">
+            <Link to={`${servicePath}?mode=quote`}>Quote</Link>
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
