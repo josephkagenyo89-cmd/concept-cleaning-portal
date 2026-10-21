@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -22,8 +22,8 @@ export default function ReferralForm({ isOpen, onClose }: ReferralFormProps) {
     additionalInfo: '',
   });
 
-  // Load services on mount
-  useState(() => {
+  // Load service names for the referral form.
+  useEffect(() => {
     const loadServices = async () => {
       try {
         const { data, error } = await supabase

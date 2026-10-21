@@ -1,8 +1,8 @@
-import { ReactNode, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { ReactNode, useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Sparkles, Phone, MessageCircle, Mail, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSettings } from '@/hooks/useSettings';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { cn } from '@/lib/utils';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
 
@@ -28,19 +28,29 @@ interface PublicShellProps {
 }
 
 export default function PublicShell({ children, headerExtra, hideMobileBar = false }: PublicShellProps) {
-  const { settings } = useSettings();
+  const { general } = usePublicSettings();
   const [open, setOpen] = useState(false);
-  const company = settings.general.company_name || 'Concept Cleaning Services';
-  const phone = settings.general.phone || '+254796563741';
-  const email = settings.general.email || 'info.conceptcleaningkenya@gmail.com';
+  const location = useLocation();
+  const company = general.company_name || 'Concept Cleaning Services';
+  const phone = general.phone || '+254796563741';
+  const email = general.email || 'info.conceptcleaningkenya@gmail.com';
+
+  useEffect(() => {
+    if (!location.hash) return;
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname, location.hash]);
 
   return (
     <div className={cn('min-h-screen bg-background text-foreground', hideMobileBar ? '' : 'pb-16 md:pb-0')}>
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
-            {settings.general.logo_url ? (
-              <img src={settings.general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
+            {general.logo_url ? (
+              <img src={general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
             ) : (
               <img src={conceptLogo} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain bg-white/0" />
             )}
@@ -99,7 +109,7 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
             <ul className="mt-3 space-y-2 text-sm opacity-80">
               <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /><a href={`tel:${phone}`}>{phone}</a></li>
               <li className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /><a href={`mailto:${email}`} className="break-all">{email}</a></li>
-              <li className="flex gap-2"><MapPin className="h-4 w-4 shrink-0" />{settings.general.address || 'Nairobi, Kenya'}</li>
+              <li className="flex gap-2"><MapPin className="h-4 w-4 shrink-0" />{general.address || 'Nairobi, Kenya'}</li>
             </ul>
           </div>
         </div>
