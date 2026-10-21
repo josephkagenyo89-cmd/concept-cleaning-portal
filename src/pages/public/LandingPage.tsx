@@ -36,7 +36,7 @@ const FAQS = [
 function BottomTabs({ onAccount, waHref }: { onAccount: () => void; waHref: string }) {
   const tab = 'flex min-h-[44px] flex-col items-center justify-center gap-1 text-[11px] font-bold text-brand-slate';
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-sand bg-white">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-sand bg-white md:hidden">
       <div className="mx-auto grid max-w-[430px] grid-cols-4 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2">
         <Link to="/" className={tab}><Home className="h-[22px] w-[22px]" />Home</Link>
         <Link to="/marketplace" className={tab}><LayoutGrid className="h-[22px] w-[22px]" />Services</Link>
@@ -142,9 +142,9 @@ export default function LandingPage() {
 
       <GlobalDiscountBanner />
 
-      <div className="min-h-screen bg-brand-paper pb-28 text-brand-ink md:py-6">
-        <div className="mx-auto max-w-[430px] bg-white md:overflow-hidden md:rounded-[28px] md:border md:border-brand-sand md:shadow-xl">
-          <div className="space-y-6 px-4 pb-6 pt-4">
+      <div className="min-h-screen bg-brand-paper pb-28 text-brand-ink md:pb-10 md:pt-8">
+        <div className="mx-auto max-w-[430px] bg-white md:max-w-3xl md:rounded-3xl md:border md:border-brand-sand md:shadow-sm">
+          <div className="space-y-6 px-4 pb-6 pt-4 md:space-y-8 md:px-8 md:pb-8 md:pt-6">
 
             {/* Soft sign-in suggestion: a suggestion, never a gate */}
             {!user && !softHidden && (
