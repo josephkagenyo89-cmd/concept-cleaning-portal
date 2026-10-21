@@ -492,7 +492,7 @@ export default function MarketServiceDetail() {
             </p>
 
             {pricing.active ? (
-              <p className="mt-1 text-sm font-semibold text-emerald-700">
+              <p className="mt-1 text-sm font-semibold text-brand-forest">
                 {globalDiscount.label} · you save {formatKes(pricing.discountAmount)}
               </p>
             ) : null}
@@ -642,8 +642,8 @@ export default function MarketServiceDetail() {
                 </div>
                 {pricing.active ? (
                   <div className="mt-1 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-emerald-700">Book now to save</span>
-                    <span className="font-semibold text-emerald-700">{formatKes(pricing.discountAmount)}</span>
+                    <span className="font-semibold text-brand-forest">Book now to save</span>
+                    <span className="font-semibold text-brand-forest">{formatKes(pricing.discountAmount)}</span>
                   </div>
                 ) : null}
                 <p className="mt-1 text-[11px] text-brand-slate">
