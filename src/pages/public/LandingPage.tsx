@@ -239,22 +239,37 @@ export default function LandingPage() {
               <button type="button" onClick={() => setReferralOpen(true)} className="shrink-0 rounded-xl bg-brand-forest px-3 py-2.5 text-[13px] font-bold text-white">Refer</button>
             </section>
 
-            {/* Blog: live posts from the database */}
-            {posts.length > 0 && (
-              <section>
-                <h2 className="mb-3 text-[17px] font-extrabold">From our blog</h2>
-                <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-2">
+            {/* Blog: latest published articles from the database */}
+            <section className="rounded-2xl border border-brand-sand bg-[#faf9f5] p-4 md:p-5">
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-[17px] font-extrabold">From our blog</h2>
+                  <p className="mt-1 text-xs text-brand-slate">Practical cleaning tips, pest-control guides and hygiene advice.</p>
+                </div>
+                <Link to="/blog" className="shrink-0 text-[13px] font-bold text-brand-brassDark">All posts →</Link>
+              </div>
+              {posts.length > 0 ? (
+                <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
                   {posts.map((p) => (
-                    <Link key={p.id} to={`/blog/${p.slug}`} className="w-[200px] shrink-0 rounded-2xl border border-brand-sand bg-white p-3">
-                      <p className="text-[11px] font-extrabold uppercase tracking-wide text-brand-brassDark">{p.category}</p>
+                    <Link key={p.id} to={`/blog/${p.slug}`} className="w-[220px] shrink-0 overflow-hidden rounded-2xl border border-brand-sand bg-white p-3 transition hover:border-brand-brass hover:shadow-md">
+                      {p.cover_image && (
+                        <img src={p.cover_image} alt="" loading="lazy" className="mb-3 h-24 w-full rounded-xl object-cover" />
+                      )}
+                      <p className="text-[10px] font-extrabold uppercase tracking-wide text-brand-brassDark">{p.category}</p>
                       <p className="mt-1 text-sm font-extrabold leading-snug">{p.title}</p>
-                      <p className="mt-1 text-xs text-brand-slate">{readingTime(p.content)} min read</p>
+                      {p.excerpt && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-brand-slate">{p.excerpt}</p>}
+                      <p className="mt-2 text-xs text-brand-slate">{readingTime(p.content)} min read</p>
                     </Link>
                   ))}
                 </div>
-                <Link to="/blog" className="text-[13px] font-bold text-brand-brassDark">All posts →</Link>
-              </section>
-            )}
+              ) : (
+                <div className="rounded-xl border border-dashed border-brand-sand bg-white px-4 py-5">
+                  <p className="text-sm font-semibold text-brand-ink">Explore our cleaning articles and guides.</p>
+                  <p className="mt-1 text-xs leading-relaxed text-brand-slate">Visit the blog for practical advice and the latest published posts.</p>
+                  <Link to="/blog" className="mt-3 inline-flex text-[13px] font-bold text-brand-brassDark">Browse the blog →</Link>
+                </div>
+              )}
+            </section>
 
             {/* Service areas */}
             <section id="areas" className="scroll-mt-24 rounded-2xl bg-[#faf9f5] p-4">
