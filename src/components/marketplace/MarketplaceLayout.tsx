@@ -95,14 +95,14 @@ export default function MarketplaceLayout() {
   return (
     <div className="min-h-screen bg-[#F6F3EC] pb-32 md:pb-10">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-market text-market-foreground shadow-md">
+      <header className="sticky top-0 z-40 border-b border-[#C6A66B]/40 bg-[#333333] text-[#F6F3EC] shadow-[0_8px_24px_rgba(51,51,51,0.12)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 md:min-w-[230px]">
             {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 rounded-full bg-white/10 px-0 text-market-foreground hover:bg-white/15 md:h-10 md:w-10"
+                className="h-9 w-9 shrink-0 rounded-full bg-white/10 px-0 text-[#F6F3EC] hover:bg-white/15 md:h-10 md:w-10"
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
                 title="Go back"
@@ -110,6 +110,15 @@ export default function MarketplaceLayout() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
+            <Link to="/marketplace" className="flex min-w-0 items-center gap-2.5" aria-label={`${company} marketplace`}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#C6A66B] text-[#333333] shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <span className="hidden min-w-0 sm:block">
+                <span className="block max-w-[190px] truncate text-sm font-extrabold leading-tight tracking-wide text-[#F6F3EC]">{company}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.2em] text-[#C6A66B]">Services marketplace</span>
+              </span>
+            </Link>
           </div>
 
           {/* Desktop primary navigation */}
@@ -121,7 +130,7 @@ export default function MarketplaceLayout() {
                 end={(item as any).end}
                 className={({ isActive }) =>
                   `relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive ? 'bg-white/20' : 'hover:bg-white/10'
+                    isActive ? 'bg-[#C6A66B]/15 text-[#E6CB92]' : 'text-[#F6F3EC]/85 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
@@ -139,7 +148,7 @@ export default function MarketplaceLayout() {
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-market-foreground hover:bg-white/15">
+                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-[#F6F3EC] hover:bg-white/15">
                   <Globe className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">{activeLang.code}</span>
                 </Button>
@@ -156,7 +165,7 @@ export default function MarketplaceLayout() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 px-0 text-market-foreground hover:bg-white/15"
+              className="h-9 w-9 px-0 text-[#F6F3EC] hover:bg-white/15"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -179,7 +188,7 @@ export default function MarketplaceLayout() {
             ) : (
               <Button
                 size="sm"
-                className="h-9 bg-white/15 px-3 text-xs font-semibold text-market-foreground hover:bg-white/25"
+                className="h-9 rounded-full border border-[#C6A66B]/70 bg-white/10 px-3 text-xs font-semibold text-[#F6F3EC] hover:bg-white/20"
                 onClick={() => navigate(`/customer-auth?next=${encodeURIComponent(location.pathname)}`)}
               >
                 <LogIn className="mr-1 h-4 w-4" /> Login
@@ -199,7 +208,7 @@ export default function MarketplaceLayout() {
       {promoVisible && (
         <div className="px-4 pt-3 md:px-6">
           <div
-            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-[#C6A66B] bg-[#333333] px-4 py-3 text-[#F6F3EC] shadow-lg shadow-[#333333]/10"
+            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-[#D8C8A2] bg-white px-4 py-3 text-[#333333] shadow-[0_8px_28px_rgba(51,51,51,0.06)]"
             style={{
               transform: `translateX(${promoDrag}px)`,
               transition: promoDrag === 0 ? 'transform 0.22s ease' : 'none',
@@ -212,17 +221,17 @@ export default function MarketplaceLayout() {
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold">%</span>
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F6F3EC] text-sm font-bold text-[#8A6A2B]">%</span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold leading-tight md:text-base">Enjoy up to KES 2,000 off a service</p>
-                  <p className="text-[11px] text-[#D8D1C4] md:text-xs">Swipe to dismiss</p>
+                  <p className="text-[11px] text-[#746F66] md:text-xs">Swipe to dismiss</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={dismissPromo}
-                className="shrink-0 rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-white/20"
+                className="shrink-0 rounded-full bg-[#F6F3EC] px-3 py-1.5 text-[11px] font-semibold text-[#333333] transition hover:bg-[#E9E1D1]"
                 aria-label="Dismiss promotion"
               >
                 Close
@@ -240,7 +249,7 @@ export default function MarketplaceLayout() {
       <InstallAppPrompt />
 
       {/* Bottom navigation + staff login (mobile only) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E4DFD2] bg-white/95 shadow-[0_-8px_24px_rgba(51,51,51,0.06)] backdrop-blur md:hidden">
         <nav className="mx-auto flex max-w-3xl items-stretch">
           {NAV.map((item) => (
             <NavLink
@@ -249,7 +258,7 @@ export default function MarketplaceLayout() {
               end={item.end}
               className={({ isActive }) =>
                 `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-                  isActive ? 'text-market' : 'text-muted-foreground'
+                  isActive ? 'font-bold text-[#8A6A2B]' : 'text-[#746F66] hover:text-[#333333]'
                 }`
               }
             >
@@ -266,10 +275,10 @@ export default function MarketplaceLayout() {
           ))}
         </nav>
 
-        <div className="mx-auto max-w-3xl border-t bg-muted/40 px-4 py-2">
+        <div className="mx-auto max-w-3xl border-t border-[#E4DFD2] bg-[#F6F3EC] px-4 py-2">
           <a
             href="/admin"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#C6A66B] bg-[#333333] py-2.5 text-xs font-semibold text-[#F6F3EC]"
           >
             <Building2 className="h-4 w-4" /> Staff Login
           </a>
