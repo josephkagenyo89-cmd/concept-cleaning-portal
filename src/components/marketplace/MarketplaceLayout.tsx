@@ -3,7 +3,7 @@ import { Home, LayoutGrid, CalendarCheck, Bell, User, Sparkles, Globe, LogIn, Bu
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -40,9 +40,6 @@ export default function MarketplaceLayout() {
   const location = useLocation();
   const [lang, setLang] = useState(() => localStorage.getItem('ccs_market_lang') || 'en');
   const [unread, setUnread] = useState(0);
-  const [promoVisible, setPromoVisible] = useState(() => localStorage.getItem('ccs_market_promo_dismissed') !== '1');
-  const [promoDrag, setPromoDrag] = useState(0);
-  const promoDragStart = useRef<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem('ccs_market_lang', lang);
@@ -73,29 +70,7 @@ export default function MarketplaceLayout() {
     }
   };
 
-  const handlePromoPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    promoDragStart.current = event.clientX;
-  };
-
-  const handlePromoPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (promoDragStart.current === null) return;
-    const delta = event.clientX - promoDragStart.current;
-    setPromoDrag(Math.max(-180, Math.min(180, delta)));
-  };
-
-  const handlePromoPointerEnd = () => {
-    if (Math.abs(promoDrag) > 110) {
-      dismissPromo();
-    } else {
-      setPromoDrag(0);
-    }
-    promoDragStart.current = null;
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F6F3EC] pb-32 md:pb-10">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[#C6A66B]/40 bg-[#333333] text-[#F6F3EC] shadow-[0_8px_24px_rgba(51,51,51,0.12)]">
+  const handlePromoPointerDown = (event: React,51,51,0.12)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2 md:min-w-[230px]">
             {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
@@ -204,42 +179,6 @@ export default function MarketplaceLayout() {
           </div>
         </div>
       </header>
-
-      {promoVisible && (
-        <div className="px-4 pt-3 md:px-6">
-          <div
-            className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-[#D8C8A2] bg-white px-4 py-3 text-[#333333] shadow-[0_8px_28px_rgba(51,51,51,0.06)]"
-            style={{
-              transform: `translateX(${promoDrag}px)`,
-              transition: promoDrag === 0 ? 'transform 0.22s ease' : 'none',
-              touchAction: 'pan-y',
-            }}
-            onPointerDown={handlePromoPointerDown}
-            onPointerMove={handlePromoPointerMove}
-            onPointerUp={handlePromoPointerEnd}
-            onPointerLeave={handlePromoPointerEnd}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F6F3EC] text-sm font-bold text-[#8A6A2B]">%</span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold leading-tight md:text-base">Enjoy up to KES 2,000 off a service</p>
-                  <p className="text-[11px] text-[#746F66] md:text-xs">Swipe to dismiss</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={dismissPromo}
-                className="shrink-0 rounded-full bg-[#F6F3EC] px-3 py-1.5 text-[11px] font-semibold text-[#333333] transition hover:bg-[#E9E1D1]"
-                aria-label="Dismiss promotion"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <main className="mx-auto max-w-6xl">
         <Outlet />
