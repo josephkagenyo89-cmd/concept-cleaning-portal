@@ -63,14 +63,10 @@ export default function MarketplaceLayout() {
   const company = settings.general.company_name || 'Concept Cleaning Services';
   const activeLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
 
-  const dismissPromo = () => {
-    setPromoVisible(false);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ccs_market_promo_dismissed', '1');
-    }
-  };
-
-  const handlePromoPointerDown = (event: React,51,51,0.12)]">
+  return (
+    <div className="min-h-screen bg-[#F6F3EC] pb-32 md:pb-10">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-[#C6A66B]/40 bg-[#333333] text-[#F6F3EC] shadow-[0_8px_24px_rgba(51,51,51,0.12)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2 md:min-w-[230px]">
             {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
