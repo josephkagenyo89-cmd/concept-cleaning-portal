@@ -629,13 +629,13 @@ export default function MarketServiceDetail() {
               </div>
 
               {!isCustomer && (
-                <p className="rounded-lg bg-brand-forest-soft p-2 text-xs text-foreground">
+                <p className="rounded-lg bg-brand-paper p-2 text-xs text-foreground">
                   Sign in or create a customer account to
                   complete your request.
                 </p>
               )}
 
-              <div className="rounded-lg border border-market/20 bg-brand-forest-soft/50 p-3 text-sm">
+              <div className="rounded-lg border border-brand-sand bg-brand-paper p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-brand-slate">Estimated total</span>
                   <span className="font-bold text-brand-forest">{formatKes(pricing.original)}</span>
