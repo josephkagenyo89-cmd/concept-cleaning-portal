@@ -13,8 +13,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 210 90% 40%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 39 46% 60%;
+    --primary-foreground: 0 0% 20%;
 
     --secondary: 214 100% 96%;
     --secondary-foreground: 215 16% 34%;
@@ -30,7 +30,7 @@
 
     --border: 214 32% 90%;
     --input: 214 32% 90%;
-    --ring: 210 90% 40%;
+    --ring: 39 46% 60%;
 
     --radius: 0.75rem;
 
@@ -51,9 +51,9 @@
     --info: 210 100% 56%;
     --info-foreground: 0 0% 100%;
 
-    --market: 160 84% 32%;
-    --market-foreground: 0 0% 100%;
-    --market-soft: 160 60% 95%;
+    --market: 39 46% 60%;
+    --market-foreground: 0 0% 20%;
+    --market-soft: 40 35% 95%;
     --tier-bronze: 30 60% 50%;
     --tier-silver: 210 10% 60%;
     --tier-gold: 45 93% 47%;
@@ -69,7 +69,7 @@
     --popover: 222 40% 9%;
     --popover-foreground: 210 40% 95%;
 
-    --primary: 210 90% 50%;
+    --primary: 39 46% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 30% 15%;
@@ -86,7 +86,7 @@
 
     --border: 222 25% 18%;
     --input: 222 25% 18%;
-    --ring: 210 90% 50%;
+    --ring: 39 46% 60%;
 
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 90%;
