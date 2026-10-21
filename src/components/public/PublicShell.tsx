@@ -45,40 +45,40 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
   }, [location.pathname, location.hash]);
 
   return (
-    <div className={cn('min-h-screen bg-background text-foreground', hideMobileBar ? '' : 'pb-16 md:pb-0')}>
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <div className={cn('min-h-screen bg-brand-paper text-brand-ink', hideMobileBar ? '' : 'pb-16 md:pb-0')}>
+      <header className="sticky top-0 z-40 border-b border-brand-sand bg-brand-paper/95 text-brand-ink backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
             {general.logo_url ? (
-              <img src={general.logo_url} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain" />
+              <img src={general.logo_url} alt={`${company} logo`} className="h-12 w-12 rounded-lg object-contain md:h-14 md:w-14" />
             ) : (
-              <img src={conceptLogo} alt={`${company} logo`} className="h-20 w-20 rounded-lg object-contain bg-white/0" />
+              <img src={conceptLogo} alt={`${company} logo`} className="h-12 w-12 rounded-lg object-contain md:h-14 md:w-14" />
             )}
-            <span className="truncate text-lg font-bold leading-tight md:text-2xl">{company}</span>
+            <span className="truncate text-base font-extrabold leading-tight text-brand-forest md:text-xl">{company}</span>
           </Link>
           {headerExtra}
           <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end}
-                className={({ isActive }) => cn('text-sm font-medium text-muted-foreground hover:text-foreground', isActive && !n.to.includes('#') && 'text-foreground')}>
+                className={({ isActive }) => cn('text-sm font-semibold text-brand-slate hover:text-brand-forest', isActive && !n.to.includes('#') && 'text-brand-forest')}>
                 {n.label}
               </NavLink>
             ))}
           </nav>
           <div className="hidden items-center gap-2 md:flex">
             <Button asChild variant="ghost" size="sm"><Link to="/customer-auth">Customer Login</Link></Button>
-            <Button asChild size="sm" className="bg-market text-market-foreground hover:bg-market/90"><Link to="/marketplace">Book Now</Link></Button>
+            <Button asChild size="sm" className="bg-brand-forest text-white hover:bg-brand-panel"><Link to="/marketplace">Book Now</Link></Button>
           </div>
-          <button className="md:hidden p-2" onClick={() => setOpen(!open)} aria-label="Toggle menu">
+          <button className="rounded-lg p-2 text-brand-forest hover:bg-brand-sand/60 md:hidden" onClick={() => setOpen(!open)} aria-label="Toggle menu">
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
         {open && (
-          <nav className="border-t bg-background px-4 py-3 md:hidden" aria-label="Mobile">
+          <nav className="border-t border-brand-sand bg-brand-paper px-4 py-3 md:hidden" aria-label="Mobile">
             {NAV.map((n) => (
-              <Link key={n.to} to={n.to} onClick={() => setOpen(false)} className="block py-2.5 text-base font-medium">{n.label}</Link>
+              <Link key={n.to} to={n.to} onClick={() => setOpen(false)} className="block py-2.5 text-base font-semibold text-brand-slate hover:text-brand-forest">{n.label}</Link>
             ))}
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2 [&_button]:rounded-full">
               <Button asChild variant="outline"><Link to="/customer-auth">Customer Login</Link></Button>
               <Button asChild variant="outline"><a href="/admin">Staff Login</a></Button>
             </div>
@@ -88,7 +88,7 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
 
       <main>{children}</main>
 
-      <footer className="mt-16 bg-foreground text-background">
+      <footer className="mt-16 bg-brand-forest text-brand-cream">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4 md:px-6">
           <div className="md:col-span-2">
             <p className="text-lg font-bold">{company}</p>
@@ -117,10 +117,10 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
       </footer>
 
       {!hideMobileBar && (
-        <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background md:hidden">
-          <a href={`tel:${phone}`} className="flex flex-col items-center py-2 text-xs font-medium"><Phone className="h-5 w-5" />Call</a>
+        <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-brand-sand bg-brand-paper text-brand-forest md:hidden">
+          <a href={`tel:${phone}`} className="flex flex-col items-center gap-1 py-2 text-xs font-semibold"><Phone className="h-5 w-5" />Call</a>
           <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center py-2 text-xs font-medium"><MessageCircle className="h-5 w-5" />WhatsApp</a>
-          <Link to="/marketplace" className="flex flex-col items-center bg-market py-2 text-xs font-semibold text-market-foreground"><Sparkles className="h-5 w-5" />Book Now</Link>
+          <Link to="/marketplace" className="flex flex-col items-center gap-1 bg-brand-forest py-2 text-xs font-bold text-white"><Sparkles className="h-5 w-5" />Book Now</Link>
         </div>
       )}
     </div>
