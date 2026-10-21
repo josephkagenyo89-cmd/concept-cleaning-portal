@@ -4,7 +4,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft,
-  Star,
   Clock,
   CheckCircle2,
   MapPin,
@@ -25,7 +24,6 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   MarketService,
-  displayRating,
   formatKes,
   serviceImage,
   startingPrice,
@@ -471,19 +469,12 @@ export default function MarketServiceDetail() {
               {service.name}
             </h1>
 
-            <div className="mt-1 flex items-center gap-3 text-xs text-brand-slate">
-              <span className="flex items-center gap-1 font-medium text-foreground">
-                <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-                {displayRating(service.id).toFixed(1)}
-              </span>
-
-              {service.estimated_duration && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {service.estimated_duration}
-                </span>
-              )}
-            </div>
+            {service.estimated_duration && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-slate">
+                <Clock className="h-3.5 w-3.5" />
+                Estimated duration: {service.estimated_duration}
+              </p>
+            )}
 
             <p className="mt-2 text-xl font-bold text-brand-forest">
               {pricing.original > 0 ? (
