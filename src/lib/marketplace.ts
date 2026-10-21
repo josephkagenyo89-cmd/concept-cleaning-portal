@@ -142,17 +142,6 @@ export async function fetchMarketCategories(): Promise<string[]> {
   return Array.from(new Set((data || []).map((row: any) => String(row.category || '').trim()).filter(Boolean)));
 }
 
-/** Deterministic pseudo-rating so cards look complete without inventing stored data. */
-export function displayRating(id: string): number {
-  let h = 0;
-
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) % 1000;
-  }
-
-  return 4.3 + (h % 7) / 10;
-}
-
 export function startingPrice(s: MarketService): number {
   return s.base_price > 0 ? s.base_price : s.price_per_sqm;
 }
