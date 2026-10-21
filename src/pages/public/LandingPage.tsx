@@ -36,7 +36,7 @@ function BottomTabs({ onAccount, waHref }: { onAccount: () => void; waHref: stri
         <Link to="/" className={tab}><Home className="h-[22px] w-[22px]" />Home</Link>
         <Link to="/marketplace" className={tab}><LayoutGrid className="h-[22px] w-[22px]" />Services</Link>
         <button type="button" onClick={onAccount} className={tab}><User className="h-[22px] w-[22px]" />Account</button>
-        <a href={waHref} target="_blank" rel="noopener noreferrer" className={`${tab} !text-brand-ink`}><MessageCircle className="h-[22px] w-[22px]" />WhatsApp</a>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" className={`${tab} !text-[#1F7A4D]`}><MessageCircle className="h-[22px] w-[22px]" />WhatsApp</a>
       </div>
     </nav>
   );
@@ -118,7 +118,7 @@ export default function LandingPage() {
       href={waHome}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-brass text-brand-ink px-3 py-2 text-xs font-bold text-white hover:bg-brand-brass/90 md:text-sm"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1F7A4D] px-3 py-2 text-xs font-bold text-white hover:bg-[#186540] md:text-sm"
     >
       <MessageCircle className="h-4 w-4" /> WhatsApp
     </a>
