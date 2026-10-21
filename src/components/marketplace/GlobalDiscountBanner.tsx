@@ -17,7 +17,7 @@ export default function GlobalDiscountBanner() {
   const left = daysLeft(discount.endDate);
 
   return (
-    <div role="status" className="bg-brand-brass px-4 py-2.5 text-center text-sm font-semibold text-brand-forest">
+    <div role="status" className="bg-[#C6A66B] px-4 py-2.5 text-center text-sm font-semibold text-[#333333]">
       <span>{discount.label}</span>
       <span className="ml-2 font-normal">· {discount.percentage}% off all services</span>
       {left !== null && (
