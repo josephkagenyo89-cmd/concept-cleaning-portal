@@ -19,7 +19,15 @@ export function waLink(phone: string, msg: string) {
   return `https://wa.me/${p}?text=${encodeURIComponent(msg)}`;
 }
 
-export default function PublicShell({ children }: { children: ReactNode }) {
+interface PublicShellProps {
+  children: ReactNode;
+  /** Optional element shown in the header, next to the company name. */
+  headerExtra?: ReactNode;
+  /** Set true when a page supplies its own mobile bottom bar. Default keeps the shared bar. */
+  hideMobileBar?: boolean;
+}
+
+export default function PublicShell({ children, headerExtra, hideMobileBar = false }: PublicShellProps) {
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   const company = settings.general.company_name || 'Concept Cleaning Services';
@@ -27,7 +35,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   const email = settings.general.email || 'info.conceptcleaningkenya@gmail.com';
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-16 md:pb-0">
+    <div className={cn('min-h-screen bg-background text-foreground', hideMobileBar ? '' : 'pb-16 md:pb-0')}>
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
@@ -38,6 +46,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             )}
             <span className="truncate text-lg font-bold leading-tight md:text-2xl">{company}</span>
           </Link>
+          {headerExtra}
           <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end}
@@ -97,11 +106,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         <p className="border-t border-background/10 py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} {company}. All rights reserved.</p>
       </footer>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background md:hidden">
-        <a href={`tel:${phone}`} className="flex flex-col items-center py-2 text-xs font-medium"><Phone className="h-5 w-5" />Call</a>
-        <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center py-2 text-xs font-medium"><MessageCircle className="h-5 w-5" />WhatsApp</a>
-        <Link to="/marketplace" className="flex flex-col items-center bg-market py-2 text-xs font-semibold text-market-foreground"><Sparkles className="h-5 w-5" />Book Now</Link>
-      </div>
+      {!hideMobileBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background md:hidden">
+          <a href={`tel:${phone}`} className="flex flex-col items-center py-2 text-xs font-medium"><Phone className="h-5 w-5" />Call</a>
+          <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a quote.')} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center py-2 text-xs font-medium"><MessageCircle className="h-5 w-5" />WhatsApp</a>
+          <Link to="/marketplace" className="flex flex-col items-center bg-market py-2 text-xs font-semibold text-market-foreground"><Sparkles className="h-5 w-5" />Book Now</Link>
+        </div>
+      )}
     </div>
   );
 }

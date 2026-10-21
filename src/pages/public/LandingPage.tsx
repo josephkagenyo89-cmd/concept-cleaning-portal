@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ShieldCheck, Leaf, Clock, FileCheck2, Star, ArrowRight, MessageCircle, MapPin,
-  Search, CalendarCheck, Sparkles, BadgeCheck,
+  Search, CalendarCheck, Sparkles, BadgeCheck, Home, LayoutGrid, User, Gift, Receipt, X, ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,9 +11,11 @@ import {
 } from '@/components/ui/accordion';
 import PublicShell, { waLink } from '@/components/public/PublicShell';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import GlobalDiscountBanner from '@/components/marketplace/GlobalDiscountBanner';
 import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/contexts/AuthContext';
 import { BlogPost, fetchPublishedPosts, fmtBlogDate, readingTime } from '@/lib/blog';
-import { MarketService, fetchMarketServices, fetchMarketServicesLimited, serviceImage } from '@/lib/marketplace';
+import { MarketService, fetchMarketServicesLimited } from '@/lib/marketplace';
 import residential from '@/assets/market/residential.jpg';
 import commercial from '@/assets/market/commercial.jpg';
 import carpet from '@/assets/market/carpet.jpg';
@@ -54,12 +56,79 @@ const FAQS = [
   { q: 'Do you bring your own equipment?', a: 'Yes. Our team brings all machines, tools and cleaning products needed.' },
 ];
 
+const SOFT_KEY = 'ccs_soft_signin_dismissed';
+
+/** Bottom app bar for phones: Home, Services, Account, WhatsApp. Hidden on laptops. */
+function MobileAppBar({ onAccount, waHref }: { onAccount: () => void; waHref: string }) {
+  const item = 'flex min-h-[44px] flex-col items-center justify-center gap-1 text-[11px] font-semibold text-brand-slate';
+  return (
+    <nav aria-label="App navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-brand-sand bg-white px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 md:hidden">
+      <Link to="/" className={item}><Home className="h-5 w-5" />Home</Link>
+      <Link to="/marketplace" className={item}><LayoutGrid className="h-5 w-5" />Services</Link>
+      <button type="button" onClick={onAccount} className={item}><User className="h-5 w-5" />Account</button>
+      <a href={waHref} target="_blank" rel="noopener noreferrer" className={`${item} !text-[#1F7A4D]`}><MessageCircle className="h-5 w-5" />WhatsApp</a>
+    </nav>
+  );
+}
+
+/** Account sheet: Track my booking lives here for signed-in clients. */
+function AccountSheet({ open, onClose, signedIn }: { open: boolean; onClose: () => void; signedIn: boolean }) {
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-brand-forest/40 transition-opacity md:hidden ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Your account"
+        className={`fixed inset-x-0 bottom-0 z-50 rounded-t-3xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),20px)] shadow-2xl transition-transform duration-300 md:hidden ${open ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-brand-sand" />
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-brand-ink">Your account</h2>
+          <button type="button" onClick={onClose} aria-label="Close account" className="rounded-full p-1.5 text-brand-slate"><X className="h-5 w-5" /></button>
+        </div>
+
+        {signedIn ? (
+          <div className="mt-4 grid gap-3">
+            <Button asChild className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
+              <Link to="/my/bookings" onClick={onClose}>Track my booking</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-brand-sand">
+              <Link to="/my/documents" onClick={onClose}><Receipt className="mr-2 h-4 w-4" />Invoices and receipts</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link to="/my" onClick={onClose}>Account home</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3">
+            <p className="text-sm text-brand-slate">Sign in with Google to track bookings, invoices and receipts.</p>
+            <Button asChild variant="outline" className="border-brand-sand bg-white text-brand-ink">
+              <Link to="/customer-auth?next=/my" onClick={onClose}>Continue with Google</Link>
+            </Button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function LandingPage() {
   const { settings } = useSettings();
+  const { user, isCustomer } = useAuth();
   const phone = settings.general.phone || '+254796563741';
   const reviewUrl = (settings as any).feedback?.google_review_url || 'https://g.page/r/CYJAstog5dgWEBI/review';
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [quickBookingServices, setQuickBookingServices] = useState<MarketService[]>([]);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [softOpen, setSoftOpen] = useState(false);
+  const [softHidden, setSoftHidden] = useState<boolean>(() => {
+    try { return localStorage.getItem(SOFT_KEY) === '1'; } catch { return false; }
+  });
 
   useEffect(() => { fetchPublishedPosts(3).then(setPosts); }, []);
 
@@ -98,7 +167,6 @@ export default function LandingPage() {
             if (seen.has(key)) return;
             selected.push(service);
             seen.add(key);
-            if (selected.length >= 4) return;
           });
         }
 
@@ -109,12 +177,30 @@ export default function LandingPage() {
     return () => { active = false; };
   }, []);
 
+  const dismissSoft = () => {
+    setSoftHidden(true);
+    try { localStorage.setItem(SOFT_KEY, '1'); } catch { /* storage unavailable: hide for this visit only */ }
+  };
+
   const title = 'Concept Cleaning Services | Professional Cleaning in Nairobi, Kenya';
   const desc = 'Trusted home, office, carpet, sofa and fumigation services in Nairobi. Vetted crews, clear prices, M-Pesa payment. Book online or get a WhatsApp quote today.';
+  const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like a free quote.');
+  const headerWhatsApp = (
+    <a
+      href={waLink(phone, 'Hello Concept Cleaning Services, I would like to book a cleaning.')}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1F7A4D] px-3 py-2 text-xs font-bold text-white hover:bg-[#186540] md:text-sm"
+    >
+      <MessageCircle className="h-4 w-4" /> WhatsApp
+    </a>
+  );
 
   return (
-    <PublicShell>
-      <div className="bg-brand-paper font-['Manrope',sans-serif] text-brand-ink">
+    <PublicShell headerExtra={headerWhatsApp} hideMobileBar>
+      <GlobalDiscountBanner />
+
+      <div className="bg-brand-paper font-['Manrope',sans-serif] text-brand-ink pb-20 md:pb-0">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={desc} />
@@ -127,32 +213,62 @@ export default function LandingPage() {
         })}</script>
       </Helmet>
 
+      {/* Soft sign-in suggestion: a suggestion, never a gate. Hidden for signed-in users and after dismissal. */}
+      {!user && !softHidden && (
+        <div className="mx-auto max-w-6xl px-4 pt-4 md:px-6">
+          <div className="rounded-xl border border-brand-sand bg-white">
+            <button
+              type="button"
+              onClick={() => setSoftOpen((v) => !v)}
+              aria-expanded={softOpen}
+              className="flex min-h-[44px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-brand-slate"
+            >
+              Save your bookings and invoices
+              <ChevronDown className={`h-4 w-4 transition-transform ${softOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {softOpen && (
+              <div className="border-t border-brand-sand px-4 pb-4 pt-3 text-sm text-brand-slate">
+                <p>Sign in with Google to see your bookings, quotations and receipts in one place. You can still browse and book without it.</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Button asChild variant="outline" className="border-brand-sand bg-white text-brand-ink">
+                    <Link to="/customer-auth?next=/my">Continue with Google</Link>
+                  </Button>
+                  <button type="button" onClick={dismissSoft} className="min-h-[44px] text-sm text-brand-slate underline-offset-4 hover:underline">
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-forest text-brand-cream">
         <img src={residential} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-brand-forest/90 via-brand-forest/75 to-brand-forest/65" />
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-24">
+        <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-2 md:items-center md:px-6 md:py-20 lg:gap-10">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-brand-panel text-brand-brass px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+            <p className="inline-flex items-center gap-2 rounded-full bg-brand-panel px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-brass">
               <Star className="h-3.5 w-3.5 fill-current" /> Trusted cleaning team in Nairobi
             </p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">
+            <h1 className="mt-4 text-3xl font-extrabold leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl">
               Cleaner homes. <br className="hidden sm:block" />Healthier businesses.
             </h1>
             <p className="mt-4 max-w-lg text-base text-brand-mist md:text-lg">
-              Vetted cleaners, clear pricing, and professional results for homes, offices, carpets, sofas and pest control across Nairobi — with fast booking and easy M-Pesa payment.
+              Vetted cleaners, clear pricing, and professional results for homes, offices, carpets, sofas and pest control across Nairobi, with fast booking and easy M-Pesa payment.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
-                <Link to="/marketplace#all-services">Instant booking <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                <Link to="/marketplace">Browse services & prices <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
-                <a href={waLink(phone, 'Hello Concept Cleaning Services, I would like a free quote.')} target="_blank" rel="noopener noreferrer">
+                <a href={waQuote} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="mr-1 h-4 w-4" /> Get a free quote
                 </a>
               </Button>
             </div>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-brand-mist">
+            <div className="mt-6 flex flex-wrap gap-2 text-sm text-brand-mist sm:gap-3">
               <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">4.9★ rated</span>
               <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">24–48h booking</span>
               <span className="rounded-full border border-brand-line bg-brand-panel/60 px-3 py-1">M-Pesa payment</span>
@@ -174,26 +290,23 @@ export default function LandingPage() {
                     <Link
                       key={`${service.category}:${service.id}`}
                       to={directLink}
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream transition hover:bg-white/10"
+                      className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream transition hover:bg-white/10"
                     >
-                      <span className="h-2.5 w-2.5 rounded-full bg-brand-brass" />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand-brass" />
                       <span className="line-clamp-1">{service.name}</span>
                     </Link>
                   );
                 })
               ) : (
-                ['Home cleaning', 'Office disinfection', 'Carpet care', 'Fumigation'].map((service) => (
-                  <div key={service} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream">
-                    <span className="h-2.5 w-2.5 rounded-full bg-brand-brass" />
-                    {service}
-                  </div>
-                ))
+                <Link to="/categories" className="col-span-full flex min-h-[44px] items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-brand-cream">
+                  Browse all service categories
+                </Link>
               )}
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Button asChild className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
-                <Link to="/marketplace#all-services">Book now</Link>
+                <Link to="/marketplace">Book now</Link>
               </Button>
               <Button asChild variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
                 <a href={waLink(phone, 'Hello Concept Cleaning Services, I need a quick quote.')} target="_blank" rel="noopener noreferrer">WhatsApp quote</a>
@@ -201,7 +314,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:col-span-2">
             {PILLARS.map((p) => (
               <div key={p.title} className="rounded-xl border border-brand-line bg-brand-panel p-4 text-brand-cream shadow-lg">
                 <p.icon className="h-6 w-6 text-brand-brass" />
@@ -222,15 +335,15 @@ export default function LandingPage() {
       </section>
 
       {/* Services */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6" aria-labelledby="services-h">
+      <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-14" aria-labelledby="services-h">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 id="services-h" className="text-2xl font-bold text-brand-ink md:text-3xl">Cleaning & fumigation services in Nairobi</h2>
-            <p className="mt-2 text-brand-slate">Pick what you need — prices are shown upfront.</p>
+            <p className="mt-2 text-brand-slate">Pick what you need. Prices are shown upfront.</p>
           </div>
           <Link to="/marketplace" className="hidden shrink-0 text-sm font-semibold text-brand-brassDark md:inline-flex">View all →</Link>
         </div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3">
           {SERVICES.map((s) => (
             <Link key={s.name} to="/marketplace" className="group overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
               <ServiceVisual image={s.img} alt={`${s.name} in Nairobi`} className="aspect-[16/10] w-full object-cover" />
@@ -244,11 +357,25 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Referral */}
+      <section className="mx-auto max-w-6xl px-4 pb-4 md:px-6">
+        <div className="flex flex-col gap-4 rounded-2xl border border-brand-sand bg-white p-5 sm:flex-row sm:items-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-sand text-brand-brassDark"><Gift className="h-5 w-5" /></span>
+          <div className="flex-1">
+            <h2 className="font-semibold text-brand-ink">Refer a friend</h2>
+            <p className="text-sm text-brand-slate">Share your code and you both save on the next clean.</p>
+          </div>
+          <Button asChild variant="outline" className="shrink-0 border-brand-brassDark text-brand-ink">
+            <Link to="/marketplace">Refer now</Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Why us */}
       <section className="bg-brand-sand/40">
-        <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-14">
           <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Why Nairobi chooses Concept Cleaning</h2>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-4">
             {PILLARS.map((p) => (
               <div key={p.title} className="rounded-2xl border border-brand-sand bg-white p-6">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-sand text-brand-brassDark"><p.icon className="h-5 w-5" /></span>
@@ -261,9 +388,9 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+      <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-14">
         <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">How it works</h2>
-        <ol className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-4">
           {STEPS.map((s, i) => (
             <li key={s.title} className="relative rounded-2xl border border-brand-sand bg-white p-6">
               <span className="absolute right-5 top-4 text-4xl font-extrabold text-brand-sand">{i + 1}</span>
@@ -277,41 +404,41 @@ export default function LandingPage() {
 
       {/* Areas */}
       <section id="areas" className="bg-brand-sand/40 scroll-mt-20">
-        <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-14">
           <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Areas we serve in Nairobi</h2>
           <p className="mt-2 text-brand-slate">Same professional service across the city and nearby towns.</p>
           <ul className="mt-6 flex flex-wrap gap-2">
             {AREAS.map((a) => (
-              <li key={a} className="inline-flex items-center gap-1 rounded-full border border-brand-sand bg-white text-brand-ink px-3 py-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-brand-brassDark" />{a}</li>
+              <li key={a} className="inline-flex items-center gap-1 rounded-full border border-brand-sand bg-white px-3 py-1.5 text-sm text-brand-ink"><MapPin className="h-3.5 w-3.5 text-brand-brassDark" />{a}</li>
             ))}
           </ul>
         </div>
       </section>
 
       {/* Reviews */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        <div className="rounded-3xl border border-brand-sand bg-white p-8 text-center md:p-12">
+      <section className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-14">
+        <div className="rounded-3xl border border-brand-sand bg-white p-6 text-center md:p-12">
           <div className="flex justify-center gap-1 text-brand-brassDark">{[...Array(5)].map((_, i) => <Star key={i} className="h-6 w-6 fill-current" />)}</div>
           <h2 className="mt-4 text-2xl font-bold text-brand-ink md:text-3xl">Loved by homes & businesses across Nairobi</h2>
-          <p className="mx-auto mt-2 max-w-xl text-brand-slate">Read what our clients say on Google — and share your own experience.</p>
+          <p className="mx-auto mt-2 max-w-xl text-brand-slate">Read what our clients say on Google, and share your own experience.</p>
           <Button asChild variant="outline" className="mt-6 border-brand-brassDark text-brand-ink hover:bg-brand-sand"><a href={reviewUrl} target="_blank" rel="noopener noreferrer">Read our Google reviews</a></Button>
         </div>
       </section>
 
       {/* Blog */}
       {posts.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6">
+        <section className="mx-auto max-w-6xl px-4 pb-12 md:px-6 md:pb-14">
           <div className="flex items-end justify-between">
             <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">Cleaning tips & guides</h2>
             <Link to="/blog" className="text-sm font-semibold text-brand-brassDark">All articles →</Link>
           </div>
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-3 md:gap-5">
             {posts.map((p) => (
-              <Link key={p.id} to={`/blog/${p.slug}`} className="overflow-hidden rounded-2xl border border-brand-sand bg-white hover:shadow-lg transition">
+              <Link key={p.id} to={`/blog/${p.slug}`} className="overflow-hidden rounded-2xl border border-brand-sand bg-white transition hover:shadow-lg">
                 {p.cover_image && <img src={p.cover_image} alt={p.title} loading="lazy" className="aspect-[16/9] w-full object-cover" />}
                 <div className="p-5">
                   <p className="text-xs text-brand-slate">{p.category} · {readingTime(p.content)} min read · {fmtBlogDate(p.published_at)}</p>
-                  <h3 className="mt-2 font-semibold text-brand-ink leading-snug">{p.title}</h3>
+                  <h3 className="mt-2 font-semibold leading-snug text-brand-ink">{p.title}</h3>
                 </div>
               </Link>
             ))}
@@ -334,17 +461,20 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
-        <div className="rounded-3xl bg-brand-forest p-8 text-center text-brand-cream md:p-14">
+        <div className="rounded-3xl bg-brand-forest p-7 text-center text-brand-cream md:p-14">
           <h2 className="text-2xl font-extrabold md:text-4xl">Ready for a cleaner space?</h2>
           <p className="mx-auto mt-3 max-w-lg text-brand-mist">Book in minutes or get a free quote on WhatsApp.</p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90"><Link to="/marketplace">Book a Service</Link></Button>
             <Button asChild size="lg" variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
-              <a href={`tel:${phone}`}>Call {phone}</a>
+              <a href={waQuote} target="_blank" rel="noopener noreferrer">WhatsApp a quote</a>
             </Button>
           </div>
         </div>
       </section>
+
+      <MobileAppBar onAccount={() => setAccountOpen(true)} waHref={waQuote} />
+      <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} signedIn={!!user && isCustomer} />
       </div>
     </PublicShell>
   );
