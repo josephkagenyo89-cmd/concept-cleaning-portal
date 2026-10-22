@@ -2,114 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global white-and-charcoal theme shared by the marketplace, customer portal, and ERP. */
 @layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+  :root,
+  .dark {
+    color-scheme: light;
+
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 20%;
 
-    --primary: 210 90% 40%;
+    --primary: 0 0% 20%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 100% 96%;
-    --secondary-foreground: 215 16% 34%;
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 0 0% 20%;
 
-    --muted: 214 32% 93%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 35%;
 
-    --accent: 210 100% 56%;
+    --accent: 0 0% 20%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 0% 20%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 90%;
-    --input: 214 32% 90%;
-    --ring: 210 90% 40%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 20%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 215 60% 16%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 210 100% 56%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 0 0% 20%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 55% 22%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 215 50% 24%;
-    --sidebar-ring: 210 100% 56%;
-    --sidebar-muted: 214 30% 70%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 0 0% 20%;
+    --sidebar-muted: 0 0% 35%;
 
-    --success: 142 71% 45%;
+    /* Keep status semantics for operational feedback, not decorative theme accents. */
+    --success: 142 71% 35%;
     --success-foreground: 0 0% 100%;
     --warning: 43 96% 56%;
-    --warning-foreground: 43 96% 15%;
-    --info: 210 100% 56%;
+    --warning-foreground: 0 0% 15%;
+    --info: 0 0% 20%;
     --info-foreground: 0 0% 100%;
 
-    --market: 0 0% 20%;
-    --market-foreground: 40 35% 95%;
-    --market-soft: 40 35% 95%;
-    --tier-bronze: 30 60% 50%;
-    --tier-silver: 210 10% 60%;
-    --tier-gold: 45 93% 47%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 95%;
-
-    --card: 222 40% 9%;
-    --card-foreground: 210 40% 95%;
-
-    --popover: 222 40% 9%;
-    --popover-foreground: 210 40% 95%;
-
-    --primary: 210 90% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 222 30% 15%;
-    --secondary-foreground: 210 40% 90%;
-
-    --muted: 222 25% 15%;
-    --muted-foreground: 215 16% 55%;
-
-    --accent: 210 100% 56%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 222 25% 18%;
-    --input: 222 25% 18%;
-    --ring: 210 90% 50%;
-
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 210 90% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 30% 14%;
-    --sidebar-accent-foreground: 210 40% 90%;
-    --sidebar-border: 222 25% 18%;
-    --sidebar-ring: 210 90% 50%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 43 96% 56%;
-    --warning-foreground: 43 96% 15%;
-    --info: 210 100% 56%;
-    --info-foreground: 0 0% 100%;
-
-    --market: 0 0% 20%;
-    --market-foreground: 40 35% 95%;
-    --market-soft: 40 35% 95%;
-    --tier-bronze: 30 60% 50%;
-    --tier-silver: 210 10% 60%;
-    --tier-gold: 45 93% 47%;
+    --market: 0 0% 100%;
+    --market-foreground: 0 0% 20%;
+    --market-soft: 0 0% 96%;
+    --tier-bronze: 0 0% 20%;
+    --tier-silver: 0 0% 20%;
+    --tier-gold: 0 0% 20%;
   }
 }
 
@@ -117,6 +69,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
