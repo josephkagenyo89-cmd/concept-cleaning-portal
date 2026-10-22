@@ -64,16 +64,16 @@ export default function MarketplaceLayout() {
   const activeLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
 
   return (
-    <div className="min-h-screen bg-[#F6F3EC] pb-32 md:pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] pb-32 md:pb-10">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[#C6A66B]/40 bg-[#333333] text-[#F6F3EC] shadow-[0_8px_24px_rgba(51,51,51,0.12)]">
+      <header className="sticky top-0 z-40 border-b border-[#E2E8F0] bg-[#0F766E] text-white shadow-[0_8px_24px_rgba(51,51,51,0.12)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2 md:min-w-[230px]">
             {location.pathname !== '/marketplace' && location.pathname !== '/categories' && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 shrink-0 rounded-full bg-white/10 px-0 text-[#F6F3EC] hover:bg-white/15 md:h-10 md:w-10"
+                className="h-9 w-9 shrink-0 rounded-full bg-white/10 px-0 text-white hover:bg-white/15 md:h-10 md:w-10"
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
                 title="Go back"
@@ -82,12 +82,12 @@ export default function MarketplaceLayout() {
               </Button>
             )}
             <Link to="/marketplace" className="flex min-w-0 items-center gap-2.5" aria-label={`${company} marketplace`}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#C6A66B] text-[#333333] shadow-sm">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0F766E] text-[#333333] shadow-sm">
                 <Sparkles className="h-5 w-5" />
               </span>
               <span className="hidden min-w-0 sm:block">
-                <span className="block max-w-[190px] truncate text-sm font-extrabold leading-tight tracking-wide text-[#F6F3EC]">{company}</span>
-                <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.2em] text-[#C6A66B]">Services marketplace</span>
+                <span className="block max-w-[190px] truncate text-sm font-extrabold leading-tight tracking-wide text-white">{company}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.2em] text-[#F97316]">Services marketplace</span>
               </span>
             </Link>
           </div>
@@ -101,7 +101,7 @@ export default function MarketplaceLayout() {
                 end={(item as any).end}
                 className={({ isActive }) =>
                   `relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive ? 'bg-[#C6A66B]/15 text-[#E6CB92]' : 'text-[#F6F3EC]/85 hover:bg-white/10 hover:text-white'
+                    isActive ? 'bg-[#0F766E]/15 text-[#F97316]' : 'text-white/85 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
@@ -119,7 +119,7 @@ export default function MarketplaceLayout() {
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-[#F6F3EC] hover:bg-white/15">
+                <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 text-white hover:bg-white/15">
                   <Globe className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">{activeLang.code}</span>
                 </Button>
@@ -136,7 +136,7 @@ export default function MarketplaceLayout() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 px-0 text-[#F6F3EC] hover:bg-white/15"
+              className="h-9 w-9 px-0 text-white hover:bg-white/15"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -159,7 +159,7 @@ export default function MarketplaceLayout() {
             ) : (
               <Button
                 size="sm"
-                className="h-9 rounded-full border border-[#C6A66B]/70 bg-white/10 px-3 text-xs font-semibold text-[#F6F3EC] hover:bg-white/20"
+                className="h-9 rounded-full border border-[#0F766E]/70 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"
                 onClick={() => navigate(`/customer-auth?next=${encodeURIComponent(location.pathname)}`)}
               >
                 <LogIn className="mr-1 h-4 w-4" /> Login
@@ -184,7 +184,7 @@ export default function MarketplaceLayout() {
       <InstallAppPrompt />
 
       {/* Bottom navigation + staff login (mobile only) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E4DFD2] bg-white/95 shadow-[0_-8px_24px_rgba(51,51,51,0.06)] backdrop-blur md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E2E8F0] bg-white/95 shadow-[0_-8px_24px_rgba(51,51,51,0.06)] backdrop-blur md:hidden">
         <nav className="mx-auto flex max-w-3xl items-stretch">
           {NAV.map((item) => (
             <NavLink
@@ -193,7 +193,7 @@ export default function MarketplaceLayout() {
               end={item.end}
               className={({ isActive }) =>
                 `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-                  isActive ? 'font-bold text-[#8A6A2B]' : 'text-[#746F66] hover:text-[#333333]'
+                  isActive ? 'font-bold text-[#0F766E]' : 'text-[#475569] hover:text-[#0F766E]'
                 }`
               }
             >
@@ -210,10 +210,10 @@ export default function MarketplaceLayout() {
           ))}
         </nav>
 
-        <div className="mx-auto max-w-3xl border-t border-[#E4DFD2] bg-[#F6F3EC] px-4 py-2">
+        <div className="mx-auto max-w-3xl border-t border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2">
           <a
             href="/admin"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#C6A66B] bg-[#333333] py-2.5 text-xs font-semibold text-[#F6F3EC]"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0F766E] bg-[#0F766E] py-2.5 text-xs font-semibold text-white"
           >
             <Building2 className="h-4 w-4" /> Staff Login
           </a>
