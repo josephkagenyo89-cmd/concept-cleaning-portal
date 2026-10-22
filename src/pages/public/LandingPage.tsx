@@ -1,305 +1,208 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Home, LayoutGrid, User, MessageCircle, Gift, Receipt, X, ChevronDown } from 'lucide-react';
+import {
+  ArrowRight, CheckCircle2, ChevronDown, Clock3, Droplets, Home,
+  MessageCircle, ShieldCheck, Sparkles, SprayCan, Sofa, Building2,
+  CarFront, Bug, MapPin, Star, Menu, X
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PublicShell, { waLink } from '@/components/public/PublicShell';
-import GlobalDiscountBanner from '@/components/marketplace/GlobalDiscountBanner';
-import { useAuth } from '@/contexts/AuthContext';
-import { BlogPost, fetchPublishedPosts, readingTime } from '@/lib/blog';
-import ReferralForm from '@/components/marketplace/ReferralForm';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { fetchMarketCategories } from '@/lib/marketplace';
 
-const SOFT_KEY = 'ccs_soft_signin_dismissed';
-
-const FLOW = [
-  { title: 'Choose a service', text: 'Browse by type of clean or fumigation.', to: '/marketplace' },
-  { title: 'See the price', text: 'Discounts are shown on every service.', to: '/marketplace' },
-  { title: 'Book or request a quote', text: 'Sign in with Google once, then confirm.', to: '/marketplace' },
-  { title: 'Payment and receipt', text: 'Follow the payment instructions on your invoice and keep your official receipt.', to: '/my/bookings' },
+const SERVICES = [
+  { title: 'Home cleaning', text: 'Thoughtful everyday, deep and move-in cleaning for a fresher home.', icon: Home, category: 'Residential Cleaning' },
+  { title: 'Office cleaning', text: 'Professional care for offices, shops and business spaces.', icon: Building2, category: 'Commercial Cleaning' },
+  { title: 'Sofa & upholstery', text: 'Lift everyday dirt and refresh the furniture you use most.', icon: Sofa, category: 'Upholstery Cleaning' },
+  { title: 'Carpet & rugs', text: 'A deeper clean for carpets, rugs and high-traffic areas.', icon: Droplets, category: 'Carpet & Rug Cleaning' },
+  { title: 'Fumigation & pest control', text: 'Targeted treatment for common household and workplace pests.', icon: Bug, category: 'Fumigation & Pest Control' },
+  { title: 'Car interior detailing', text: 'Give your vehicle cabin a cleaner, more comfortable feel.', icon: CarFront, category: 'Car Interior Cleaning' },
 ];
 
 const FAQS = [
-  { q: 'How soon can you come?', a: 'Availability depends on your location, service and schedule. We will confirm the date when reviewing your request.' },
-  { q: 'Is fumigation safe for children and pets?', a: 'We use approved products and tell you how long to keep people and pets out.' },
-  { q: 'How do I pay?', a: 'Your booking or quotation will confirm the amount and payment instructions. We issue an official receipt after payment is recorded.' },
-  { q: 'Can I change my date?', a: 'Yes. Message us at least one day before.' },
+  { q: 'Which areas do you serve?', a: 'We serve Nairobi and selected locations in Kiambu, Kajiado and Machakos. Contact us to confirm availability in your estate.' },
+  { q: 'How do I know the price?', a: 'Browse available services and their listed prices. If your job needs a tailored scope, request a free quotation.' },
+  { q: 'How do I book?', a: 'Choose a service, review the details, then follow the booking steps. We will confirm availability and the next steps.' },
+  { q: 'Do you provide fumigation?', a: 'Yes. We provide fumigation and pest-control services and share relevant preparation and re-entry guidance for your treatment.' },
 ];
-
-/** Bottom tabs: Home, Services, Account, WhatsApp. Shown on every screen size. */
-function BottomTabs({ onAccount, waHref }: { onAccount: () => void; waHref: string }) {
-  const tab = 'flex min-h-[44px] flex-col items-center justify-center gap-1 text-[11px] font-bold text-brand-slate';
-  return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-sand bg-white md:hidden">
-      <div className="mx-auto grid max-w-[430px] grid-cols-4 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2">
-        <Link to="/" className={tab}><Home className="h-[22px] w-[22px]" />Home</Link>
-        <Link to="/marketplace" className={tab}><LayoutGrid className="h-[22px] w-[22px]" />Services</Link>
-        <button type="button" onClick={onAccount} className={tab}><User className="h-[22px] w-[22px]" />Account</button>
-        <a href={waHref} target="_blank" rel="noopener noreferrer" className={`${tab} !text-[#1F7A4D]`}><MessageCircle className="h-[22px] w-[22px]" />WhatsApp</a>
-      </div>
-    </nav>
-  );
-}
-
-/** Account sheet. Signed-in clients get Track my booking; everyone else gets Google sign-in. */
-function AccountSheet({ open, onClose, signedIn }: { open: boolean; onClose: () => void; signedIn: boolean }) {
-  return (
-    <>
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        className={`fixed inset-0 z-40 bg-brand-forest/40 transition-opacity ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Your account"
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[430px] rounded-t-3xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),20px)] shadow-2xl transition-transform duration-300 ${open ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-brand-sand" />
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-brand-ink">{signedIn ? 'Hello again' : 'Your account'}</h2>
-          <button type="button" onClick={onClose} aria-label="Close account" className="rounded-full p-1.5 text-brand-slate"><X className="h-5 w-5" /></button>
-        </div>
-        {signedIn ? (
-          <div className="mt-4 grid gap-3">
-            <p className="text-sm text-brand-slate">Everything you have booked, in one place.</p>
-            <Button asChild className="bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
-              <Link to="/my/bookings" onClick={onClose}>Track my booking</Link>
-            </Button>
-            <Button asChild variant="outline" className="border-brand-sand">
-              <Link to="/my/documents" onClick={onClose}><Receipt className="mr-2 h-4 w-4" />Invoices and receipts</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-3">
-            <p className="text-sm text-brand-slate">Sign in with Google to track bookings, invoices and receipts.</p>
-            <Button asChild variant="outline" className="border-brand-sand bg-white text-brand-ink">
-              <Link to="/customer-auth?next=/my" onClick={onClose}>Continue with Google</Link>
-            </Button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
 
 export default function LandingPage() {
   const { general } = usePublicSettings();
-  const { user, isCustomer } = useAuth();
   const phone = general.phone || '+254796563741';
-  const waHome = waLink(phone, 'Hello Concept Cleaning Services, I would like to book a cleaning.');
-  const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like a free quote.');
-  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const waHome = waLink(phone, 'Hello Concept Cleaning Services, I would like to book a cleaning service.');
+  const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like a free quotation.');
   const [categories, setCategories] = useState<string[]>([]);
-  const [referralOpen, setReferralOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [softOpen, setSoftOpen] = useState(false);
-  const [softHidden, setSoftHidden] = useState<boolean>(() => {
-    try { return localStorage.getItem(SOFT_KEY) === '1'; } catch { return false; }
-  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
-    fetchPublishedPosts(3).then(setPosts).catch(() => setPosts([]));
-    fetchMarketCategories().then(setCategories).catch(() => setCategories([]));
+    let active = true;
+    fetchMarketCategories()
+      .then((items) => { if (active) setCategories(items); })
+      .catch(() => { if (active) setCategories([]); });
+    return () => { active = false; };
   }, []);
 
-  const dismissSoft = () => {
-    setSoftHidden(true);
-    try { localStorage.setItem(SOFT_KEY, '1'); } catch { /* storage unavailable: hide for this visit only */ }
-  };
-
-  const title = 'Concept Cleaning Services | Professional Cleaning in Nairobi, Kenya';
-  const desc = 'Trusted home, office, carpet, sofa and fumigation services in Nairobi. Vetted crews, clear prices, M-Pesa payment. Book online or get a WhatsApp quote today.';
-
-  const headerWhatsApp = (
-    <a
-      href={waHome}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1F7A4D] px-3 py-2 text-xs font-bold text-white hover:bg-[#186540] md:text-sm"
-    >
-      <MessageCircle className="h-4 w-4" /> WhatsApp
-    </a>
-  );
+  const title = 'Concept Cleaning Services | Professional Cleaning in Nairobi';
+  const description = 'Book professional home, office, upholstery, carpet and car interior cleaning, plus fumigation and pest control in Nairobi and nearby areas.';
 
   return (
-    <PublicShell headerExtra={headerWhatsApp} hideMobileBar>
+    <PublicShell hideMobileBar>
       <Helmet>
         <title>{title}</title>
-        <meta name="description" content={desc} />
+        <meta name="description" content={description} />
         <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/" />
         <meta property="og:title" content={title} />
-        <meta property="og:description" content={desc} />
-        <script type="application/ld+json">{JSON.stringify({
-          '@context': 'https://schema.org', '@type': 'FAQPage',
-          mainEntity: FAQS.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
-        })}</script>
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
       </Helmet>
 
-      <GlobalDiscountBanner />
-
-      <div className="min-h-screen bg-brand-paper pb-28 text-brand-ink md:pb-10 md:pt-8">
-        <div className="mx-auto max-w-[430px] bg-white md:max-w-5xl md:rounded-3xl md:border md:border-brand-sand md:shadow-sm">
-          <div className="space-y-6 px-4 pb-6 pt-4 md:space-y-8 md:px-8 md:pb-8 md:pt-6">
-
-            {/* Soft sign-in suggestion: a suggestion, never a gate */}
-            {!user && !softHidden && (
-              <div className="rounded-xl border border-brand-sand bg-[#faf9f5]">
-                <button
-                  type="button"
-                  onClick={() => setSoftOpen((v) => !v)}
-                  aria-expanded={softOpen}
-                  className="flex min-h-[44px] w-full items-center justify-between px-4 py-3 text-left text-[13px] font-semibold text-brand-slate"
-                >
-                  Save your bookings and invoices
-                  <ChevronDown className={`h-4 w-4 transition-transform ${softOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {softOpen && (
-                  <div className="border-t border-brand-sand px-4 pb-4 pt-3 text-[13px] text-brand-slate">
-                    <p>Sign in with Google to see your bookings, quotations and receipts in one place. You can still browse and book without it.</p>
-                    <div className="mt-3 flex flex-col gap-2">
-                      <Button asChild variant="outline" className="border-brand-sand bg-white text-brand-ink">
-                        <Link to="/customer-auth?next=/my">Continue with Google</Link>
-                      </Button>
-                      <button type="button" onClick={dismissSoft} className="min-h-[44px] text-sm text-brand-slate underline-offset-4 hover:underline">
-                        Maybe later
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Hero */}
-            <section className="rounded-2xl bg-brand-forest p-5 text-brand-cream">
-              <h1 className="text-2xl font-extrabold leading-tight">Book a clean in Nairobi</h1>
-              <p className="mt-2 text-sm text-brand-mist">See the price first, choose a date, and receive clear payment instructions. Quotations are free.</p>
-              <Button asChild size="lg" className="mt-4 w-full bg-brand-brass text-brand-forest hover:bg-brand-brass/90">
-                <Link to="/marketplace">Browse services and prices</Link>
+      <main className="min-h-screen bg-white text-[#333333]">
+        <header className="sticky top-0 z-40 border-b border-[#e7e7e7] bg-white/95 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+            <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="Concept Cleaning Services home">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#333333] text-white"><Sparkles className="h-5 w-5" /></span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-extrabold tracking-tight sm:text-base">CONCEPT CLEANING</span>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#777777]">Services • Nairobi</span>
+              </span>
+            </Link>
+            <nav className="hidden items-center gap-7 text-sm font-semibold text-[#555555] lg:flex" aria-label="Main navigation">
+              <a href="#services" className="transition-colors hover:text-black">Our services</a>
+              <a href="#how-it-works" className="transition-colors hover:text-black">How it works</a>
+              <a href="#why-us" className="transition-colors hover:text-black">Why Concept</a>
+              <a href="#faq" className="transition-colors hover:text-black">FAQs</a>
+            </nav>
+            <div className="hidden items-center gap-2 sm:flex">
+              <Button asChild variant="outline" className="border-[#d6d6d6] bg-white text-[#333333] hover:bg-[#f5f5f5]">
+                <Link to="/marketplace">Browse services</Link>
               </Button>
-              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-                <Button asChild variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
-                  <Link to="/categories">Categories</Link>
-                </Button>
-                <Button asChild variant="outline" className="border-brand-outline bg-transparent text-brand-cream hover:bg-brand-panel hover:text-brand-cream">
-                  <a href={waQuote} target="_blank" rel="noopener noreferrer">Get a quote</a>
-                </Button>
-              </div>
-            </section>
-
-            {/* Booking steps */}
-            <section>
-              <h2 className="mb-3 text-[17px] font-extrabold">How booking works</h2>
-              <div className="grid gap-2">
-                {FLOW.map((s, i) => (
-                  <Link key={s.title} to={s.to} className="flex items-center gap-3 rounded-2xl border border-brand-sand bg-white p-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-forest text-[13px] font-extrabold text-white">{i + 1}</span>
-                    <span>
-                      <span className="block text-sm font-bold">{s.title}</span>
-                      <span className="text-xs text-brand-slate">{s.text}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
-            {/* Categories */}
-            <section>
-              <h2 className="mb-3 text-[17px] font-extrabold">What do you need cleaned?</h2>
-              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
-                {categories.map((category) => {
-                  const descriptions: Record<string, string> = {
-                    'Residential Cleaning': 'Deep, regular and move-in cleaning',
-                    'Upholstery Cleaning': 'Sofas, mattresses and upholstery',
-                    'Carpet & Rug Cleaning': 'Professional carpet and rug care',
-                    'Car Interior Cleaning': 'Refresh your vehicle interior',
-                    'Commercial Cleaning': 'Offices and business premises',
-                    'Fumigation & Pest Control': 'Targeted pest control services',
-                  };
-                  return (
-                    <Link key={category} to={`/categories?c=${encodeURIComponent(category)}`} className="rounded-2xl border border-brand-sand bg-white p-3.5 text-sm font-bold transition hover:border-brand-brass">
-                      {category}
-                      <span className="mt-0.5 block text-xs font-medium text-brand-slate">{descriptions[category] || 'Explore available services'}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-              {!categories.length && <p className="text-xs text-brand-slate">Browse all available services to see current categories.</p>}
-            </section>
-
-            {/* Referral */}
-            <section className="flex items-center gap-3 rounded-2xl border border-brand-sand bg-white p-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-sand text-brand-brassDark"><Gift className="h-5 w-5" /></span>
-              <div className="flex-1">
-                <p className="text-[15px] font-bold">Refer a friend</p>
-                <p className="text-xs text-brand-slate">Refer a client and earn KES 500–1,000 after their service is completed.</p>
-              </div>
-              <button type="button" onClick={() => setReferralOpen(true)} className="shrink-0 rounded-xl bg-brand-forest px-3 py-2.5 text-[13px] font-bold text-white">Refer</button>
-            </section>
-
-            {/* Blog: latest published articles from the database */}
-            <section className="rounded-2xl border border-brand-sand bg-[#faf9f5] p-4 md:p-5">
-              <div className="mb-3 flex items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-[17px] font-extrabold">From our blog</h2>
-                  <p className="mt-1 text-xs text-brand-slate">Practical cleaning tips, pest-control guides and hygiene advice.</p>
-                </div>
-                <Link to="/blog" className="shrink-0 text-[13px] font-bold text-brand-brassDark">All posts →</Link>
-              </div>
-              {posts.length > 0 ? (
-                <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
-                  {posts.map((p) => (
-                    <Link key={p.id} to={`/blog/${p.slug}`} className="w-[220px] shrink-0 overflow-hidden rounded-2xl border border-brand-sand bg-white p-3 transition hover:border-brand-brass hover:shadow-md">
-                      {p.cover_image && (
-                        <img src={p.cover_image} alt="" loading="lazy" className="mb-3 h-24 w-full rounded-xl object-cover" />
-                      )}
-                      <p className="text-[10px] font-extrabold uppercase tracking-wide text-brand-brassDark">{p.category}</p>
-                      <p className="mt-1 text-sm font-extrabold leading-snug">{p.title}</p>
-                      {p.excerpt && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-brand-slate">{p.excerpt}</p>}
-                      <p className="mt-2 text-xs text-brand-slate">{readingTime(p.content)} min read</p>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-brand-sand bg-white px-4 py-5">
-                  <p className="text-sm font-semibold text-brand-ink">Explore our cleaning articles and guides.</p>
-                  <p className="mt-1 text-xs leading-relaxed text-brand-slate">Visit the blog for practical advice and the latest published posts.</p>
-                  <Link to="/blog" className="mt-3 inline-flex text-[13px] font-bold text-brand-brassDark">Browse the blog →</Link>
-                </div>
-              )}
-            </section>
-
-            {/* Service areas */}
-            <section id="areas" className="scroll-mt-24 rounded-2xl bg-[#faf9f5] p-4">
-              <h2 className="text-[17px] font-extrabold">Where we serve</h2>
-              <p className="mt-2 text-sm text-brand-slate">Nairobi and surrounding areas, including selected locations in Kiambu, Kajiado and Machakos. Contact us to confirm availability in your estate.</p>
-            </section>
-
-            {/* Questions */}
-            <section id="faq" className="scroll-mt-24">
-              <h2 className="mb-2 text-[17px] font-extrabold">Questions</h2>
-              {FAQS.map((f, i) => (
-                <details key={f.q} open={i === 0} className="border-b border-brand-sand py-3">
-                  <summary className="cursor-pointer list-none text-sm font-bold">{f.q}</summary>
-                  <p className="mt-2 text-[13px] text-brand-slate">{f.a}</p>
-                </details>
-              ))}
-            </section>
-
-            <p className="pt-2 text-center text-xs text-brand-slate">
-              <Link to="/privacy-policy" className="underline-offset-4 hover:underline">Privacy</Link> ·{' '}
-              <Link to="/terms-and-conditions" className="underline-offset-4 hover:underline">Terms</Link> ·{' '}
-              <a href={`tel:${phone}`} className="underline-offset-4 hover:underline">Call {phone}</a>
-            </p>
+              <Button asChild className="bg-[#333333] text-white hover:bg-black">
+                <a href={waHome} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Book on WhatsApp</a>
+              </Button>
+            </div>
+            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#e2e2e2] sm:hidden" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(v => !v)}>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
-        </div>
-      </div>
+          {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 sm:hidden" aria-label="Mobile navigation">
+            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Our services</a>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">How it works</a>
+            <a href="#why-us" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Why Concept</a>
+            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">FAQs</a>
+            <Button asChild className="mt-1 bg-[#333333] text-white hover:bg-black"><Link to="/marketplace">Browse services</Link></Button>
+          </nav>}
+        </header>
 
-      <BottomTabs onAccount={() => setAccountOpen(true)} waHref={waHome} />
-      <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} signedIn={!!user && isCustomer} />
-      <ReferralForm isOpen={referralOpen} onClose={() => setReferralOpen(false)} />
+        <section className="relative overflow-hidden border-b border-[#ededed]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#f2f2f2] via-white to-white" aria-hidden="true" />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#dedede] bg-white px-3 py-1.5 text-xs font-bold text-[#555555]"><span className="h-2 w-2 rounded-full bg-[#333333]" /> CLEAN SPACES. BETTER DAYS.</span>
+              <h1 className="mt-6 text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">A cleaner space.<br /><span className="text-[#777777]">A better feeling.</span></h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-[#666666] sm:text-lg">Professional cleaning and pest-control services for homes, offices and the spaces that matter to you in Nairobi.</p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="min-h-12 bg-[#333333] px-6 text-white transition hover:-translate-y-0.5 hover:bg-black">
+                  <Link to="/marketplace">Explore services & prices <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="min-h-12 border-[#d4d4d4] bg-white px-6 text-[#333333] transition hover:-translate-y-0.5 hover:bg-[#f6f6f6]">
+                  <a href={waQuote} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Get a free quote</a>
+                </Button>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-sm font-medium text-[#666666]">
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#333333]" /> Clear service details</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#333333]" /> Convenient booking</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#333333]" /> Home & business care</span>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-xl">
+              <div className="absolute -inset-3 rounded-[2rem] border border-[#e5e5e5]" aria-hidden="true" />
+              <div className="relative overflow-hidden rounded-[1.7rem] bg-[#ededed] p-5 sm:p-7">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex min-h-40 flex-col justify-between rounded-2xl bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Home className="h-5 w-5" /></span>
+                    <div><p className="font-extrabold">Home cleaning</p><p className="mt-1 text-xs leading-5 text-[#777777]">Make room to breathe.</p></div>
+                  </div>
+                  <div className="mt-7 flex min-h-40 flex-col justify-between rounded-2xl bg-[#333333] p-4 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10"><SprayCan className="h-5 w-5" /></span>
+                    <div><p className="font-extrabold">Pest control</p><p className="mt-1 text-xs leading-5 text-white/70">Targeted treatment.</p></div>
+                  </div>
+                  <div className="-mt-4 flex min-h-40 flex-col justify-between rounded-2xl bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Sofa className="h-5 w-5" /></span>
+                    <div><p className="font-extrabold">Sofa & carpet</p><p className="mt-1 text-xs leading-5 text-[#777777]">Refresh the details.</p></div>
+                  </div>
+                  <div className="flex min-h-40 flex-col justify-between rounded-2xl bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Building2 className="h-5 w-5" /></span>
+                    <div><p className="font-extrabold">Office care</p><p className="mt-1 text-xs leading-5 text-[#777777]">Ready for business.</p></div>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white bg-white/80 p-4">
+                  <div><p className="text-sm font-extrabold">Your space, taken care of.</p><p className="mt-1 text-xs text-[#777777]">Start with the service you need.</p></div>
+                  <Link to="/marketplace" aria-label="Explore cleaning services" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#333333] text-white transition hover:scale-105"><ArrowRight className="h-4 w-4" /></Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="services" className="scroll-mt-24 mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#777777]">What we do</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">The right clean for every space.</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-[#777777] sm:text-base">Choose a service to explore details, pricing and booking options.</p></div>
+            <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-bold underline underline-offset-4 transition hover:text-black">View all services <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {SERVICES.map((service, index) => {
+              const Icon = service.icon;
+              const available = categories.length === 0 || categories.includes(service.category);
+              return <Link key={service.title} to={available ? `/categories?c=${encodeURIComponent(service.category)}` : '/marketplace'} className="group flex min-h-52 flex-col rounded-2xl border border-[#e7e7e7] bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-[#bdbdbd] hover:shadow-[0_14px_35px_rgba(0,0,0,0.07)] sm:p-6">
+                <div className="flex items-start justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f3f3f3] transition duration-300 group-hover:bg-[#333333] group-hover:text-white"><Icon className="h-5 w-5" /></span><span className="text-xs font-bold text-[#aaaaaa]">0{index + 1}</span></div>
+                <h3 className="mt-5 text-lg font-extrabold">{service.title}</h3><p className="mt-2 flex-1 text-sm leading-6 text-[#777777]">{service.text}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold">Explore service <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+              </Link>;
+            })}
+          </div>
+        </section>
+
+        <section id="how-it-works" className="scroll-mt-24 border-y border-[#e9e9e9] bg-[#f7f7f7]">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+            <div className="max-w-2xl"><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#777777]">Simple from the start</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Book in a few clear steps.</h2></div>
+            <div className="mt-9 grid gap-4 md:grid-cols-3">
+              {[{n:'01',title:'Choose what you need',text:'Browse services and check the details and available prices.'},{n:'02',title:'Share your requirements',text:'Select your service and send your booking request or ask for a quote.'},{n:'03',title:'Confirm the plan',text:'We follow up to confirm availability, service details and next steps.'}].map((step) => <div key={step.n} className="rounded-2xl border border-[#e4e4e4] bg-white p-6"><span className="text-sm font-black tracking-widest text-[#999999]">{step.n}</span><h3 className="mt-5 text-lg font-extrabold">{step.title}</h3><p className="mt-2 text-sm leading-6 text-[#777777]">{step.text}</p></div>)}
+            </div>
+          </div>
+        </section>
+
+        <section id="why-us" className="scroll-mt-24 mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:items-center lg:px-8">
+          <div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#777777]">Why Concept</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Care in the details.<br />Clarity at every step.</h2><p className="mt-4 max-w-xl text-sm leading-7 text-[#777777] sm:text-base">We make it easier to find the right service for your home or business, understand what is included and know how to move forward.</p>
+            <Button asChild className="mt-7 bg-[#333333] text-white hover:bg-black"><Link to="/marketplace">Find your service <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[{icon:ShieldCheck,title:'Professional approach',text:'Clear service information and practical guidance.'},{icon:Clock3,title:'Convenient booking',text:'Send a request online or talk to us directly.'},{icon:Sparkles,title:'Services for real life',text:'From everyday cleaning to detailed refreshes.'},{icon:MapPin,title:'Locally focused',text:'Serving Nairobi and selected nearby areas.'}].map((item) => { const Icon = item.icon; return <div key={item.title} className="rounded-2xl border border-[#e7e7e7] p-5"><Icon className="h-5 w-5" /><h3 className="mt-4 font-extrabold">{item.title}</h3><p className="mt-2 text-sm leading-6 text-[#777777]">{item.text}</p></div>; })}
+          </div>
+        </section>
+
+        <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 rounded-3xl bg-[#333333] p-7 text-white sm:p-10 lg:flex-row lg:items-center lg:p-12">
+            <div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Ready when you are</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Let’s make your space feel new again.</h2><p className="mt-3 text-sm leading-6 text-white/70 sm:text-base">Browse services or tell us what you need and we’ll help you find the right next step.</p></div>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="bg-white text-[#333333] hover:bg-[#eeeeee]"><Link to="/marketplace">Browse services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"><a href={waQuote} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp us</a></Button></div>
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-24 mx-auto max-w-4xl px-4 pb-16 sm:px-6 sm:pb-20">
+          <div className="text-center"><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#777777]">Helpful answers</p><h2 className="mt-3 text-3xl font-black tracking-tight">Frequently asked questions</h2></div>
+          <div className="mt-8 divide-y divide-[#e7e7e7] border-y border-[#e7e7e7]">
+            {FAQS.map((faq, i) => <div key={faq.q} className="py-1"><button type="button" aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 py-4 text-left font-bold"><span>{faq.q}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} /></button>{openFaq === i && <p className="max-w-3xl pb-5 pr-8 text-sm leading-6 text-[#777777]">{faq.a}</p>}</div>)}
+          </div>
+        </section>
+
+        <footer className="border-t border-[#e7e7e7] bg-[#f8f8f8]">
+          <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+            <div><p className="font-extrabold tracking-tight">CONCEPT CLEANING SERVICES</p><p className="mt-1 text-sm text-[#777777]">Professional cleaning and pest control in Nairobi, Kenya.</p><p className="mt-2 text-xs text-[#888888]">© {new Date().getFullYear()} Concept Cleaning Services.</p></div>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[#555555]"><Link to="/marketplace" className="hover:text-black">Services</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
+          </div>
+        </footer>
+      </main>
     </PublicShell>
   );
 }
