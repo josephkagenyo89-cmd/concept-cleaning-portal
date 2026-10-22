@@ -75,3 +75,76 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
+
+
+/* Teal / blue / orange brand system for the non-ERP application.
+   RouteTheme enables this on #root for all routes except /admin/erp. */
+#root.ccs-modern-theme {
+  --ccs-primary: #0F766E;
+  --ccs-primary-dark: #115E59;
+  --ccs-secondary: #0284C7;
+  --ccs-cta: #F97316;
+  --ccs-cta-text: #0F172A;
+  --ccs-cta-hover: #EA580C;
+  --ccs-whatsapp: #25D366;
+  --ccs-whatsapp-text: #0B3D1E;
+  --ccs-success: #16A34A;
+  --ccs-page-bg: #F8FAFC;
+  --ccs-surface: #FFFFFF;
+  --ccs-text: #0F172A;
+  --ccs-muted: #475569;
+  --ccs-border: #E2E8F0;
+  --ccs-error: #DC2626;
+
+  color-scheme: light;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 175 77% 26%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 200 98% 39%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 35%;
+  --accent: 24 94% 53%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 175 77% 26%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: 175 77% 26%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 175 77% 26%;
+  --sidebar-muted: 215 16% 35%;
+  --success: 142 71% 36%;
+  --success-foreground: 0 0% 100%;
+  --info: 200 98% 39%;
+  --info-foreground: 0 0% 100%;
+  --market: 175 77% 26%;
+  --market-foreground: 0 0% 100%;
+  --market-soft: 210 40% 96%;
+  --tier-bronze: 24 94% 53%;
+  --tier-silver: 200 98% 39%;
+  --tier-gold: 175 77% 26%;
+}
+
+/* Remap shared brand utility classes only while the non-ERP theme is active. */
+#root.ccs-modern-theme .bg-brand-forest { background-color: var(--ccs-primary) !important; }
+#root.ccs-modern-theme .text-brand-forest { color: var(--ccs-primary) !important; }
+#root.ccs-modern-theme .border-brand-forest { border-color: var(--ccs-primary) !important; }
+#root.ccs-modern-theme .bg-brand-paper { background-color: var(--ccs-page-bg) !important; }
+#root.ccs-modern-theme .text-brand-ink,
+#root.ccs-modern-theme .text-brand-slate { color: var(--ccs-text) !important; }
+#root.ccs-modern-theme .border-brand-sand { border-color: var(--ccs-border) !important; }
+#root.ccs-modern-theme .bg-brand-sand { background-color: var(--ccs-page-bg) !important; }
+#root.ccs-modern-theme .bg-brand-panel { background-color: var(--ccs-primary-dark) !important; }
+#root.ccs-modern-theme .text-brand-cream { color: #FFFFFF !important; }
