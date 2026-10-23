@@ -60,6 +60,19 @@ export default function LandingPage() {
       </Helmet>
 
       <main className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ "--primary": "#0F766E", "--primary-dark": "#115E59", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
+        <div className="bg-[#073B3A] text-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-2 px-4 py-2 text-[11px] font-semibold sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <a href="tel:+254729607206" className="inline-flex items-center gap-1.5 hover:text-[#FDBA74]"><MessageCircle className="h-3.5 w-3.5" /> 0729 607206</a>
+              <a href={waLink('+254796563741', 'Hello Concept Cleaning Services, I would like to make an enquiry.')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-[#FDBA74]"><MessageCircle className="h-3.5 w-3.5" /> WhatsApp 0796 563741</a>
+              <span className="hidden text-white/75 md:inline">Serving Nairobi | Kiambu | Kajiado | Machakos</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link to="/customer-auth?next=/my" className="hover:text-[#FDBA74]">Customer Login</Link>
+              <a href="/admin" className="hover:text-[#FDBA74]">Staff Login</a>
+            </div>
+          </div>
+        </div>
         <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="Concept Cleaning Services home">
@@ -70,10 +83,11 @@ export default function LandingPage() {
               </span>
             </Link>
             <nav className="hidden items-center gap-7 text-sm font-semibold text-[var(--muted)] lg:flex" aria-label="Main navigation">
-              <a href="#services" className="transition-colors hover:text-black">Our services</a>
-              <a href="#how-it-works" className="transition-colors hover:text-black">How it works</a>
-              <a href="#why-us" className="transition-colors hover:text-black">Why Concept</a>
-              <a href="#faq" className="transition-colors hover:text-black">FAQs</a>
+              <a href="#home" className="transition-colors hover:text-black">Home</a>
+              <a href="#services" className="transition-colors hover:text-black">Services</a>
+              <a href="#why-us" className="transition-colors hover:text-black">About Us</a>
+              <a href="#gallery" className="transition-colors hover:text-black">Gallery</a>
+              <a href="#contact" className="transition-colors hover:text-black">Contact</a>
             </nav>
             <div className="hidden items-center gap-2 sm:flex">
               <Button asChild variant="outline" className="border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[#f5f5f5]">
@@ -88,15 +102,15 @@ export default function LandingPage() {
             </button>
           </div>
           {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 sm:hidden" aria-label="Mobile navigation">
-            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Our services</a>
-            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">How it works</a>
-            <a href="#why-us" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Why Concept</a>
-            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">FAQs</a>
+            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Services</a>
+            <a href="#why-us" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</a>
+            <a href="#gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</a>
+            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</a>
             <Button asChild className="mt-1 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]"><Link to="/marketplace">Browse services</Link></Button>
           </nav>}
         </header>
 
-        <section className="relative isolate min-h-[560px] overflow-hidden bg-[#073B3A] sm:min-h-[610px] lg:min-h-[650px]">
+        <section id="home" className="relative isolate min-h-[560px] overflow-hidden bg-[#073B3A] sm:min-h-[610px] lg:min-h-[650px]">
           <img
             src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=2200&q=85"
             alt="Professional cleaner caring for a modern home"
@@ -207,7 +221,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+        <section id="contact" className="scroll-mt-24 px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 rounded-3xl bg-[var(--primary)] p-7 text-white sm:p-10 lg:flex-row lg:items-center lg:p-12">
             <div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Ready when you are</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Let’s make your space feel new again.</h2><p className="mt-3 text-sm leading-6 text-white/70 sm:text-base">Browse services or tell us what you need and we’ll help you find the right next step.</p></div>
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="bg-[var(--surface)] text-[var(--text)] hover:bg-[#eeeeee]"><Link to="/marketplace">Browse services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-[var(--surface)]/10 hover:text-white"><a href={waQuote} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp us</a></Button></div>
