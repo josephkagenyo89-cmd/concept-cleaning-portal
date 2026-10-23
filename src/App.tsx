@@ -259,6 +259,21 @@ function CustomerGate() {
     </>
   );
  }
+function RouteTheme() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Apply the new brand tokens everywhere except the ERP module.
+    const root = document.getElementById("root");
+    if (!root) return;
+    const isErpRoute = location.pathname === "/admin/erp" || location.pathname.startsWith("/admin/erp/");
+    root.classList.toggle("ccs-modern-theme", !isErpRoute);
+    return () => root.classList.remove("ccs-modern-theme");
+  }, [location.pathname]);
+
+  return null;
+}
+
 function MetaPixelPageView() {
   const location = useLocation();
 
@@ -358,6 +373,7 @@ const App = () => (
       <Sonner />
       <NetworkStatus />
       <BrowserRouter>
+        <RouteTheme />
         <MetaPixelPageView />
         <UTMTracker />
         <ScrollProgress />

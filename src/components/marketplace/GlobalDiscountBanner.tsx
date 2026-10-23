@@ -17,11 +17,11 @@ export default function GlobalDiscountBanner() {
   const left = daysLeft(discount.endDate);
 
   return (
-    <div role="status" className="bg-brand-brass px-4 py-2.5 text-center text-sm font-semibold text-brand-forest">
-      <span>{discount.label}</span>
-      <span className="ml-2 font-normal">· {discount.percentage}% off all services</span>
+    <div role="status" className="bg-[#333333] px-4 py-3 text-center text-sm font-semibold leading-relaxed text-white">
+      <span className="font-extrabold">{discount.label}</span>
+      <span className="ml-2 font-semibold">· {discount.percentage}% off all services</span>
       {left !== null && (
-        <span className="ml-2 inline-block rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold text-white">
+        <span className="ml-2 inline-block rounded-full border border-white/50 px-2.5 py-0.5 text-xs font-bold text-white">
           Ends in {left} {left === 1 ? 'day' : 'days'}
         </span>
       )}
