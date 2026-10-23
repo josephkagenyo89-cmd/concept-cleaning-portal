@@ -35,6 +35,7 @@ export default function LandingPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -118,13 +119,13 @@ export default function LandingPage() {
               <div className="mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/20 bg-white/10 p-3 shadow-2xl backdrop-blur-md sm:flex-row sm:items-center">
                 <label className="flex min-h-12 flex-1 items-center gap-3 rounded-xl bg-white px-4 text-[#334155]">
                   <MapPin className="h-5 w-5 shrink-0 text-[#0F766E]" />
-                  <select aria-label="Choose a cleaning service" defaultValue="" className="h-12 min-w-0 flex-1 bg-transparent text-sm font-medium outline-none">
+                  <select aria-label="Choose a cleaning service" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm font-medium outline-none">
                     <option value="" disabled>What cleaning service are you looking for?</option>
                     {SERVICES.map((service) => <option key={service.category} value={service.category}>{service.title}</option>)}
                   </select>
                 </label>
                 <Button asChild size="lg" className="min-h-12 rounded-xl bg-[#F97316] px-7 font-extrabold text-[#172033] hover:bg-[#FB923C]">
-                  <Link to="/marketplace">Book Now <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  <Link to={selectedCategory ? `/categories?c=${encodeURIComponent(selectedCategory)}` : "/marketplace"}>Book Now <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </div>
               <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-white/95">
