@@ -1,10 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import residential from '@/assets/market/residential.jpg';
-import upholstery from '@/assets/market/upholstery.jpg';
-import carpet from '@/assets/market/carpet.jpg';
-import car from '@/assets/market/car.jpg';
-import commercial from '@/assets/market/commercial.jpg';
-import pest from '@/assets/market/pest.jpg';
 
 export interface MarketService {
   id: string;
@@ -24,14 +18,14 @@ export interface MarketService {
   service_features: string[];
 }
 
-/** Fallback imagery per category — used when a service has no image in the Services module. */
-const CATEGORY_IMAGES: Record<string, string> = {
-  'Residential Cleaning': residential,
-  'Upholstery Cleaning': upholstery,
-  'Carpet & Rug Cleaning': carpet,
-  'Car Interior Cleaning': car,
-  'Commercial Cleaning': commercial,
-  'Fumigation & Pest Control': pest,
+/** Uploaded category artwork in the existing public Supabase Storage bucket. */
+const CATEGORY_SLUGS: Record<string, string> = {
+  'Residential Cleaning': 'residential-cleaning',
+  'Upholstery Cleaning': 'upholstery-cleaning',
+  'Carpet & Rug Cleaning': 'carpet-rug-cleaning',
+  'Car Interior Cleaning': 'car-interior-cleaning',
+  'Commercial Cleaning': 'commercial-cleaning',
+  'Fumigation & Pest Control': 'fumigation-pest-control',
 };
 
 export const CATEGORY_ORDER = [
@@ -44,9 +38,9 @@ export const CATEGORY_ORDER = [
 ];
 
 export function categoryImage(category: string): string {
-  // Keep the app visually stable by using the bundled fallback images when the
-  // storage-backed lookup is unavailable.
-  return CATEGORY_IMAGES[category] || residential;
+  const slug = CATEGORY_SLUGS[category];
+  if (!slug) return '';
+  return supabase.storage.from('assets').getPublicUrl(`categories/${slug}.jpg`).data.publicUrl;
 }
 
 export function serviceImage(
