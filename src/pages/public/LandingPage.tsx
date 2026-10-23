@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import PublicShell, { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
-import { fetchMarketCategories } from '@/lib/marketplace';
+import { categoryImage, fetchMarketCategories } from '@/lib/marketplace';
 
 const SERVICES = [
   { title: 'Home cleaning', text: 'Thoughtful everyday, deep and move-in cleaning for a fresher home.', icon: Home, category: 'Residential Cleaning' },
@@ -95,73 +95,97 @@ export default function LandingPage() {
           </nav>}
         </header>
 
-        <section className="relative overflow-hidden border-b border-[#ededed]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#f2f2f2] via-white to-white" aria-hidden="true" />
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#dedede] bg-[var(--surface)] px-3 py-1.5 text-xs font-bold text-[var(--muted)]"><span className="h-2 w-2 rounded-full bg-[var(--primary)]" /> CLEAN SPACES. BETTER DAYS.</span>
-              <h1 className="mt-6 text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">A cleaner space.<br /><span className="text-[var(--muted)]">A better feeling.</span></h1>
-              <p className="mt-5 max-w-xl text-base leading-7 text-[var(--muted)] sm:text-lg">Professional cleaning and pest-control services for homes, offices and the spaces that matter to you in Nairobi.</p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button asChild size="lg" className="min-h-12 bg-[var(--cta)] px-6 text-[var(--cta-text)] transition hover:-translate-y-0.5 hover:bg-[var(--cta-hover)]">
-                  <Link to="/marketplace">Explore services & prices <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="min-h-12 border-[var(--border)] bg-[var(--surface)] px-6 text-[var(--text)] transition hover:-translate-y-0.5 hover:bg-[#f6f6f6]">
-                  <a href={waQuote} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Get a free quote</a>
+        <section className="relative isolate min-h-[560px] overflow-hidden bg-[#073B3A] sm:min-h-[610px] lg:min-h-[650px]">
+          <img
+            src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=2200&q=85"
+            alt="Professional cleaner caring for a modern home"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+            fetchPriority="high"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#062F30]/95 via-[#063B3B]/82 to-[#062F30]/15" aria-hidden="true" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#062F30]/50 via-transparent to-black/10" aria-hidden="true" />
+          <div className="mx-auto flex min-h-[560px] max-w-7xl items-center px-4 py-16 sm:min-h-[610px] sm:px-6 sm:py-20 lg:min-h-[650px] lg:px-8">
+            <div className="max-w-3xl text-white">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                <Sparkles className="h-4 w-4 text-[#FDBA74]" /> Trusted cleaning across Nairobi
+              </span>
+              <h1 className="mt-6 max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
+                A Cleaner, Healthier <span className="text-[#5EEAD4]">Space for You</span>
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/90 sm:text-lg sm:leading-8">
+                Professional home, office, upholstery and car-interior cleaning, plus reliable fumigation and pest control — delivered with care.
+              </p>
+              <div className="mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/20 bg-white/10 p-3 shadow-2xl backdrop-blur-md sm:flex-row sm:items-center">
+                <label className="flex min-h-12 flex-1 items-center gap-3 rounded-xl bg-white px-4 text-[#334155]">
+                  <MapPin className="h-5 w-5 shrink-0 text-[#0F766E]" />
+                  <select aria-label="Choose a cleaning service" defaultValue="" className="h-12 min-w-0 flex-1 bg-transparent text-sm font-medium outline-none">
+                    <option value="" disabled>What cleaning service are you looking for?</option>
+                    {SERVICES.map((service) => <option key={service.category} value={service.category}>{service.title}</option>)}
+                  </select>
+                </label>
+                <Button asChild size="lg" className="min-h-12 rounded-xl bg-[#F97316] px-7 font-extrabold text-[#172033] hover:bg-[#FB923C]">
+                  <Link to="/marketplace">Book Now <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-sm font-medium text-[var(--muted)]">
-                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--text)]" /> Clear service details</span>
-                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--text)]" /> Convenient booking</span>
-                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--text)]" /> Home & business care</span>
-              </div>
-            </div>
-            <div className="relative mx-auto w-full max-w-xl">
-              <div className="absolute -inset-3 rounded-[2rem] border border-[#e5e5e5]" aria-hidden="true" />
-              <div className="relative overflow-hidden rounded-[1.7rem] bg-[#ededed] p-5 sm:p-7">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex min-h-40 flex-col justify-between rounded-2xl bg-[var(--surface)] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Home className="h-5 w-5" /></span>
-                    <div><p className="font-extrabold">Home cleaning</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Make room to breathe.</p></div>
-                  </div>
-                  <div className="mt-7 flex min-h-40 flex-col justify-between rounded-2xl bg-[var(--primary)] p-4 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--surface)]/10"><SprayCan className="h-5 w-5" /></span>
-                    <div><p className="font-extrabold">Pest control</p><p className="mt-1 text-xs leading-5 text-white/70">Targeted treatment.</p></div>
-                  </div>
-                  <div className="-mt-4 flex min-h-40 flex-col justify-between rounded-2xl bg-[var(--surface)] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Sofa className="h-5 w-5" /></span>
-                    <div><p className="font-extrabold">Sofa & carpet</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Refresh the details.</p></div>
-                  </div>
-                  <div className="flex min-h-40 flex-col justify-between rounded-2xl bg-[var(--surface)] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:min-h-48 sm:p-5">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f0f0]"><Building2 className="h-5 w-5" /></span>
-                    <div><p className="font-extrabold">Office care</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Ready for business.</p></div>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white bg-[var(--surface)]/80 p-4">
-                  <div><p className="text-sm font-extrabold">Your space, taken care of.</p><p className="mt-1 text-xs text-[var(--muted)]">Start with the service you need.</p></div>
-                  <Link to="/marketplace" aria-label="Explore cleaning services" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white transition hover:scale-105"><ArrowRight className="h-4 w-4" /></Link>
-                </div>
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-white/95">
+                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-[#5EEAD4]" /> Trusted &amp; Reliable</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-[#5EEAD4]" /> Eco-Friendly Products</span>
+                <span className="inline-flex items-center gap-2"><Star className="h-5 w-5 text-[#FDBA74]" /> Satisfaction Guaranteed</span>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="services" className="scroll-mt-24 mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--muted)]">What we do</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">The right clean for every space.</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">Choose a service to explore details, pricing and booking options.</p></div>
-            <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-bold underline underline-offset-4 transition hover:text-black">View all services <ArrowRight className="h-4 w-4" /></Link>
+        <section id="services" className="scroll-mt-24 overflow-hidden bg-[#F1F8F8] py-16 sm:py-20">
+          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-4 sm:flex-row sm:items-end sm:px-6 lg:px-8">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#0F766E]">What we do</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-[#102A2A] sm:text-4xl">Our Services</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#475569] sm:text-base">Specialist care for every space, from everyday home cleaning to professional pest control.</p>
+            </div>
+            <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
           </div>
-          <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICES.map((service, index) => {
-              const Icon = service.icon;
-              const available = categories.length === 0 || categories.includes(service.category);
-              return <Link key={service.title} to={available ? `/categories?c=${encodeURIComponent(service.category)}` : '/marketplace'} className="group flex min-h-52 flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#bdbdbd] hover:shadow-[0_14px_35px_rgba(0,0,0,0.07)] sm:p-6">
-                <div className="flex items-start justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f3f3f3] transition duration-300 group-hover:bg-[var(--primary)] group-hover:text-white"><Icon className="h-5 w-5" /></span><span className="text-xs font-bold text-[#aaaaaa]">0{index + 1}</span></div>
-                <h3 className="mt-5 text-lg font-extrabold">{service.title}</h3><p className="mt-2 flex-1 text-sm leading-6 text-[var(--muted)]">{service.text}</p>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold">Explore service <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-              </Link>;
-            })}
+          <div className="service-marquee mt-8" aria-label="Cleaning service categories">
+            <div className="service-marquee__track">
+              {[0, 1].map((copy) => (
+                <div key={copy} className="service-marquee__group" aria-hidden={copy === 1 ? true : undefined}>
+                  {[
+                    { title: 'Residential Cleaning', category: 'Residential Cleaning', image: categoryImage('Residential Cleaning'), icon: Home },
+                    { title: 'Upholstery Cleaning', category: 'Upholstery Cleaning', image: categoryImage('Upholstery Cleaning'), icon: Sofa },
+                    { title: 'Carpet & Rug Cleaning', category: 'Carpet & Rug Cleaning', image: categoryImage('Carpet & Rug Cleaning'), icon: Droplets },
+                    { title: 'Car Interior Cleaning', category: 'Car Interior Cleaning', image: categoryImage('Car Interior Cleaning'), icon: CarFront },
+                    { title: 'Commercial Cleaning', category: 'Commercial Cleaning', image: categoryImage('Commercial Cleaning'), icon: Building2 },
+                    { title: 'Fumigation & Pest Control', category: 'Fumigation & Pest Control', image: categoryImage('Fumigation & Pest Control'), icon: Bug },
+                  ].map((service) => {
+                    const Icon = service.icon;
+                    return <Link key={service.category} to={copy === 1 ? '/marketplace' : `/categories?c=${encodeURIComponent(service.category)}`} tabIndex={copy === 1 ? -1 : undefined} className="service-marquee__card group">
+                      <img src={service.image} alt={copy === 1 ? '' : service.title} loading="lazy" />
+                      <span className="service-marquee__shade" />
+                      <span className="service-marquee__icon"><Icon className="h-5 w-5" /></span>
+                      <span className="service-marquee__title">{service.title}</span>
+                      <span className="service-marquee__arrow"><ArrowRight className="h-4 w-4" /></span>
+                    </Link>;
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
+          <style>{`
+            .service-marquee { overflow: hidden; width: 100%; }
+            .service-marquee__track { display: flex; width: max-content; animation: ccs-service-marquee 42s linear infinite; }
+            .service-marquee:hover .service-marquee__track, .service-marquee:focus-within .service-marquee__track { animation-play-state: paused; }
+            .service-marquee__group { display: flex; flex: none; gap: 18px; padding: 0 9px; }
+            .service-marquee__card { position: relative; display: flex; width: 270px; height: 300px; flex: none; overflow: hidden; flex-direction: column; justify-content: flex-end; border-radius: 18px; background: #0F766E; color: white; box-shadow: 0 10px 28px rgb(15 23 42 / 12%); }
+            .service-marquee__card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 450ms ease; }
+            .service-marquee__card:hover img { transform: scale(1.06); }
+            .service-marquee__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(3 28 30 / 3%) 20%, rgb(3 28 30 / 88%) 100%); }
+            .service-marquee__icon { position: absolute; top: 18px; left: 18px; display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 1px solid rgb(255 255 255 / 40%); border-radius: 13px; background: rgb(7 59 58 / 55%); backdrop-filter: blur(8px); }
+            .service-marquee__title { position: relative; z-index: 1; max-width: 220px; padding: 0 20px 22px; font-size: 20px; font-weight: 800; line-height: 1.2; }
+            .service-marquee__arrow { position: absolute; right: 16px; bottom: 18px; z-index: 1; display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 999px; background: #F97316; color: #172033; }
+            @keyframes ccs-service-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+            @media (max-width: 640px) { .service-marquee__card { width: 230px; height: 260px; } .service-marquee__group { gap: 12px; padding: 0 6px; } .service-marquee__track { animation-duration: 34s; } }
+            @media (prefers-reduced-motion: reduce) { .service-marquee__track { animation: none; } .service-marquee { overflow-x: auto; } }
+          `}</style>
         </section>
 
         <section id="how-it-works" className="scroll-mt-24 border-y border-[#e9e9e9] bg-[var(--bg)]">
