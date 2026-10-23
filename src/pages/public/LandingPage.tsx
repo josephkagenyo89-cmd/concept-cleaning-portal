@@ -30,7 +30,6 @@ const FAQS = [
 export default function LandingPage() {
   const { general } = usePublicSettings();
   const phone = general.phone || '+254796563741';
-  const waHome = waLink(phone, 'Hello Concept Cleaning Services, I would like to book a cleaning service.');
   const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like a free quotation.');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -71,7 +70,7 @@ export default function LandingPage() {
           </div>
           <div className="absolute inset-0 bg-white/75" />
         </div>
-        <section id="home" className="relative isolate z-10 min-h-[600px] overflow-hidden bg-[#073B3A] sm:min-h-[660px] lg:min-h-[720px]">
+        <section id="home" className="relative isolate z-10 min-h-[600px] overflow-hidden bg-transparent sm:min-h-[660px] lg:min-h-[720px]">
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#062F30]/95 via-[#063B3B]/75 to-[#062F30]/35" aria-hidden="true" />
           <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#062F30]/55 via-transparent to-black/15" aria-hidden="true" />
           <div className="mx-auto flex min-h-[600px] max-w-7xl items-center px-4 py-16 sm:min-h-[660px] sm:px-6 sm:py-20 lg:min-h-[720px] lg:px-8">
