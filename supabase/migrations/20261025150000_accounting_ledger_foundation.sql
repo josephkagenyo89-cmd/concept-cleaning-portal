@@ -214,8 +214,9 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF TG_OP = 'UPDATE' AND NEW.status = 'posted' AND OLD.status IS DISTINCT FROM 'posted' THEN
-    SELECT p.status, p.start_date, p.end_date
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.status = 'posted' AND OLD.status IS DISTINCT FROM 'posted' THEN
+      SELECT p.status, p.start_date, p.end_date
       INTO v_period_status, v_period_start, v_period_end
     FROM public.accounting_periods p
     WHERE p.id = NEW.period_id
@@ -290,13 +291,14 @@ BEGIN
       RAISE EXCEPTION 'Reversal lines must exactly reverse the original journal by account';
     END IF;
 
-    NEW.posted_at := now();
-    NEW.posted_by := auth.uid();
+      NEW.posted_at := now();
+      NEW.posted_by := auth.uid();
+    END IF;
   END IF;
 
   RETURN NEW;
 END;
-$$;
+$;
 
 DROP TRIGGER IF EXISTS trg_journal_entries_guard ON public.journal_entries;
 CREATE TRIGGER trg_journal_entries_guard
