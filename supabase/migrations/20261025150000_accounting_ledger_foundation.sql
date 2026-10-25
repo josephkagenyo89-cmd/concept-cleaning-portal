@@ -142,17 +142,24 @@ BEGIN
     RAISE EXCEPTION 'Accounting periods cannot overlap';
   END IF;
 
-  IF TG_OP = 'UPDATE' AND OLD.status = 'closed' THEN
-    IF (to_jsonb(NEW) - ARRAY['closed_at', 'closed_by'])
-       IS DISTINCT FROM
-       (to_jsonb(OLD) - ARRAY['closed_at', 'closed_by']) THEN
-      RAISE EXCEPTION 'Closed accounting periods are locked';
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.status = 'closed' THEN
+      IF (to_jsonb(NEW) - ARRAY['closed_at', 'closed_by'])
+         IS DISTINCT FROM
+         (to_jsonb(OLD) - ARRAY['closed_at', 'closed_by']) THEN
+        RAISE EXCEPTION 'Closed accounting periods are locked';
+      END IF;
     END IF;
   END IF;
 
-  IF NEW.status = 'closed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'closed') THEN
-    NEW.closed_at := now();
-    NEW.closed_by := auth.uid();
+  IF NEW.status = 'closed' THEN
+    IF TG_OP = 'INSERT' THEN
+      NEW.closed_at := now();
+      NEW.closed_by := auth.uid();
+    ELSIF OLD.status IS DISTINCT FROM 'closed' THEN
+      NEW.closed_at := now();
+      NEW.closed_by := auth.uid();
+    END IF;
   END IF;
 
   RETURN NEW;
@@ -207,7 +214,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.status = 'posted' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'posted') THEN
+  IF TG_OP = 'UPDATE' AND NEW.status = 'posted' AND OLD.status IS DISTINCT FROM 'posted' THEN
     SELECT p.status, p.start_date, p.end_date
       INTO v_period_status, v_period_start, v_period_end
     FROM public.accounting_periods p
@@ -254,6 +261,35 @@ BEGIN
       RAISE EXCEPTION 'A reversal must reference an original posted, non-reversal journal';
     END IF;
 
+    IF NEW.reversal_of_entry_id IS NOT NULL AND EXISTS (
+      WITH original_totals AS (
+        SELECT account_id, SUM(debit) AS debit, SUM(credit) AS credit
+        FROM public.journal_lines
+        WHERE journal_entry_id = NEW.reversal_of_entry_id
+        GROUP BY account_id
+      ),
+      reversal_totals AS (
+        SELECT account_id, SUM(debit) AS debit, SUM(credit) AS credit
+        FROM public.journal_lines
+        WHERE journal_entry_id = NEW.id
+        GROUP BY account_id
+      ),
+      comparison AS (
+        SELECT COALESCE(o.account_id, r.account_id) AS account_id,
+               COALESCE(o.debit, 0) AS original_debit,
+               COALESCE(o.credit, 0) AS original_credit,
+               COALESCE(r.debit, 0) AS reversal_debit,
+               COALESCE(r.credit, 0) AS reversal_credit
+        FROM original_totals o
+        FULL JOIN reversal_totals r USING (account_id)
+      )
+      SELECT 1 FROM comparison
+      WHERE reversal_debit <> original_credit
+         OR reversal_credit <> original_debit
+    ) THEN
+      RAISE EXCEPTION 'Reversal lines must exactly reverse the original journal by account';
+    END IF;
+
     NEW.posted_at := now();
     NEW.posted_by := auth.uid();
   END IF;
@@ -277,8 +313,20 @@ AS $$
 DECLARE
   v_entry_id uuid;
   v_status text;
+  v_old_status text;
   v_account_active boolean;
 BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.journal_entry_id IS DISTINCT FROM NEW.journal_entry_id THEN
+    SELECT status INTO v_old_status
+    FROM public.journal_entries
+    WHERE id = OLD.journal_entry_id
+    FOR UPDATE;
+
+    IF v_old_status IS DISTINCT FROM 'draft' THEN
+      RAISE EXCEPTION 'Lines cannot be moved out of a journal that is not a draft';
+    END IF;
+  END IF;
+
   v_entry_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.journal_entry_id ELSE NEW.journal_entry_id END;
 
   SELECT status INTO v_status
@@ -415,4 +463,3 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.accounting_accounts TO authentica
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.journal_entries TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.journal_lines TO authenticated;
 GRANT SELECT ON public.accounting_audit_log TO authenticated;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
