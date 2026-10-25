@@ -217,9 +217,16 @@ DECLARE
   parent_status text;
   account_active boolean;
 BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    SELECT status INTO parent_status FROM public.journal_entries WHERE id = OLD.journal_entry_id FOR SHARE;
+    IF parent_status IS DISTINCT FROM 'draft' THEN
+      RAISE EXCEPTION 'Journal lines in a posted or void journal are immutable';
+    END IF;
+  END IF;
+
   SELECT status INTO parent_status
     FROM public.journal_entries
-    WHERE id = COALESCE(NEW.journal_entry_id, OLD.journal_entry_id)
+    WHERE id = CASE WHEN TG_OP = 'DELETE' THEN OLD.journal_entry_id ELSE NEW.journal_entry_id END
     FOR SHARE;
   IF parent_status IS NULL THEN RAISE EXCEPTION 'Journal entry does not exist'; END IF;
   IF parent_status <> 'draft' THEN RAISE EXCEPTION 'Journal lines can only be changed while the journal is draft'; END IF;
