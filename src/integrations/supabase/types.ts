@@ -2396,6 +2396,7 @@ export type Database = {
           payment_date: string
           services: string | null
           signature_bypass_reason: string | null
+          signature_bypass_admin_signature: string | null
           signature_bypassed: boolean
           signature_bypassed_at: string | null
           signature_bypassed_by: string | null
@@ -2433,6 +2434,7 @@ export type Database = {
           payment_date: string
           services?: string | null
           signature_bypass_reason?: string | null
+          signature_bypass_admin_signature?: string | null
           signature_bypassed?: boolean
           signature_bypassed_at?: string | null
           signature_bypassed_by?: string | null
@@ -2470,6 +2472,7 @@ export type Database = {
           payment_date?: string
           services?: string | null
           signature_bypass_reason?: string | null
+          signature_bypass_admin_signature?: string | null
           signature_bypassed?: boolean
           signature_bypassed_at?: string | null
           signature_bypassed_by?: string | null
