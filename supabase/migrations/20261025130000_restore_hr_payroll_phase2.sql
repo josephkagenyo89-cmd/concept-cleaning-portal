@@ -223,7 +223,7 @@ BEGIN
     NEW.payroll_code := OLD.payroll_code;
 
     IF OLD.status IN ('paid','cancelled') THEN
-      IF NEW IS DISTINCT FROM OLD THEN
+      IF (to_jsonb(NEW) - 'updated_at') IS DISTINCT FROM (to_jsonb(OLD) - 'updated_at') THEN
         RAISE EXCEPTION 'Payroll run already % and is locked', OLD.status;
       END IF;
     ELSIF OLD.status = 'approved' THEN
@@ -245,9 +245,12 @@ BEGIN
          OR NEW.created_by_name IS DISTINCT FROM OLD.created_by_name
          OR NEW.approved_by IS DISTINCT FROM OLD.approved_by
          OR NEW.approved_by_name IS DISTINCT FROM OLD.approved_by_name
-         OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
-         OR NEW.paid_at IS DISTINCT FROM OLD.paid_at THEN
+         OR NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN
         RAISE EXCEPTION 'Approved payroll details are locked';
+      END IF;
+      IF NEW.paid_at IS DISTINCT FROM OLD.paid_at
+         AND NOT (OLD.status = 'approved' AND NEW.status = 'paid') THEN
+        RAISE EXCEPTION 'Paid timestamp can only be set when marking payroll paid';
       END IF;
       IF NEW.status = 'paid' AND NEW.payment_reference IS DISTINCT FROM OLD.payment_reference THEN
         NULL;
