@@ -1,7 +1,8 @@
 -- Manual regression test for record_invoice_payment.
 -- Run only against a disposable/local Supabase database.
--- Replace the UUID below with an existing admin/super-admin auth.users.id and ensure
--- at least one unpaid/approved invoice exists. All writes are rolled back.
+-- Replace the UUID below with an existing admin/super-admin auth.users.id.
+-- The test requires an approved invoice > KES 2 with no invoice_payments or linked income row.
+-- All writes are rolled back.
 BEGIN;
 SELECT set_config('request.jwt.claim.sub', 'REPLACE_WITH_ADMIN_AUTH_USER_UUID', true);
 
@@ -11,7 +12,8 @@ DECLARE
   v_first jsonb;
   v_second jsonb;
   v_paid numeric;
-  v_balance numeric;
+  v_income_count integer;
+  v_income_amount numeric;
   v_reference text := 'TEST-' || upper(substr(gen_random_uuid()::text, 1, 12));
   v_blocked boolean := false;
 BEGIN
@@ -20,16 +22,17 @@ BEGIN
   END IF;
 
   SELECT * INTO v_invoice
-  FROM public.invoices
-  WHERE payment_status NOT IN ('paid', 'cancelled', 'void')
-    AND amount > 2
-    AND NOT EXISTS (SELECT 1 FROM public.invoice_payments ip WHERE ip.invoice_id = invoices.id)
-  ORDER BY created_at DESC
+  FROM public.invoices i
+  WHERE i.payment_status = 'approved'
+    AND i.amount > 2
+    AND NOT EXISTS (SELECT 1 FROM public.invoice_payments ip WHERE ip.invoice_id = i.id)
+    AND NOT EXISTS (SELECT 1 FROM public.income_records ir WHERE ir.invoice_id = i.id)
+  ORDER BY i.created_at DESC
   LIMIT 1
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Test requires an unpaid invoice with amount > KES 2 and no invoice_payments';
+    RAISE EXCEPTION 'Test requires an approved invoice > KES 2 with no prior payment or linked income record';
   END IF;
 
   v_first := public.record_invoice_payment(
@@ -47,17 +50,13 @@ BEGIN
     RAISE EXCEPTION 'Expected a positive outstanding balance after partial payment';
   END IF;
 
-  -- Duplicate payment reference must fail, even on a different invoice.
+  -- Duplicate payment reference must fail.
   BEGIN
-    PERFORM public.record_invoice_payment(
-      v_invoice.id, 1, 'mpesa', v_reference, CURRENT_DATE
-    );
+    PERFORM public.record_invoice_payment(v_invoice.id, 1, 'mpesa', v_reference, CURRENT_DATE);
   EXCEPTION WHEN unique_violation THEN
     v_blocked := true;
   END;
-  IF NOT v_blocked THEN
-    RAISE EXCEPTION 'Duplicate M-Pesa reference was accepted';
-  END IF;
+  IF NOT v_blocked THEN RAISE EXCEPTION 'Duplicate M-Pesa reference was accepted'; END IF;
 
   -- Overpayment must fail.
   v_blocked := false;
@@ -90,6 +89,23 @@ BEGIN
   FROM public.invoice_payments WHERE invoice_id = v_invoice.id;
   IF round(v_paid, 2) <> round(v_invoice.amount, 2) THEN
     RAISE EXCEPTION 'Payment total does not reconcile to invoice amount';
+  END IF;
+
+  SELECT count(*), COALESCE(max(amount), 0)
+    INTO v_income_count, v_income_amount
+  FROM public.income_records WHERE invoice_id = v_invoice.id;
+  IF v_income_count <> 1 THEN
+    RAISE EXCEPTION 'Expected exactly one income approval summary per invoice, found %', v_income_count;
+  END IF;
+  IF round(v_income_amount, 2) <> round(v_invoice.amount, 2) THEN
+    RAISE EXCEPTION 'Income approval summary does not equal total payments';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.invoice_payments
+    WHERE invoice_id = v_invoice.id AND income_record_id IS DISTINCT FROM
+      (SELECT id FROM public.income_records WHERE invoice_id = v_invoice.id)
+  ) THEN
+    RAISE EXCEPTION 'Payment detail rows do not link to the invoice income summary';
   END IF;
 
   RAISE NOTICE 'Invoice payment regression checks passed for invoice %', v_invoice.invoice_number;
