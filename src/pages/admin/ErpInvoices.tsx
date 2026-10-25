@@ -81,6 +81,9 @@ export default function ErpInvoices() {
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
   const [mpesaCode, setMpesaCode] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentBalance, setPaymentBalance] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'bank'>('mpesa');
   const [submittingPay, setSubmittingPay] = useState(false);
 
   // "Send to client" prompt state — fired after successful payment
@@ -254,77 +257,68 @@ export default function ErpInvoices() {
     fetchData();
   };
 
-  const openPaymentDialog = (inv: Invoice) => {
+  const openPaymentDialog = async (inv: Invoice) => {
     setMpesaCode('');
     setPaymentDate(new Date().toISOString().split('T')[0]);
+    setPaymentMethod('mpesa');
+    const { data, error } = await (supabase as any).from('invoice_payments').select('amount').eq('invoice_id', inv.id);
+    if (error) {
+      toast({ title: 'Could not load payment balance', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const paid = (data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+    const balance = Math.max(0, Number(inv.amount || 0) - paid);
+    setPaymentBalance(balance);
+    setPaymentAmount(balance.toFixed(2));
     setPayInvoice(inv);
   };
 
   const submitPayment = async () => {
     if (!payInvoice) return;
+    const amount = Number(paymentAmount);
     const code = mpesaCode.trim().toUpperCase();
-    if (code.length < 6) {
-      toast({ title: 'M-Pesa code is required', description: 'Enter the transaction code from the M-Pesa message.', variant: 'destructive' });
+    if (!Number.isFinite(amount) || amount <= 0 || amount > paymentBalance) {
+      toast({ title: 'Invalid payment amount', description: `Enter an amount greater than zero and no more than KES ${paymentBalance.toLocaleString()}.`, variant: 'destructive' });
+      return;
+    }
+    if (paymentMethod !== 'cash' && code.length < 3) {
+      toast({ title: 'Payment reference required', description: 'Enter the M-Pesa confirmation code or bank reference.', variant: 'destructive' });
       return;
     }
     setSubmittingPay(true);
     const inv = payInvoice;
 
     try {
-      // 1. Mark invoice paid
-      const { error: invError } = await supabase.from('invoices').update({
-        payment_status: 'paid',
-        mpesa_code: code,
-        payment_date: new Date(paymentDate).toISOString(),
-      } as any).eq('id', inv.id);
-      if (invError) throw invError;
+      const { data: paymentResult, error: paymentError } = await supabase.rpc('record_invoice_payment' as any, {
+        p_invoice_id: inv.id,
+        p_amount: amount,
+        p_payment_method: paymentMethod,
+        p_payment_reference: code || null,
+        p_payment_date: paymentDate,
+      } as any);
+      if (paymentError) throw paymentError;
+      const result = paymentResult as any;
+      if (!result?.success) throw new Error('The payment was not confirmed by the server.');
 
-      // 2. Auto-create income record (pending Super Admin approval per system rule)
-      const { data: existingIncome } = await (supabase.from('income_records').select('id') as any).eq('invoice_id', inv.id).maybeSingle();
-      if (!existingIncome) {
-        await supabase.from('income_records').insert({
-          amount: Number(inv.amount),
-          date: paymentDate,
-          description: `Invoice ${inv.invoice_number} — ${inv.client_name} — ${inv.service}`,
-          service: inv.service,
-          payment_method: 'mpesa',
-          mpesa_code: code,
-          source: 'client_payment',
-          created_by: user!.id,
-          invoice_id: inv.id,
-          client_id: inv.client_id,
-          booking_id: inv.booking_id,
-          status: 'pending_approval',
-        } as any);
-      }
-
-      // 3. Auto-generate receipt PDF record
       const { data: rNum } = await supabase.rpc('next_receipt_number' as any);
       const receiptNumber = (rNum as string) || `CCS-RCP-${Date.now()}`;
-      const lineItemsData = (inv.line_items && inv.line_items.length > 0)
-        ? inv.line_items.map((i: any) => ({ name: i.name, description: i.description || i.serviceCode || undefined, quantity: i.quantity || 1, unitPrice: i.unitPrice || i.total, total: i.total }))
-        : [{ name: inv.service, quantity: 1, unitPrice: Number(inv.amount), total: Number(inv.amount) }];
-
       const receiptDoc: DocumentData = {
         documentType: 'receipt',
         documentNumber: receiptNumber,
-        dateCreated: fmtDate(new Date(), 'PPP'),
+        dateCreated: fmtDate(new Date(`${paymentDate}T00:00:00`), 'PPP'),
         createdBy: profile?.full_name || 'Admin',
         createdByRole: 'admin',
         clientName: inv.client_name,
         clientPhone: inv.client_phone || undefined,
-        lineItems: lineItemsData,
-        totalAmount: Number(inv.amount),
-        subtotal: inv.subtotal != null ? Number(inv.subtotal) : Number(inv.amount) + (Number(inv.discount_amount) || 0),
-        discountAmount: Number(inv.discount_amount) || 0,
-        discountReason: inv.discount_reason || undefined,
-        discountType: inv.discount_type || undefined,
-        discountValue: inv.discount_value != null ? Number(inv.discount_value) : undefined,
-        paymentStatus: 'PAID',
-        mpesaCode: code,
-        paymentDate: fmtDate(new Date(paymentDate), 'PPP'),
+        lineItems: [{ name: `Payment against invoice ${inv.invoice_number}`, quantity: 1, unitPrice: amount, total: amount }],
+        totalAmount: amount,
+        subtotal: amount,
+        discountAmount: 0,
+        paymentStatus: 'PAYMENT RECEIVED',
+        mpesaCode: paymentMethod === 'mpesa' ? code : undefined,
+        paymentDate: fmtDate(new Date(`${paymentDate}T00:00:00`), 'PPP'),
         invoiceNumber: inv.invoice_number,
-        amountPaid: Number(inv.amount),
+        amountPaid: amount,
       };
 
       await saveDocumentRecord({
@@ -336,28 +330,23 @@ export default function ErpInvoices() {
         status: 'paid',
       });
 
-      // 4. NOTE: Service certificates are now MANUAL ONLY.
-      // Use the "Generate Certificate" button on the invoice/booking row.
-      // This guarantees signatures + payment data are persisted before issuing.
-      const certificateDoc: DocumentData | null = null;
-
       await supabase.from('audit_logs').insert({
-        admin_id: user!.id, action: 'invoice.paid', target_type: 'invoice', target_id: inv.id,
-        details: { invoice_number: inv.invoice_number, amount: inv.amount, mpesa_code: code },
+        admin_id: user!.id,
+        action: 'invoice.payment_recorded',
+        target_type: 'invoice',
+        target_id: inv.id,
+        details: { invoice_number: inv.invoice_number, payment_amount: amount, total_paid: result.total_paid, outstanding_balance: result.outstanding_balance, payment_method: paymentMethod, payment_reference: code || null },
       });
 
       toast({
-        title: 'Payment recorded',
-        description: 'Receipt generated. Income pending Super Admin approval. Issue a certificate manually when ready.',
+        title: result.payment_status === 'paid' ? 'Invoice fully paid' : 'Partial payment recorded',
+        description: `Received KES ${amount.toLocaleString()}. Balance: KES ${Number(result.outstanding_balance).toLocaleString()}. Income is pending Super Admin approval.`,
       });
-
       setPayInvoice(null);
       setSubmittingPay(false);
-      // Refresh and offer share
       await fetchData();
-      // Offer to share with client via WhatsApp
-      const refreshedInv = { ...inv, payment_status: 'paid', mpesa_code: code, payment_date: paymentDate };
-      setShareTarget({ invoice: refreshedInv, receipt: receiptDoc, certificate: certificateDoc });
+      const refreshedInv = { ...inv, payment_status: result.payment_status, mpesa_code: paymentMethod === 'mpesa' ? code : inv.mpesa_code, payment_date: paymentDate };
+      setShareTarget({ invoice: refreshedInv, receipt: receiptDoc, certificate: null });
     } catch (err: any) {
       setSubmittingPay(false);
       toast({ title: 'Payment failed', description: err.message, variant: 'destructive' });
@@ -508,7 +497,7 @@ export default function ErpInvoices() {
                               <CheckCircle2 className="h-3 w-3 mr-1" />Approve
                             </Button>
                           )}
-                          {inv.payment_status === 'approved' && (
+                          {['approved', 'partial'].includes(inv.payment_status) && (
                             <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => openPaymentDialog(inv)}>
                               <CreditCard className="h-3 w-3 mr-1" />Record Payment
                             </Button>
@@ -557,18 +546,36 @@ export default function ErpInvoices() {
                 <div className="flex justify-between font-semibold mt-1"><span>Amount</span><span>Ksh {Number(payInvoice.amount).toLocaleString()}</span></div>
               </div>
               <div className="space-y-1.5">
-                <Label>M-Pesa Confirmation Code <span className="text-destructive">*</span></Label>
-                <Input value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} placeholder="e.g. SLM4XK7H8Z" maxLength={20} className="font-mono uppercase" />
-                <p className="text-xs text-muted-foreground">Enter the transaction code from the M-Pesa SMS confirmation.</p>
+                <Label>Outstanding Balance</Label>
+                <div className="font-semibold">KES {paymentBalance.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
+              <div className="space-y-1.5">
+                <Label>Payment Amount (KES) <span className="text-destructive">*</span></Label>
+                <Input type="number" min="0.01" max={paymentBalance} step="0.01" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Payment Method</Label>
+                <Select value={paymentMethod} onValueChange={v => setPaymentMethod(v as 'mpesa' | 'cash' | 'bank')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mpesa">M-Pesa</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank">Bank transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {paymentMethod !== 'cash' && <div className="space-y-1.5">
+                <Label>{paymentMethod === 'mpesa' ? 'M-Pesa Confirmation Code' : 'Bank Reference'} <span className="text-destructive">*</span></Label>
+                <Input value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} placeholder={paymentMethod === 'mpesa' ? 'e.g. SLM4XK7H8Z' : 'Enter bank transaction reference'} maxLength={40} className="font-mono uppercase" />
+              </div>}
               <div className="space-y-1.5">
                 <Label>Payment Date</Label>
                 <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setPayInvoice(null)} disabled={submittingPay}>Cancel</Button>
-                <Button onClick={submitPayment} disabled={submittingPay || mpesaCode.trim().length < 6}>
-                  {submittingPay ? 'Recording…' : 'Mark as Paid'}
+                <Button onClick={submitPayment} disabled={submittingPay || !paymentAmount || Number(paymentAmount) <= 0 || Number(paymentAmount) > paymentBalance || (paymentMethod !== 'cash' && mpesaCode.trim().length < 3)}>
+                  {submittingPay ? 'Recording…' : 'Record Payment'}
                 </Button>
               </DialogFooter>
             </div>
