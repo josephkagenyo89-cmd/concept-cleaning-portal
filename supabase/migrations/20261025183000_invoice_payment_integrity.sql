@@ -82,6 +82,9 @@ BEGIN
   IF v_invoice.payment_status IN ('cancelled', 'void') THEN
     RAISE EXCEPTION 'Cannot record payment against a cancelled invoice';
   END IF;
+  IF v_invoice.payment_status NOT IN ('approved', 'partial') THEN
+    RAISE EXCEPTION 'Invoice must be approved before payment can be recorded';
+  END IF;
 
   SELECT COALESCE(SUM(amount), 0) INTO v_paid_before
   FROM public.invoice_payments
