@@ -97,12 +97,68 @@ CREATE OR REPLACE FUNCTION public.accounting_set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $
 BEGIN
   NEW.updated_at := now();
   RETURN NEW;
 END;
-$$;
+$;
+
+CREATE OR REPLACE FUNCTION public.accounting_guard_period()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status <> 'open' THEN
+      RAISE EXCEPTION 'Accounting periods must be created open and closed through the close-period workflow';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.status = 'closed' THEN
+      RAISE EXCEPTION 'Closed accounting periods cannot be deleted';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.journal_entries WHERE period_id = OLD.id) THEN
+      RAISE EXCEPTION 'Accounting periods containing journal entries cannot be deleted';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF OLD.status = 'closed' THEN
+    RAISE EXCEPTION 'Closed accounting periods are immutable and cannot be reopened';
+  END IF;
+
+  IF NEW.status = 'closed' THEN
+    IF EXISTS (SELECT 1 FROM public.journal_entries WHERE period_id = OLD.id AND status = 'draft') THEN
+      RAISE EXCEPTION 'Cannot close an accounting period while draft journals remain';
+    END IF;
+    NEW.closed_at := now();
+    NEW.closed_by := auth.uid();
+  ELSE
+    NEW.closed_at := NULL;
+    NEW.closed_by := NULL;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.journal_entries je
+    WHERE je.period_id = OLD.id
+      AND (je.entry_date < NEW.starts_on OR je.entry_date > NEW.ends_on)
+  ) THEN
+    RAISE EXCEPTION 'Period dates cannot be changed to exclude existing journal entries';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_accounting_period_guard ON public.accounting_periods;
+CREATE TRIGGER trg_accounting_period_guard
+BEFORE INSERT OR UPDATE OR DELETE ON public.accounting_periods
+FOR EACH ROW EXECUTE FUNCTION public.accounting_guard_period();
+
 
 DROP TRIGGER IF EXISTS trg_accounting_accounts_updated_at ON public.accounting_accounts;
 CREATE TRIGGER trg_accounting_accounts_updated_at
