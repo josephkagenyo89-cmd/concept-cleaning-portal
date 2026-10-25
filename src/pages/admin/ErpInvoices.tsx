@@ -288,6 +288,7 @@ export default function ErpInvoices() {
     setSubmittingPay(true);
     const inv = payInvoice;
 
+    let paymentRecorded = false;
     try {
       const { data: paymentResult, error: paymentError } = await supabase.rpc('record_invoice_payment' as any, {
         p_invoice_id: inv.id,
@@ -299,6 +300,7 @@ export default function ErpInvoices() {
       if (paymentError) throw paymentError;
       const result = paymentResult as any;
       if (!result?.success) throw new Error('The payment was not confirmed by the server.');
+      paymentRecorded = true;
 
       const { data: rNum } = await supabase.rpc('next_receipt_number' as any);
       const receiptNumber = (rNum as string) || `CCS-RCP-${Date.now()}`;
@@ -349,7 +351,13 @@ export default function ErpInvoices() {
       setShareTarget({ invoice: refreshedInv, receipt: receiptDoc, certificate: null });
     } catch (err: any) {
       setSubmittingPay(false);
-      toast({ title: 'Payment failed', description: err.message, variant: 'destructive' });
+      if (paymentRecorded) {
+        setPayInvoice(null);
+        await fetchData();
+        toast({ title: 'Payment recorded; receipt needs attention', description: err.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Payment failed', description: err.message, variant: 'destructive' });
+      }
     }
   };
 
