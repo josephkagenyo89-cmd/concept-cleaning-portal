@@ -97,18 +97,18 @@ CREATE OR REPLACE FUNCTION public.accounting_set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $
+AS $$
 BEGIN
   NEW.updated_at := now();
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.accounting_guard_period()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     IF NEW.status <> 'open' THEN
@@ -152,7 +152,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_accounting_period_guard ON public.accounting_periods;
 CREATE TRIGGER trg_accounting_period_guard
@@ -184,7 +184,7 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_accounting_accounts_audit ON public.accounting_accounts;
 CREATE TRIGGER trg_accounting_accounts_audit
