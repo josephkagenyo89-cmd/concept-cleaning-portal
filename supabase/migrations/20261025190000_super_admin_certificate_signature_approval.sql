@@ -11,8 +11,11 @@ COMMENT ON COLUMN public.service_certificates.signature_bypass_admin_signature
 CREATE OR REPLACE FUNCTION public.enforce_super_admin_certificate_waiver()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = pg_catalog, public
-AS $$
+AS $
+DECLARE
+  v_approver_name text;
 BEGIN
   -- Preserve existing historical waiver records when unrelated fields change.
   IF TG_OP = 'UPDATE'
@@ -53,10 +56,17 @@ BEGIN
       RAISE EXCEPTION 'The waiver reason must be 1000 characters or fewer';
     END IF;
 
-    IF coalesce(length(btrim(NEW.signature_bypassed_by_name)), 0) = 0 THEN
-      RAISE EXCEPTION 'The approving Super Admin name is required';
+    SELECT nullif(btrim(p.full_name), '')
+      INTO v_approver_name
+      FROM public.profiles AS p
+     WHERE p.user_id = auth.uid();
+
+    IF v_approver_name IS NULL THEN
+      RAISE EXCEPTION 'The approving Super Admin must have a profile name';
     END IF;
 
+    -- Never trust a client-supplied approver name or timestamp.
+    NEW.signature_bypassed_by_name := v_approver_name;
     NEW.signature_bypassed_at := now();
   ELSIF NEW.signature_bypass_admin_signature IS NOT NULL
      OR NEW.signature_bypass_reason IS NOT NULL
