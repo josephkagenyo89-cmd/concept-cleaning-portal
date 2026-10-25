@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award } from 'lucide-react';
+import { Plus, FileText, Share2, CheckCircle2, CreditCard, Award, Search, ReceiptText, CircleDollarSign, AlertTriangle, Clock3 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { downloadDocumentPdf, shareDocumentWhatsApp, DocumentData } from '@/lib/documentPdf';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
@@ -66,6 +66,8 @@ export default function ErpInvoices() {
   const canApprove = isAdmin || isSuperAdmin;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [services, setServices] = useState<any[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -97,6 +99,25 @@ export default function ErpInvoices() {
     setInvoices(data);
     setLoading(false);
   };
+
+  // Payment tracking is derived from existing invoice records; this UI does not mutate invoice data.
+  const today = new Date().toISOString().slice(0, 10);
+  const isOutstanding = (inv: Invoice) => !['paid', 'cancelled'].includes(inv.payment_status);
+  const isOverdue = (inv: Invoice) => isOutstanding(inv) && !!inv.due_date && inv.due_date < today;
+  const paidInvoices = invoices.filter(inv => inv.payment_status === 'paid');
+  const outstandingInvoices = invoices.filter(isOutstanding);
+  const overdueInvoices = invoices.filter(isOverdue);
+  const filteredInvoices = invoices.filter(inv => {
+    const query = invoiceSearch.trim().toLowerCase();
+    const matchesSearch = !query || [inv.invoice_number, inv.client_name, inv.client_phone || '', inv.service]
+      .some(value => value.toLowerCase().includes(query));
+    const matchesFilter = invoiceFilter === 'all'
+      || (invoiceFilter === 'paid' && inv.payment_status === 'paid')
+      || (invoiceFilter === 'unpaid' && isOutstanding(inv))
+      || (invoiceFilter === 'overdue' && isOverdue(inv))
+      || (invoiceFilter === 'pending_approval' && inv.payment_status === 'pending_approval');
+    return matchesSearch && matchesFilter;
+  });
 
   useEffect(() => {
     fetchData();
@@ -433,16 +454,36 @@ export default function ErpInvoices() {
           </DialogContent>
         </Dialog>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="rounded-full bg-muted p-2"><ReceiptText className="h-5 w-5" /></div><div><p className="text-sm text-muted-foreground">All invoices</p><p className="text-2xl font-semibold">{invoices.length}</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="rounded-full bg-muted p-2"><CircleDollarSign className="h-5 w-5" /></div><div><p className="text-sm text-muted-foreground">Paid invoices</p><p className="text-2xl font-semibold">{paidInvoices.length}</p><p className="text-xs text-muted-foreground">KES {paidInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0).toLocaleString()} marked paid</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="rounded-full bg-muted p-2"><Clock3 className="h-5 w-5" /></div><div><p className="text-sm text-muted-foreground">Unpaid / awaiting payment</p><p className="text-2xl font-semibold">{outstandingInvoices.length}</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="rounded-full bg-muted p-2"><AlertTriangle className="h-5 w-5" /></div><div><p className="text-sm text-muted-foreground">Overdue invoices</p><p className="text-2xl font-semibold">{overdueInvoices.length}</p><p className="text-xs text-muted-foreground">Based on due date</p></div></CardContent></Card>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={invoiceSearch} onChange={e => setInvoiceSearch(e.target.value)} placeholder="Search invoice number, client, phone or service…" aria-label="Search invoices" /></div>
+        <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
+          <SelectTrigger className="w-full sm:w-[220px]"><SelectValue placeholder="Filter invoices" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All invoices</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="unpaid">Unpaid / awaiting payment</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="pending_approval">Pending approval</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Card>
         <CardContent className="p-0">
           {loading ? <div className="flex justify-center p-8"><div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" /></div> : (
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Invoice #</TableHead><TableHead>Client</TableHead><TableHead>Service</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead>
+                <TableHead>Invoice #</TableHead><TableHead>Client</TableHead><TableHead>Service</TableHead><TableHead>Amount</TableHead><TableHead>Due date</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {invoices.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No invoices yet</TableCell></TableRow> :
-                  invoices.map(inv => (
+                {invoices.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No invoices yet</TableCell></TableRow> :
+                  filteredInvoices.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No invoices match your search or filter.</TableCell></TableRow> :
+                  filteredInvoices.map(inv => (
                     <TableRow key={inv.id}>
                       <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
                       <TableCell>
@@ -451,10 +492,14 @@ export default function ErpInvoices() {
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">{inv.service}</TableCell>
                       <TableCell className="font-medium">KES {Number(inv.amount).toLocaleString()}</TableCell>
+                      <TableCell><span className={isOverdue(inv) ? 'text-destructive font-medium' : 'text-muted-foreground'}>{inv.due_date ? fmtDate(new Date(`${inv.due_date}T00:00:00`), 'dd MMM yyyy') : '—'}</span></TableCell>
                       <TableCell>
-                        <Badge variant={statusColor(inv.payment_status) as any} className="capitalize">
-                          {STATUS_LABEL[inv.payment_status] || inv.payment_status}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={statusColor(inv.payment_status) as any} className="capitalize">
+                            {STATUS_LABEL[inv.payment_status] || inv.payment_status}
+                          </Badge>
+                          {isOverdue(inv) && <Badge variant="destructive">Overdue</Badge>}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
