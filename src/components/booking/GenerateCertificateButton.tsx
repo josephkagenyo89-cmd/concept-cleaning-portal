@@ -36,6 +36,7 @@ export default function GenerateCertificateButton({ bookingId, size = 'sm', vari
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
+  const signatureMovedRef = useRef(false);
   const [feedbackCtx, setFeedbackCtx] = useState<{
     clientName: string; clientId?: string; clientPhone?: string;
     agentId?: string; agentName?: string; serviceName?: string;
@@ -66,7 +67,7 @@ export default function GenerateCertificateButton({ bookingId, size = 'sm', vari
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     drawingRef.current = true;
-    setHasAdminSigned(true);
+    signatureMovedRef.current = false;
     const ctx = e.currentTarget.getContext('2d');
     if (!ctx) return;
     const p = signaturePoint(e);
@@ -82,6 +83,8 @@ export default function GenerateCertificateButton({ bookingId, size = 'sm', vari
     const p = signaturePoint(e);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    signatureMovedRef.current = true;
+    setHasAdminSigned(true);
   };
 
   const endSignature = () => { drawingRef.current = false; };
