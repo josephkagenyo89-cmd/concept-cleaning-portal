@@ -76,6 +76,10 @@ export interface SignatureData {
   staffSignature?: string;
   staffName?: string;
   staffSignedAt?: string;
+  adminSignature?: string;
+  adminName?: string;
+  adminSignedAt?: string;
+  clientSignatureWaived?: boolean;
 }
 
 export interface DocumentData {
@@ -686,11 +690,18 @@ function drawAcceptance(doc: jsPDF, w: number, y: number, data: DocumentData): n
   const colW = (tableW - 12) / 3;
   const boxH = 32;
 
-  const boxes = [
-    { title: 'CLIENT SIGNATURE', sub: 'Signature & Date', image: data.signatures?.clientSignature, name: data.signatures?.clientName },
-    { title: 'SALES REPRESENTATIVE', sub: data.salespersonName || data.createdBy || '', image: data.signatures?.staffSignature, name: data.signatures?.staffName },
-    { title: 'COMPANY STAMP', sub: 'Official Stamp', image: undefined, name: undefined },
-  ];
+  const isWaivedCertificate = data.documentType === 'service_certificate' && !!data.signatures?.clientSignatureWaived;
+  const boxes = isWaivedCertificate
+    ? [
+        { title: 'CLIENT SIGNATURE WAIVED', sub: 'Waived by approved exception', image: undefined, name: data.clientName },
+        { title: 'SERVICE STAFF', sub: data.signatures?.staffName || 'Staff', image: data.signatures?.staffSignature, name: data.signatures?.staffName },
+        { title: 'SUPER ADMIN APPROVAL', sub: (data.signatures?.adminName || 'Super Admin') + (data.signatures?.adminSignedAt ? ' · ' + new Date(data.signatures.adminSignedAt).toLocaleDateString() : ''), image: data.signatures?.adminSignature, name: data.signatures?.adminName },
+      ]
+    : [
+        { title: 'CLIENT SIGNATURE', sub: 'Signature & Date', image: data.signatures?.clientSignature, name: data.signatures?.clientName },
+        { title: 'SALES REPRESENTATIVE', sub: data.salespersonName || data.createdBy || '', image: data.signatures?.staffSignature, name: data.signatures?.staffName },
+        { title: 'COMPANY STAMP', sub: 'Official Stamp', image: undefined, name: undefined },
+      ];
 
   boxes.forEach((b, i) => {
     const x = MARGIN_X + (colW + 6) * i;
