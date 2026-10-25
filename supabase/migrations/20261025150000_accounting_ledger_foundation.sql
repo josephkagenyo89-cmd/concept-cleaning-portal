@@ -298,7 +298,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_journal_entries_guard ON public.journal_entries;
 CREATE TRIGGER trg_journal_entries_guard
@@ -397,7 +397,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_accounting_accounts_audit ON public.accounting_accounts;
 CREATE TRIGGER trg_accounting_accounts_audit
