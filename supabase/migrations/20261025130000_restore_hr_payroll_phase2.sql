@@ -163,6 +163,15 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' AND _status IN ('approved','paid')
+     AND (
+       _status = 'approved'
+       OR (
+         _status = 'paid'
+         AND OLD.payment_status = 'unpaid'
+         AND NEW.payment_status = 'paid'
+         AND (OLD.payment_reference IS NULL OR NEW.payment_reference IS NOT DISTINCT FROM OLD.payment_reference)
+       )
+     )
      AND NEW.id IS NOT DISTINCT FROM OLD.id
      AND NEW.payroll_run_id IS NOT DISTINCT FROM OLD.payroll_run_id
      AND NEW.employee_id IS NOT DISTINCT FROM OLD.employee_id
