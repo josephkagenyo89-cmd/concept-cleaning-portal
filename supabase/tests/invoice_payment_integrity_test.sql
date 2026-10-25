@@ -14,6 +14,7 @@ DECLARE
   v_paid numeric;
   v_income_count integer;
   v_income_amount numeric;
+  v_booking_paid numeric;
   v_reference text := 'TEST-' || upper(substr(gen_random_uuid()::text, 1, 12));
   v_blocked boolean := false;
 BEGIN
@@ -48,6 +49,12 @@ BEGIN
   END IF;
   IF (v_first->>'outstanding_balance')::numeric <= 0 THEN
     RAISE EXCEPTION 'Expected a positive outstanding balance after partial payment';
+  END IF;
+  IF v_invoice.booking_id IS NOT NULL THEN
+    SELECT amount_paid INTO v_booking_paid FROM public.bookings WHERE id = v_invoice.booking_id;
+    IF round(COALESCE(v_booking_paid, 0), 2) <> round((v_first->>'total_paid')::numeric, 2) THEN
+      RAISE EXCEPTION 'Linked booking amount_paid did not reflect the partial payment';
+    END IF;
   END IF;
 
   -- Duplicate payment reference must fail.
