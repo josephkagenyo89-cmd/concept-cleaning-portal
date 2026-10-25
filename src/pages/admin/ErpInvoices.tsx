@@ -373,7 +373,9 @@ export default function ErpInvoices() {
       `🧾 Receipt: ${receipt.documentNumber}`,
     ];
     if (certificate) lines.push(`🏆 Service Certificate: ${certificate.documentNumber}`);
-    lines.push(``, `💰 Amount Paid: Ksh ${Number(invoice.amount).toLocaleString()}`, `🔐 M-Pesa: ${invoice.mpesa_code}`, ``, `Please find your documents attached. Reach us anytime: +254796563741`);
+    lines.push(``, `💰 Amount Received: Ksh ${Number(receipt.totalAmount).toLocaleString()}`);
+    if (receipt.mpesaCode) lines.push(`🔐 M-Pesa: ${receipt.mpesaCode}`);
+    lines.push(``, `Please find your documents attached. Reach us anytime: +254796563741`);
     const message = encodeURIComponent(lines.join('\n'));
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
     setShareTarget(null);
