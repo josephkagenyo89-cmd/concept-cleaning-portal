@@ -1,6 +1,8 @@
 -- Atomic invoice payment recording with partial-payment support.
--- This creates a payment ledger; it does not post to the accounting GL yet.
--- Apply only after verifying the target Supabase project and testing locally.
+-- A single income_records row remains the invoice-level approval summary because
+-- public.income_records.invoice_id is UNIQUE. invoice_payments stores each receipt.
+-- This migration does not post to the accounting GL.
+-- Apply only after local/disposable database tests and review.
 
 BEGIN;
 
@@ -63,7 +65,7 @@ BEGIN
   IF p_amount IS NULL OR p_amount <= 0 OR p_amount <> round(p_amount, 2) THEN
     RAISE EXCEPTION 'Payment amount must be a positive amount to two decimal places';
   END IF;
-  IF p_payment_method NOT IN ('mpesa', 'cash', 'bank') THEN
+  IF p_payment_method IS NULL OR p_payment_method NOT IN ('mpesa', 'cash', 'bank') THEN
     RAISE EXCEPTION 'Invalid payment method';
   END IF;
   IF p_payment_method IN ('mpesa', 'bank') AND v_reference IS NULL THEN
@@ -80,7 +82,7 @@ BEGIN
 
   IF NOT FOUND THEN RAISE EXCEPTION 'Invoice not found'; END IF;
   IF v_invoice.payment_status IN ('cancelled', 'void') THEN
-    RAISE EXCEPTION 'Cannot record payment against a cancelled invoice';
+    RAISE EXCEPTION 'Cannot record payment against a cancelled invoice'; 
   END IF;
   IF v_invoice.payment_status NOT IN ('approved', 'partial') THEN
     RAISE EXCEPTION 'Invoice must be approved before payment can be recorded';
@@ -102,30 +104,58 @@ BEGIN
     p_invoice_id, p_amount, p_payment_method, v_reference, p_payment_date, auth.uid()
   ) RETURNING id INTO v_payment_id;
 
-  INSERT INTO public.income_records (
-    date, amount, description, service, payment_method, source,
-    booking_id, invoice_id, created_by, client_id, mpesa_code, payment_reference, status
-  ) VALUES (
-    p_payment_date,
-    p_amount,
-    'Payment for invoice ' || v_invoice.invoice_number,
-    v_invoice.service,
-    p_payment_method,
-    'client_payment',
-    v_invoice.booking_id,
-    v_invoice.id,
-    auth.uid(),
-    v_invoice.client_id,
-    CASE WHEN p_payment_method = 'mpesa' THEN v_reference ELSE NULL END,
-    v_reference,
-    'pending_approval'
-  ) RETURNING id INTO v_income_id;
-
-  UPDATE public.invoice_payments SET income_record_id = v_income_id WHERE id = v_payment_id;
-
-  v_paid_after := v_paid_before + p_amount;
+  v_paid_after := round(v_paid_before + p_amount, 2);
   v_status := CASE WHEN v_paid_after >= COALESCE(v_invoice.amount, 0)
                    THEN 'paid' ELSE 'partial' END;
+
+  -- Keep one income approval summary per invoice, matching the existing UNIQUE(invoice_id)
+  -- constraint. The payment table retains the individual amounts and references.
+  SELECT id INTO v_income_id
+  FROM public.income_records
+  WHERE invoice_id = p_invoice_id
+  FOR UPDATE;
+
+  IF v_income_id IS NULL THEN
+    INSERT INTO public.income_records (
+      date, amount, description, service, payment_method, source,
+      booking_id, invoice_id, created_by, client_id, mpesa_code,
+      payment_reference, status
+    ) VALUES (
+      p_payment_date,
+      v_paid_after,
+      'Payments received for invoice ' || v_invoice.invoice_number,
+      v_invoice.service,
+      p_payment_method,
+      'client_payment',
+      v_invoice.booking_id,
+      v_invoice.id,
+      auth.uid(),
+      v_invoice.client_id,
+      CASE WHEN p_payment_method = 'mpesa' THEN v_reference ELSE NULL END,
+      v_reference,
+      'pending_approval'
+    ) RETURNING id INTO v_income_id;
+  ELSE
+    -- New money changes the invoice-level summary and requires approval again.
+    -- Preserve the single summary row so income is never double-counted per invoice.
+    UPDATE public.income_records
+    SET date = p_payment_date,
+        amount = v_paid_after,
+        description = 'Payments received for invoice ' || v_invoice.invoice_number,
+        service = v_invoice.service,
+        payment_method = p_payment_method,
+        client_id = COALESCE(client_id, v_invoice.client_id),
+        mpesa_code = CASE WHEN p_payment_method = 'mpesa' THEN v_reference ELSE NULL END,
+        payment_reference = v_reference,
+        status = 'pending_approval',
+        approved_by = NULL,
+        approved_at = NULL
+    WHERE id = v_income_id;
+  END IF;
+
+  UPDATE public.invoice_payments
+  SET income_record_id = v_income_id
+  WHERE id = v_payment_id;
 
   UPDATE public.invoices
   SET payment_status = v_status,
