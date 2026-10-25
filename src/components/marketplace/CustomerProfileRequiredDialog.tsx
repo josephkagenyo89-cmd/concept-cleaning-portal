@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,45 +13,21 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 
+const PHONE_ON_FILE_MESSAGE =
+  'This phone number is already on our records. Contact us on WhatsApp and we will link your account.';
+
 export default function CustomerProfileRequiredDialog() {
-  const { user, customerClient, refreshProfile } = useAuth();
-  const [form, setForm] = useState({
-    full_name: '',
-    phone: '',
-    location: '',
-  });
+  const { user, isCustomer, customerClient, refreshProfile } = useAuth();
+  const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (customerClient) {
-      setForm({
-        full_name: customerClient.full_name || '',
-        phone: customerClient.phone || '',
-        location: customerClient.location || '',
-      });
-      return;
-    }
-
-    if (user) {
-      const metadata = (user.user_metadata || {}) as Record<string, string>;
-
-      setForm({
-        full_name: metadata.full_name || metadata.name || '',
-        phone: metadata.phone || '',
-        location: metadata.location || '',
-      });
-    }
-  }, [customerClient, user]);
-
   const save = async () => {
-    const fullName = form.full_name.trim();
-    const phone = form.phone.trim();
-    const location = form.location.trim();
+    const cleanPhone = phone.trim();
 
-    if (!fullName || !phone || !location) {
+    if (cleanPhone.replace(/\D/g, '').length < 9) {
       toast({
-        title: 'Complete your profile',
-        description: 'Full name, phone number and location are required.',
+        title: 'Enter your phone number',
+        description: 'Please enter a valid phone number, for example 0712345678.',
         variant: 'destructive',
       });
       return;
@@ -61,87 +37,68 @@ export default function CustomerProfileRequiredDialog() {
 
     setSaving(true);
 
-    const { data: existingClient, error: lookupError } = await supabase
-      .from('clients')
-      .select('id, user_id')
-      .eq('phone', phone)
-      .maybeSingle();
+    // 1. Verified email link (server-side). The phone number is never used to link.
+    const { data: claimedId, error: claimError } = await supabase.rpc('claim_client_record' as any);
 
-    if (lookupError) {
+    if (claimError) {
       setSaving(false);
       toast({
-        title: 'Could not check phone number',
-        description: lookupError.message,
+        title: 'Could not complete your account',
+        description: 'Please try again, or contact us on WhatsApp.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (
-      existingClient &&
-      existingClient.user_id &&
-      existingClient.user_id !== user.id
-    ) {
-      setSaving(false);
-      toast({
-        title: 'Phone number already registered',
-        description: 'Please use the phone number linked to your customer account.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!claimedId) {
+      // 2. No matching record: create one. Name comes from the Google account.
+      const metadata = (user.user_metadata || {}) as Record<string, string>;
+      const fullName = metadata.full_name || metadata.name || user.email || 'Customer';
 
-    const { error: saveError } = existingClient
-      ? await supabase
-          .from('clients')
-          .update({
-            user_id: user.id,
-            full_name: fullName,
-            whatsapp_number: phone,
-            location,
-            updated_at: new Date().toISOString(),
-          } as any)
-          .eq('id', existingClient.id)
-      : await supabase
-          .from('clients')
-          .insert({
-            full_name: fullName,
-            phone,
-            whatsapp_number: phone,
-            location,
-            notes: null,
-            status: 'new',
-            created_by: user.id,
-            created_by_role: 'customer',
-            user_id: user.id,
-          } as any);
+      const { error: insertError } = await supabase
+        .from('clients')
+        .insert({
+          full_name: fullName,
+          phone: cleanPhone,
+          whatsapp_number: cleanPhone,
+          email: user.email ?? null,
+          notes: null,
+          status: 'new',
+          created_by: user.id,
+          created_by_role: 'customer',
+          user_id: user.id,
+        } as any);
+
+      if (insertError) {
+        setSaving(false);
+        // Unique phone constraint: the number belongs to an existing record.
+        // Never link it here. An admin links it after a WhatsApp check.
+        const phoneTaken = (insertError as { code?: string }).code === '23505';
+        toast({
+          title: phoneTaken ? 'Phone number already registered' : 'Could not save your phone number',
+          description: phoneTaken
+            ? PHONE_ON_FILE_MESSAGE
+            : 'Please try again, or contact us on WhatsApp.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
 
     setSaving(false);
-
-    if (saveError) {
-      toast({
-        title: 'Could not create profile',
-        description: saveError.message,
-        variant: 'destructive',
-      });
-      return;
-    }
-
     await refreshProfile();
 
     toast({
-      title: 'Profile completed',
-      description: 'Your customer profile is now ready.',
+      title: 'Account ready',
+      description: 'You can now book and track your services.',
     });
   };
 
-  const profileIncomplete =
-    !customerClient ||
-    !customerClient.full_name?.trim() ||
-    !customerClient.phone?.trim() ||
-    !customerClient.location?.trim();
+  // A client record exists only with a phone number, so the popup is needed only
+  // until a record with a phone is linked or created.
+  const needsPhone = !!user && isCustomer && (!customerClient || !customerClient.phone?.trim());
 
-  if (!user || !profileIncomplete) return null;
+  if (!needsPhone) return null;
 
   return (
     <Dialog open={true}>
@@ -151,57 +108,23 @@ export default function CustomerProfileRequiredDialog() {
         onEscapeKeyDown={(event) => event.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Complete your customer profile</DialogTitle>
+          <DialogTitle>Add your phone number</DialogTitle>
           <DialogDescription>
-            Please provide your details before continuing. Your phone number
-            will be used to create or link your customer record.
+            Enter your phone number to finish setting up your account. We use it
+            to confirm your bookings.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="required-full-name">Full name</Label>
-            <Input
-              id="required-full-name"
-              value={form.full_name}
-              onChange={(e) =>
-                setForm((current) => ({
-                  ...current,
-                  full_name: e.target.value,
-                }))
-              }
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="required-phone">Phone number</Label>
             <Input
               id="required-phone"
-              value={form.phone}
-              onChange={(e) =>
-                setForm((current) => ({
-                  ...current,
-                  phone: e.target.value,
-                }))
-              }
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. 0712345678"
               type="tel"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="required-location">Location</Label>
-            <Input
-              id="required-location"
-              value={form.location}
-              onChange={(e) =>
-                setForm((current) => ({
-                  ...current,
-                  location: e.target.value,
-                }))
-              }
-              placeholder="Estate / area / town"
+              inputMode="tel"
             />
           </div>
 

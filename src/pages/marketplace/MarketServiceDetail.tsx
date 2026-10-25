@@ -261,6 +261,18 @@ export default function MarketServiceDetail() {
 
         if (bookingError) throw bookingError;
 
+        // Save the booking location on the customer record if it has none yet
+        if (!customerClient.location && form.location.trim()) {
+          try {
+            await supabase
+              .from('clients')
+              .update({ location: form.location.trim() } as any)
+              .eq('id', customerClient.id);
+          } catch (locationError) {
+            console.warn('Could not save location to customer record:', locationError);
+          }
+        }
+
         // Link lead to booking
         if (leadId) {
           await supabase

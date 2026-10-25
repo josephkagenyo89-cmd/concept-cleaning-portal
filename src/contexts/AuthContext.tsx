@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // regardless of how many auth events fire for that same user.
   const loadUserData = (userId: string): Promise<void> => {
     // If we're already fetching (or have finished fetching) this same user's
-    // data, return the SAME promise instead of assuming it's already done —
-    // this avoids a race where a second auth event marks loading as finished
+    // data, return the SAME promise instead of assuming it's already done.
+    // This avoids a race where a second auth event marks loading as finished
     // before the real network fetch has actually completed.
     if (lastFetchedUserId.current === userId && loadUserDataPromise.current) {
       return loadUserDataPromise.current;
@@ -126,8 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
 
     // Supabase fires this immediately with the current session on subscribe,
-    // so we don't need a separate getSession() call — that was causing
-    // duplicate fetches of the same data.
+    // so we don't need a separate getSession() call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!isMounted) return;
@@ -160,104 +159,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Marketplace customers have no staff roles at all.
   const isCustomer = !!user && roles.length === 0;
 
-  // Self-heal: make sure every customer account is linked to a CRM client record.
+  // Customer self-service link. Only an existing, unowned client record whose email
+  // matches a Google-verified sign-in is linked, and only on the server (claim_client_record).
+  // Phone numbers are never used to link. If nothing matches, the profile dialog asks
+  // the customer for their details and creates the record.
   useEffect(() => {
     if (loading || !user || roles.length > 0 || customerClient) return;
 
     let cancelled = false;
 
     (async () => {
-      const meta = (user.user_metadata || {}) as Record<string, string>;
+      const { data: clientId, error: claimError } = await supabase.rpc('claim_client_record' as any);
 
-      const phone = (meta.phone || '').trim();
-
-      if (!phone) {
-        console.warn('Customer has no phone number. Skipping CRM client creation.');
+      if (claimError) {
+        console.error('Could not check customer record:', claimError.message);
         return;
       }
 
-      const { data: existingByUser, error: userLookupError } = await supabase
+      if (!clientId || cancelled) return;
+
+      const { data: linked, error: loadError } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', clientId as any)
         .maybeSingle();
 
-      if (userLookupError) {
-        console.error('Error checking client by user:', userLookupError);
+      if (loadError) {
+        console.error('Could not load linked customer record:', loadError.message);
         return;
       }
 
-      if (existingByUser) {
-        if (!cancelled) {
-          setCustomerClient(existingByUser as CustomerClient);
-        }
-        return;
-      }
-
-      const { data: existingByPhone, error: phoneLookupError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('phone', phone)
-        .maybeSingle();
-
-      if (phoneLookupError) {
-        console.error('Error checking client by phone:', phoneLookupError);
-        return;
-      }
-
-      if (existingByPhone) {
-        const { data: linkedClient, error: linkError } = await supabase
-          .from('clients')
-          .update({
-            user_id: user.id,
-          })
-          .eq('id', existingByPhone.id)
-          .select('*')
-          .maybeSingle();
-
-        if (linkError) {
-          console.error('Error linking existing CRM client:', linkError);
-
-          if (!cancelled) {
-            setCustomerClient(existingByPhone as CustomerClient);
-          }
-
-          return;
-        }
-
-        if (!cancelled) {
-          setCustomerClient(
-            (linkedClient as CustomerClient) ||
-            (existingByPhone as CustomerClient)
-          );
-        }
-
-        return;
-      }
-
-      const { data: newClient, error: insertError } = await supabase
-        .from('clients')
-        .insert({
-          full_name: meta.full_name || user.email || 'Customer',
-          phone,
-          whatsapp_number: meta.whatsapp_number || phone,
-          location: meta.location || '',
-          notes: meta.notes || null,
-          status: 'new',
-          created_by: user.id,
-          created_by_role: 'customer',
-          user_id: user.id,
-        })
-        .select('*')
-        .maybeSingle();
-
-      if (insertError) {
-        console.error('Error creating customer client:', insertError);
-        return;
-      }
-
-      if (!cancelled && newClient) {
-        setCustomerClient(newClient as CustomerClient);
+      if (!cancelled && linked) {
+        setCustomerClient(linked as CustomerClient);
       }
     })();
 
