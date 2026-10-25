@@ -1,24 +1,25 @@
--- Trigger to auto-register storage objects into public.assets
--- Run this in your Supabase SQL editor (Project SQL). It listens for inserts
--- into storage.objects and writes/updates the public.assets table.
+-- Trigger to register Storage object metadata in public.assets.
+-- public.assets is RLS-protected and not directly accessible to anon/authenticated users.
+-- The SECURITY DEFINER owner performs the trusted metadata upsert; file access itself
+-- remains governed by Supabase Storage policies.
 
--- Create function
 CREATE OR REPLACE FUNCTION public.on_storage_object_created()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+SECURITY DEFINER
+SET search_path = pg_catalog, public, storage
+AS $function$
 DECLARE
   bname text;
   fname text;
   obj_size bigint;
 BEGIN
-  -- Try to resolve bucket name from storage.buckets
-  SELECT name INTO bname FROM storage.buckets WHERE id = NEW.bucket_id LIMIT 1;
+  SELECT sb.name INTO bname
+  FROM storage.buckets AS sb
+  WHERE sb.id = NEW.bucket_id
+  LIMIT 1;
 
-  -- filename is the last path segment
   fname := regexp_replace(NEW.name, '^.*/', '');
-
-  -- size field can be named different things depending on version; coalesce common names
   obj_size := COALESCE(NEW.size, NEW.bytes, NEW.byte_size, 0);
 
   INSERT INTO public.assets (bucket, path, filename, content_type, size, metadata, uploaded_at)
@@ -39,15 +40,13 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
+$function$;
 
--- Create trigger
+-- Trigger execution does not require clients to have EXECUTE permission on the function.
+REVOKE ALL ON FUNCTION public.on_storage_object_created() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.on_storage_object_created() FROM anon, authenticated;
+
 DROP TRIGGER IF EXISTS trg_storage_object_created ON storage.objects;
 CREATE TRIGGER trg_storage_object_created
 AFTER INSERT ON storage.objects
 FOR EACH ROW EXECUTE FUNCTION public.on_storage_object_created();
-
--- Notes:
--- - This must be run in the Supabase project's SQL editor (it needs the storage schema).
--- - If your storage schema/table names differ, adjust `storage.objects` and `storage.buckets` accordingly.
--- - The trigger is simple and idempotent (uses ON CONFLICT to upsert).
