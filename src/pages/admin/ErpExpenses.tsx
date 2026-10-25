@@ -86,7 +86,7 @@ export default function ErpExpenses() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [expenseRes, fundRes, transactionRes] = await Promise.all([
-      supabase.from('expenses').select('id,date,amount,category,description,created_at,supplier_name,receipt_reference,payment_method,approval_status').order('date', { ascending: false }),
+      (supabase as any).from('expenses').select('id,date,amount,category,description,created_at,supplier_name,receipt_reference,payment_method,approval_status').order('date', { ascending: false }),
       (supabase as any).from('petty_cash_fund_balances').select('*').order('name'),
       (supabase as any).from('petty_cash_transactions').select('id,fund_id,transaction_date,transaction_type,amount,description,reference,expense_id,receipt_reference,status').order('transaction_date', { ascending: false }).limit(200),
     ]);
