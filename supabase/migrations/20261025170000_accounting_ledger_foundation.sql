@@ -181,9 +181,10 @@ BEGIN
   record_key := COALESCE(new_row->>'id', old_row->>'id', new_row->>'entry_number', old_row->>'entry_number', new_row->>'code', old_row->>'code');
   INSERT INTO public.accounting_audit_log(table_name, record_id, action, old_values, new_values, changed_by)
   VALUES (TG_TABLE_NAME, COALESCE(record_key, 'unknown'), TG_OP, old_row, new_row, auth.uid());
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 DROP TRIGGER IF EXISTS trg_accounting_accounts_audit ON public.accounting_accounts;
 CREATE TRIGGER trg_accounting_accounts_audit
@@ -209,6 +210,7 @@ DECLARE
   target_period public.accounting_periods%ROWTYPE;
   debit_total numeric(18,2);
   credit_total numeric(18,2);
+  should_post boolean := false;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     IF OLD.status <> 'draft' THEN
@@ -217,11 +219,20 @@ BEGIN
     RETURN OLD;
   END IF;
 
-  IF TG_OP = 'UPDATE' AND OLD.status <> 'draft' THEN
-    RAISE EXCEPTION 'Posted or void journal entries are immutable; use a reversing journal or correction entry';
+  IF TG_OP = 'INSERT' AND NEW.status <> 'draft' THEN
+    RAISE EXCEPTION 'Journal entries must be created as drafts';
   END IF;
 
-  IF NEW.status = 'posted' AND (TG_OP = 'INSERT' OR OLD.status <> 'posted') THEN
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.status <> 'draft' THEN
+      RAISE EXCEPTION 'Posted or void journal entries are immutable; use a reversing journal or correction entry';
+    END IF;
+    should_post := NEW.status = 'posted';
+  ELSIF TG_OP = 'INSERT' THEN
+    should_post := NEW.status = 'posted';
+  END IF;
+
+  IF should_post THEN
     SELECT * INTO target_period FROM public.accounting_periods WHERE id = NEW.period_id FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Accounting period does not exist'; END IF;
     IF target_period.status <> 'open' THEN RAISE EXCEPTION 'Cannot post to a closed accounting period'; END IF;
