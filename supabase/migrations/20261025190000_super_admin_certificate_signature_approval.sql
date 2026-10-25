@@ -57,7 +57,7 @@ BEGIN
       RAISE EXCEPTION 'The approving Super Admin name is required';
     END IF;
 
-    NEW.signature_bypassed_at := coalesce(NEW.signature_bypassed_at, now());
+    NEW.signature_bypassed_at := now();
   ELSIF NEW.signature_bypass_admin_signature IS NOT NULL
      OR NEW.signature_bypass_reason IS NOT NULL
      OR NEW.signature_bypassed_by IS NOT NULL
