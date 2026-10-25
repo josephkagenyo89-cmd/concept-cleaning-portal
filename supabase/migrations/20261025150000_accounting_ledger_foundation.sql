@@ -392,9 +392,12 @@ BEGIN
     TG_TABLE_NAME, COALESCE(v_id, 'unknown'), TG_OP, auth.uid(), v_before, v_after
   );
 
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 DROP TRIGGER IF EXISTS trg_accounting_accounts_audit ON public.accounting_accounts;
 CREATE TRIGGER trg_accounting_accounts_audit
