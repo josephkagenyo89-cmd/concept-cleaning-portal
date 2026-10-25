@@ -26,9 +26,10 @@ BEGIN
   VALUES ('TEST open period ' || test_source_id, CURRENT_DATE - 1, CURRENT_DATE + 1, 'open')
   RETURNING id INTO open_period_id;
 
-  INSERT INTO public.accounting_periods(name, starts_on, ends_on, status, closed_at)
-  VALUES ('TEST closed period ' || test_source_id, CURRENT_DATE - 1, CURRENT_DATE + 1, 'closed', now())
+  INSERT INTO public.accounting_periods(name, starts_on, ends_on)
+  VALUES ('TEST closed period ' || test_source_id, CURRENT_DATE - 1, CURRENT_DATE + 1)
   RETURNING id INTO closed_period_id;
+  UPDATE public.accounting_periods SET status = 'closed' WHERE id = closed_period_id;
 
   -- Balanced journal should post.
   INSERT INTO public.journal_entries(entry_date, description, period_id, source_type, source_id)
