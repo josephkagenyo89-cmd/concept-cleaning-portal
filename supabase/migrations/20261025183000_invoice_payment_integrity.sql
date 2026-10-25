@@ -166,6 +166,17 @@ BEGIN
       updated_at = now()
   WHERE id = p_invoice_id;
 
+  -- Keep the linked booking's paid-to-date amount aligned for partial and full payments.
+  IF v_invoice.booking_id IS NOT NULL THEN
+    UPDATE public.bookings
+    SET amount_paid = v_paid_after,
+        payment_method = p_payment_method,
+        payment_reference = v_reference,
+        mpesa_code = CASE WHEN p_payment_method = 'mpesa' THEN v_reference ELSE NULL END,
+        payment_date = p_payment_date::timestamptz
+    WHERE id = v_invoice.booking_id;
+  END IF;
+
   RETURN jsonb_build_object(
     'success', true,
     'payment_id', v_payment_id,
