@@ -34,6 +34,7 @@ export interface CertificateRecord {
   signature_bypassed?: boolean;
   signature_bypass_reason?: string | null;
   signature_bypassed_by_name?: string | null;
+  signature_bypass_admin_signature?: string | null;
   signature_bypassed_at?: string | null;
   document_reference: string | null;
   generated_by: string;
@@ -84,15 +85,19 @@ export function certificateToDocData(c: CertificateRecord): DocumentData {
       clientSignature: c.client_signature || undefined,
       clientName: c.client_name,
       clientSignedAt: c.client_signed_at || undefined,
+      clientSignatureWaived: !!c.signature_bypassed,
       staffSignature: c.staff_signature,
       staffName: c.staff_signed_name || undefined,
       staffSignedAt: c.staff_signed_at || undefined,
+      adminSignature: c.signature_bypass_admin_signature || undefined,
+      adminName: c.signature_bypassed_by_name || undefined,
+      adminSignedAt: c.signature_bypassed_at || undefined,
     },
     notes:
       (c.signature_bypassed
-        ? `Client signature waived by ${c.signature_bypassed_by_name || 'administrator'}${
+        ? `Client signature waived by Super Admin ${c.signature_bypassed_by_name || 'administrator'}${
             c.signature_bypass_reason ? ` — ${c.signature_bypass_reason}` : ''
-          }. `
+          }. Super Admin approval signature is captured on this certificate. `
         : '') +
       'This certificate confirms that the cleaning service has been completed satisfactorily and payment has been received in full. Thank you for choosing Concept Cleaning Services. We appreciate your business.',
   };
@@ -103,9 +108,10 @@ export interface GenerateOptions {
   generatedById: string;
   generatedByName: string;
   generatedByRole: string;
-  /** Admin-controlled override: issue the certificate without the client signature. */
+  /** Super Admin-controlled override: issue the certificate without the client signature. */
   bypassClientSignature?: boolean;
   bypassReason?: string;
+  bypassAdminSignature?: string;
 }
 
 export interface GenerateResult {
@@ -139,6 +145,12 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     return { ok: false, reason: 'Booking must be completed or fully confirmed before issuing a certificate.' };
   }
   const bypassed = !b.client_signature && !!opts.bypassClientSignature;
+  if (opts.bypassClientSignature && opts.generatedByRole !== 'super_admin') {
+    return { ok: false, reason: 'Only a Super Admin can approve a client signature waiver.' };
+  }
+  if (opts.bypassClientSignature && (!opts.bypassReason?.trim() || !opts.bypassAdminSignature?.startsWith('data:image/png;base64,') || opts.bypassAdminSignature.length > 2000000)) {
+    return { ok: false, reason: 'A valid Super Admin signature and waiver reason are required.' };
+  }
   if (!b.client_signature && !opts.bypassClientSignature) {
     return { ok: false, reason: 'Client signature is missing.' };
   }
@@ -220,6 +232,7 @@ export async function generateServiceCertificate(opts: GenerateOptions): Promise
     client_signature: b.client_signature || null,
     signature_bypassed: bypassed,
     signature_bypass_reason: bypassed ? (opts.bypassReason || 'Client signature waived by administrator') : null,
+    signature_bypass_admin_signature: bypassed ? opts.bypassAdminSignature : null,
     signature_bypassed_by: bypassed ? opts.generatedById : null,
     signature_bypassed_by_name: bypassed ? opts.generatedByName : null,
     signature_bypassed_at: bypassed ? new Date().toISOString() : null,
