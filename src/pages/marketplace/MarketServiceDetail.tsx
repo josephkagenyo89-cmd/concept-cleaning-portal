@@ -244,7 +244,7 @@ export default function MarketServiceDetail() {
         const { error: bookingError } = await supabase
           .from('bookings')
           .insert({
-            agent_id: customerClient.id,
+            agent_id: user.id,
             client_id: customerClient.id,
             client_name: customerClient.full_name,
             client_phone: form.phone.trim(),
