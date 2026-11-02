@@ -201,31 +201,91 @@ export default function AdminBookService() {
       return true;
     }
 
-    setClientResolutionStatus('checking');
-
-    const { data, error } = await supabase.rpc('resolve_booking_client', {
-      p_full_name: clientName.trim() || 'Unnamed Client',
-      p_phone: phone,
-      p_location: clientLocation.trim() || null,
-      p_created_by_role: currentRole,
-    } as any);
-
-    const resolved = Array.isArray(data) ? data[0] : data;
-
-    if (error || !resolved?.client_id) {
-      console.error('Client resolution failed:', error);
+    // This screen is only available through the authenticated admin gate.
+    // Resolve CRM clients with the signed-in admin session instead of calling
+    // the SECURITY DEFINER RPC from the browser.
+    if (!user || !isAdmin) {
       setClientResolutionStatus('error');
-      toast({ title: 'Client check failed', description: 'The booking was not linked to a CRM client.', variant: 'destructive' });
+      toast({ title: 'Access denied', description: 'Sign in with an administrator account to resolve CRM clients.', variant: 'destructive' });
       return false;
     }
 
-    setSelectedClient(resolved.client_id);
+    setClientResolutionStatus('checking');
+
+    const clientFields = 'id, client_code, full_name, phone, location';
+    const { data: existing, error: lookupError } = await supabase
+      .from('clients')
+      .select(clientFields)
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error('Client lookup failed:', lookupError);
+      setClientResolutionStatus('error');
+      toast({ title: 'Client check failed', description: 'The CRM client could not be checked.', variant: 'destructive' });
+      return false;
+    }
+
+    let resolved = existing;
+    let wasCreated = false;
+
+    if (!resolved) {
+      const { data: created, error: createError } = await supabase
+        .from('clients')
+        .insert({
+          full_name: clientName.trim() || 'Unnamed Client',
+          phone,
+          location: clientLocation.trim() || null,
+          created_by: user.id,
+          created_by_role: currentRole,
+        } as any)
+        .select(clientFields)
+        .single();
+
+      if (createError) {
+        // A concurrent booking may have created the same phone after our
+        // initial lookup. Re-read that CRM record rather than creating a
+        // duplicate or failing the booking unnecessarily.
+        if (createError.code === '23505') {
+          const { data: concurrent, error: retryError } = await supabase
+            .from('clients')
+            .select(clientFields)
+            .eq('phone', phone)
+            .maybeSingle();
+
+          if (retryError || !concurrent) {
+            console.error('Client resolution retry failed:', retryError || createError);
+            setClientResolutionStatus('error');
+            toast({ title: 'Client check failed', description: 'The CRM client could not be resolved.', variant: 'destructive' });
+            return false;
+          }
+
+          resolved = concurrent;
+        } else {
+          console.error('Client creation failed:', createError);
+          setClientResolutionStatus('error');
+          toast({ title: 'Client creation failed', description: createError.message || 'The CRM client could not be created.', variant: 'destructive' });
+          return false;
+        }
+      } else {
+        resolved = created;
+        wasCreated = true;
+      }
+    }
+
+    if (!resolved?.id) {
+      setClientResolutionStatus('error');
+      toast({ title: 'Client check failed', description: 'No CRM client record was returned.', variant: 'destructive' });
+      return false;
+    }
+
+    setSelectedClient(resolved.id);
     setClientName(resolved.full_name || clientName);
     setClientPhone(resolved.phone || phone);
     setClientLocation(resolved.location || clientLocation);
     setSearchQuery(resolved.client_code || resolved.phone || phone);
     setShowClientResults(false);
-    setClientResolutionStatus(resolved.was_created ? 'created' : 'linked');
+    setClientResolutionStatus(wasCreated ? 'created' : 'linked');
     return true;
   };
 
