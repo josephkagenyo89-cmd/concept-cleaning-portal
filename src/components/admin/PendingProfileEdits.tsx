@@ -24,7 +24,7 @@ interface EditRequest {
 }
 
 export default function PendingProfileEdits() {
-  const { isSuperAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const [requests, setRequests] = useState<EditRequest[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
 
@@ -77,6 +77,22 @@ export default function PendingProfileEdits() {
   useEffect(() => { load(); }, []);
 
   const handleAction = async (requestId: string, action: 'approve' | 'reject') => {
+    const request = requests.find((item) => item.id === requestId);
+    if (!user || !isAdmin || !request) {
+      toast({ title: 'Access denied', description: 'Only an authenticated administrator can review profile edits.', variant: 'destructive' });
+      return;
+    }
+
+    if (action === 'approve' && request.user_id === user.id) {
+      toast({ title: 'Approval blocked', description: 'You cannot approve your own profile edit.', variant: 'destructive' });
+      return;
+    }
+
+    if (action === 'approve' && request.requester_role === 'admin' && !isSuperAdmin) {
+      toast({ title: 'Approval blocked', description: 'Only a super administrator can approve an administrator profile edit.', variant: 'destructive' });
+      return;
+    }
+
     setProcessing(requestId);
     try {
       if (action === 'approve') {
