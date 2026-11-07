@@ -11,7 +11,21 @@ import { Upload, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface PreviewRow {
   index: number;
-  data: any;
+  data: {
+    id: string | null;
+    service_code: string | null;
+    name: string;
+    category: string;
+    category_id: string;
+    description: string;
+    short_description: string;
+    base_price: string;
+    pricing_unit: string;
+    estimated_duration: string;
+    commission_eligible: boolean;
+    is_active: boolean;
+    provided: string[];
+  };
   errors: string[];
 }
 
@@ -21,6 +35,11 @@ interface ImportServicesModalProps {
   onSuccess: () => void;
 }
 
+const normalize = (value: unknown) => String(value ?? '').trim().toLowerCase();
+const hasValue = (value: unknown) => value !== undefined && value !== null && String(value).trim() !== '';
+const parseBoolean = (value: unknown, trueWords: string[]) =>
+  trueWords.includes(String(value ?? '').trim().toLowerCase());
+
 export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportServicesModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewRow[]>([]);
@@ -29,92 +48,134 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
   const [isRevalidating, setIsRevalidating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validRows = preview.filter(r => r.errors.length === 0);
-  const invalidRows = preview.filter(r => r.errors.length > 0);
+  const validRows = preview.filter(row => row.errors.length === 0);
+  const invalidRows = preview.filter(row => row.errors.length > 0);
+  const updateRows = validRows.filter(row => Boolean(row.data.id)).length;
+  const createRows = validRows.length - updateRows;
 
   const validateRows = async (rows: PreviewRow[]): Promise<PreviewRow[]> => {
-    const { data: existingServices, error } = await supabase
-      .from('services')
-      .select('name');
-    if (error) throw new Error(error.message);
+    const [{ data: existingServices, error: servicesError }, { data: categories, error: categoriesError }] = await Promise.all([
+      supabase.from('services').select('id,name'),
+      supabase.from('service_categories' as any).select('id,name'),
+    ]);
+    if (servicesError) throw new Error('Could not check existing services: ' + servicesError.message);
+    if (categoriesError) throw new Error('Could not load service categories: ' + categoriesError.message);
 
-    const existingNames = new Set(existingServices.map(s => s.name?.toLowerCase().trim()));
+    const existingIds = new Set((existingServices || []).map((service: any) => String(service.id)));
+    const existingNames = new Set((existingServices || []).map((service: any) => normalize(service.name)));
+    const categoryList = (categories || []) as unknown as Array<{ id: string; name: string }>;
+    const categoriesById = new Map(categoryList.map(category => [category.id.toLowerCase(), category]));
+    const categoriesByName = new Map<string, Array<{ id: string; name: string }>>();
+    categoryList.forEach(category => {
+      const key = normalize(category.name);
+      categoriesByName.set(key, [...(categoriesByName.get(key) || []), category]);
+    });
+
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
 
     return rows.map(row => {
-      const data = row.data;
+      const data = { ...row.data };
       const errors: string[] = [];
+      const id = data.id?.trim() || '';
+      const nameKey = normalize(data.name);
 
-      const name = data.name?.trim();
-      if (!name) errors.push('Missing Service Name');
-      else if (existingNames.has(name.toLowerCase().trim())) errors.push('Duplicate Name (already exists)');
+      if (!data.name?.trim()) errors.push('Missing Service Name');
+      if (id) {
+        if (!existingIds.has(id)) errors.push('Service ID was not found; refusing to create a replacement');
+        if (seenIds.has(id)) errors.push('Duplicate Service ID in import file');
+        seenIds.add(id);
+      } else {
+        if (existingNames.has(nameKey)) errors.push('Duplicate Name: existing services must include their ID to update');
+        if (seenNames.has(nameKey)) errors.push('Duplicate Service Name in import file');
+        seenNames.add(nameKey);
+        if (!data.service_code?.trim()) errors.push('Missing Code for new service');
+      }
 
-      if (!data.service_code?.trim()) errors.push('Missing Code');
-      if (!data.category) errors.push('Missing Category');
+      if (!data.category?.trim()) {
+        errors.push('Missing Service Category');
+      } else if (data.category_id?.trim()) {
+        if (!categoriesById.has(data.category_id.trim().toLowerCase())) {
+          errors.push('Service Category UUID does not exist in service_categories');
+        }
+      } else {
+        const matches = categoriesByName.get(normalize(data.category)) || [];
+        if (matches.length === 1) {
+          data.category_id = matches[0].id;
+        } else if (matches.length === 0) {
+          errors.push('No exact category match found; provide service_category_id explicitly');
+        } else {
+          errors.push('Category name is ambiguous; provide service_category_id explicitly');
+        }
+      }
 
-      const price = parseFloat(data.base_price);
-      if (isNaN(price) || price < 0) errors.push('Invalid Price');
+      if (!id || hasValue(data.base_price)) {
+        const price = Number(data.base_price);
+        if (!Number.isFinite(price) || price < 0) errors.push('Invalid Price');
+      }
 
-      return { ...row, errors };
+      return { ...row, data, errors };
     });
   };
 
-  const parseFile = async (file: File) => {
+  const parseFile = async (selectedFile: File) => {
     setIsParsing(true);
     try {
-      const extension = file.name.split('.').pop()?.toLowerCase();
+      const extension = selectedFile.name.split('.').pop()?.toLowerCase();
       let rawRows: any[] = [];
 
       if (extension === 'csv') {
-        const text = await file.text();
-        const result = Papa.parse(text, {
+        const result = Papa.parse(await selectedFile.text(), {
           header: true,
           skipEmptyLines: true,
-          transformHeader: (h) => h.trim()
+          transformHeader: header => header.trim(),
         });
-        if (result.errors.length) {
-          throw new Error(`CSV parsing error: ${result.errors[0].message}`);
-        }
-        rawRows = result.data;
+        if (result.errors.length) throw new Error('CSV parsing error: ' + result.errors[0].message);
+        rawRows = result.data as any[];
       } else if (extension === 'xlsx' || extension === 'xls') {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        rawRows = XLSX.utils.sheet_to_json(firstSheet);
+        const workbook = XLSX.read(await selectedFile.arrayBuffer(), { type: 'array' });
+        rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: '' });
       } else {
-        throw new Error('Unsupported file format. Please upload a CSV or Excel file.');
+        throw new Error('Unsupported file format. Upload CSV or Excel.');
       }
 
-      if (!rawRows.length) {
-        throw new Error('File is empty or has no header row.');
-      }
+      if (!rawRows.length) throw new Error('File is empty or has no header row.');
 
-      const mapped: PreviewRow[] = rawRows.map((row, idx) => ({
-        index: idx + 1,
-        data: {
-          service_code: row['Code'] || row['service_code'] || null,
-          name: row['Service'] || row['name'] || null,
-          category: row['Category'] || row['category'] || null,
-          description: row['Description'] || row['description'] || null,
-          short_description: row['Short Description'] || row['short_description'] || null,
-          base_price: row['Price (Ksh)'] || row['base_price'] || '0',
-          pricing_unit: row['Pricing Unit'] || row['pricing_unit'] || null,
-          estimated_duration: row['Estimated Duration'] || row['estimated_duration'] || null,
-          commission_eligible: (row['Commission'] || row['commission_eligible'] || 'No')
-            .toString()
-            .toLowerCase()
-            .trim() === 'yes' ? true : false,
-          is_active: (row['Status'] || row['is_active'] || 'Active')
-            .toString()
-            .toLowerCase()
-            .trim() === 'active' ? true : false,
-        },
-        errors: [],
-      }));
+      const mapped: PreviewRow[] = rawRows.map((raw, index) => {
+        const row: Record<string, any> = {};
+        Object.entries(raw).forEach(([key, value]) => { row[key.trim().toLowerCase()] = value; });
+        const read = (...keys: string[]) => {
+          for (const key of keys) if (hasValue(row[key.toLowerCase()])) return row[key.toLowerCase()];
+          return '';
+        };
+        const provided = Object.keys(row);
+        const commissionValue = read('commission', 'commission_eligible');
+        const statusValue = read('status', 'is_active');
 
-      const validated = await validateRows(mapped);
-      setPreview(validated);
-    } catch (err: any) {
-      toast({ title: 'Failed to parse file', description: err.message, variant: 'destructive' });
+        return {
+          index: index + 1,
+          data: {
+            id: hasValue(read('id')) ? String(read('id')).trim() : null,
+            service_code: hasValue(read('code', 'service_code')) ? String(read('code', 'service_code')).trim() : null,
+            name: String(read('service', 'name') || '').trim(),
+            category: String(read('service_category', 'category') || '').trim(),
+            category_id: String(read('service_category_id', 'category_id') || '').trim(),
+            description: String(read('description') || ''),
+            short_description: String(read('short description', 'short_description') || ''),
+            base_price: String(read('price (ksh)', 'base_price') || ''),
+            pricing_unit: String(read('pricing unit', 'pricing_unit') || ''),
+            estimated_duration: String(read('estimated duration', 'estimated_duration') || ''),
+            commission_eligible: parseBoolean(commissionValue, ['yes', 'true', '1', 'y']),
+            is_active: statusValue === '' ? true : parseBoolean(statusValue, ['active', 'yes', 'true', '1', 'y']),
+            provided,
+          },
+          errors: [],
+        };
+      });
+
+      setPreview(await validateRows(mapped));
+    } catch (error: any) {
+      toast({ title: 'Failed to parse file', description: error.message, variant: 'destructive' });
       setPreview([]);
     } finally {
       setIsParsing(false);
@@ -126,84 +187,104 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
     try {
       const validated = await validateRows(preview);
       setPreview(validated);
-      toast({ title: 'Revalidation complete', description: `${validated.filter(r => r.errors.length === 0).length} valid, ${validated.filter(r => r.errors.length > 0).length} invalid.` });
-    } catch (err: any) {
-      toast({ title: 'Revalidation failed', description: err.message, variant: 'destructive' });
+      toast({
+        title: 'Revalidation complete',
+        description: validated.filter(row => !row.errors.length).length + ' valid, ' +
+          validated.filter(row => row.errors.length > 0).length + ' invalid.',
+      });
+    } catch (error: any) {
+      toast({ title: 'Revalidation failed', description: error.message, variant: 'destructive' });
     } finally {
       setIsRevalidating(false);
     }
   };
 
   const updateRowData = (index: number, field: string, value: any) => {
-    setPreview(prev => prev.map(row => {
-      if (row.index === index) {
-        return {
-          ...row,
-          data: { ...row.data, [field]: value }
-        };
-      }
-      return row;
-    }));
+    setPreview(previous => previous.map(row => row.index === index
+      ? { ...row, data: { ...row.data, [field]: value } }
+      : row));
   };
 
   const confirmImport = async () => {
-    const rowsToInsert = preview.filter(r => r.errors.length === 0).map(r => r.data);
-    if (rowsToInsert.length === 0) {
+    if (!validRows.length) {
       toast({ title: 'No valid rows to import', variant: 'destructive' });
       return;
     }
 
     setIsImporting(true);
     let created = 0;
+    let updated = 0;
     const failedRows: string[] = [];
 
     try {
-      for (const row of rowsToInsert) {
-        const payload = {
+      for (const { data: row } of validRows) {
+        // The live schema currently uses category/category_id. CSV accepts both
+        // those legacy headers and service_category/service_category_id aliases.
+        const payload: Record<string, any> = {
           name: row.name,
-          description: row.description || '',
-          base_price: parseFloat(row.base_price) || 0,
           category: row.category,
-          commission_eligible: row.commission_eligible ?? true,
-          pricing_model: 'fixed',
-          pricing_unit: 'fixed',
-          input_type: 'number',
-          service_code: row.service_code || null,
-          short_description: row.short_description || null,
-          estimated_duration: row.estimated_duration ? parseInt(row.estimated_duration) : null,
-          is_active: row.is_active ?? true,
+          category_id: row.category_id,
         };
+        const isProvided = (...keys: string[]) => keys.some(key => row.provided.includes(key));
 
-        const { error } = await (supabase.from('services').insert(payload as any) as any);
+        if (isProvided('description')) payload.description = row.description;
+        if (isProvided('short description', 'short_description')) payload.short_description = row.short_description;
+        if (isProvided('price (ksh)', 'base_price')) payload.base_price = Number(row.base_price);
+        if (isProvided('code', 'service_code')) payload.service_code = row.service_code || null;
+        if (isProvided('pricing unit', 'pricing_unit')) payload.pricing_unit = row.pricing_unit || null;
+        if (isProvided('estimated duration', 'estimated_duration')) {
+          payload.estimated_duration = row.estimated_duration ? parseInt(row.estimated_duration, 10) : null;
+        }
+        if (isProvided('commission', 'commission_eligible')) payload.commission_eligible = row.commission_eligible;
+        if (isProvided('status', 'is_active')) payload.is_active = row.is_active;
 
-        if (error) {
-          failedRows.push(`${row.name || 'Unnamed'}: ${error.message}`);
+        if (!row.id) {
+          payload.description = row.description || '';
+          payload.base_price = Number(row.base_price);
+          payload.commission_eligible = isProvided('commission', 'commission_eligible') ? row.commission_eligible : true;
+          payload.pricing_model = 'fixed';
+          payload.pricing_unit = row.pricing_unit || 'fixed';
+          payload.input_type = 'number';
+          payload.service_code = row.service_code || null;
+          payload.short_description = row.short_description || null;
+          payload.estimated_duration = row.estimated_duration ? parseInt(row.estimated_duration, 10) : null;
+          payload.is_active = isProvided('status', 'is_active') ? row.is_active : true;
+        }
+
+        const result = row.id
+          ? await supabase.from('services').update(payload as any).eq('id', row.id)
+          : await supabase.from('services').insert(payload as any);
+
+        if (result.error) {
+          failedRows.push((row.name || 'Unnamed') + ': ' + result.error.message);
+        } else if (row.id) {
+          updated++;
         } else {
           created++;
         }
       }
 
-      const skipped = preview.length - rowsToInsert.length;
+      const skipped = preview.length - validRows.length;
       toast({
         title: failedRows.length ? 'Import completed with errors' : 'Import successful',
-        description: `${created} service(s) imported. ${skipped} row(s) skipped.${
-          failedRows.length ? ` ${failedRows.length} failed.` : ''
-        }`,
+        description: created + ' created, ' + updated + ' updated, ' + skipped + ' invalid/skipped.' +
+          (failedRows.length ? ' ' + failedRows.length + ' database operation(s) failed.' : ''),
         variant: failedRows.length ? 'destructive' : 'default',
       });
+      if (failedRows.length) console.error('Service import failures:', failedRows);
 
-      if (failedRows.length) {
-        console.error('Rows that failed to import:', failedRows);
+      if (!failedRows.length) {
+        setPreview([]);
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        await handleRevalidate();
       }
-
-      setPreview([]);
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      onOpenChange(false);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Import error:', err);
-      toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
+    } catch (error: any) {
+      console.error('Service import error:', error);
+      toast({ title: 'Import failed', description: error.message, variant: 'destructive' });
     } finally {
       setIsImporting(false);
     }
@@ -216,26 +297,19 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
     onOpenChange(false);
   };
 
-  const EditableCell = ({ row, field, type = 'text' }: { row: PreviewRow; field: string; type?: 'text' | 'number' | 'checkbox' }) => {
-    const value = row.data[field];
+  const EditableCell = ({ row, field, type = 'text' }: {
+    row: PreviewRow;
+    field: string;
+    type?: 'text' | 'number' | 'checkbox';
+  }) => {
+    const value = row.data[field as keyof PreviewRow['data']];
     if (type === 'checkbox') {
-      return (
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(e) => updateRowData(row.index, field, e.target.checked)}
-          className="h-4 w-4"
-        />
-      );
+      return <input type="checkbox" checked={Boolean(value)}
+        onChange={event => updateRowData(row.index, field, event.target.checked)} className="h-4 w-4" />;
     }
-    return (
-      <Input
-        type={type}
-        value={value || ''}
-        onChange={(e) => updateRowData(row.index, field, type === 'number' ? parseFloat(e.target.value) : e.target.value)}
-        className="w-full min-w-[80px] text-sm"
-      />
-    );
+    return <Input type={type} value={String(value ?? '')}
+      onChange={event => updateRowData(row.index, field, event.target.value)}
+      className="w-full min-w-[100px] text-sm" />;
   };
 
   return (
@@ -244,29 +318,21 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Import Services
+            Import / Update Services
           </DialogTitle>
         </DialogHeader>
 
         <div className="border-2 border-dashed rounded-lg p-6 text-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) {
-                setFile(f);
-                parseFile(f);
+          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls"
+            onChange={event => {
+              const selectedFile = event.target.files?.[0];
+              if (selectedFile) {
+                setFile(selectedFile);
+                void parseFile(selectedFile);
               }
-            }}
-            className="hidden"
-            id="import-file-input"
-          />
-          <label
-            htmlFor="import-file-input"
-            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100"
-          >
+            }} className="hidden" id="import-file-input" />
+          <label htmlFor="import-file-input"
+            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100">
             <Upload className="h-4 w-4" />
             {file ? file.name : 'Choose CSV or Excel file'}
           </label>
@@ -276,14 +342,13 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
               <span className="text-green-600">{validRows.length} valid</span>
               {' · '}
               <span className="text-red-600">{invalidRows.length} invalid</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRevalidate}
-                disabled={isRevalidating}
-                className="ml-4"
-              >
-                <RefreshCw className={`h-4 w-4 mr-1 ${isRevalidating ? 'animate-spin' : ''}`} />
+              {' · '}
+              <span>{updateRows} updates</span>
+              {' · '}
+              <span>{createRows} new</span>
+              <Button variant="ghost" size="sm" onClick={handleRevalidate}
+                disabled={isRevalidating || isImporting} className="ml-4">
+                <RefreshCw className={'h-4 w-4 mr-1 ' + (isRevalidating ? 'animate-spin' : '')} />
                 Revalidate
               </Button>
             </div>
@@ -295,33 +360,25 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
             <div>
               <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Valid Rows ({validRows.length}) – will be imported
+                Valid rows — {updateRows} updates, {createRows} new services
               </h4>
-              <div className="max-h-60 overflow-y-auto border rounded-md">
+              <div className="max-h-60 overflow-auto border rounded-md">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Commission</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow>
+                    <TableHead>ID</TableHead><TableHead>Code</TableHead><TableHead>Service</TableHead>
+                    <TableHead>Category</TableHead><TableHead>Category UUID</TableHead>
+                    <TableHead>Price</TableHead><TableHead>Status</TableHead>
+                  </TableRow></TableHeader>
                   <TableBody>
-                    {validRows.map((r) => (
-                      <TableRow key={r.index}>
-                        <TableCell>{r.index}</TableCell>
-                        <TableCell>{r.data.service_code}</TableCell>
-                        <TableCell>{r.data.name}</TableCell>
-                        <TableCell>{r.data.category}</TableCell>
-                        <TableCell>{r.data.base_price}</TableCell>
-                        <TableCell>{r.data.commission_eligible ? 'Yes' : 'No'}</TableCell>
-                        <TableCell>{r.data.is_active ? 'Active' : 'Inactive'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {validRows.map(row => <TableRow key={row.index}>
+                      <TableCell className="font-mono text-xs">{row.data.id || 'NEW'}</TableCell>
+                      <TableCell>{row.data.service_code || '—'}</TableCell>
+                      <TableCell>{row.data.name}</TableCell>
+                      <TableCell>{row.data.category}</TableCell>
+                      <TableCell className="font-mono text-xs">{row.data.category_id}</TableCell>
+                      <TableCell>{row.data.base_price || '—'}</TableCell>
+                      <TableCell>{row.data.is_active ? 'Active' : 'Inactive'}</TableCell>
+                    </TableRow>)}
                   </TableBody>
                 </Table>
               </div>
@@ -331,43 +388,35 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
               <div>
                 <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
-                  Invalid Rows ({invalidRows.length}) – edit, then revalidate
+                  Invalid rows ({invalidRows.length}) — correct fields, then revalidate
                 </h4>
-                <div className="max-h-60 overflow-y-auto border rounded-md">
+                <div className="max-h-60 overflow-auto border rounded-md">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Commission</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Errors</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow>
+                      <TableHead>ID</TableHead><TableHead>Code</TableHead><TableHead>Service</TableHead>
+                      <TableHead>Category</TableHead><TableHead>Category UUID</TableHead>
+                      <TableHead>Price</TableHead><TableHead>Errors</TableHead>
+                    </TableRow></TableHeader>
                     <TableBody>
-                      {invalidRows.map((r) => (
-                        <TableRow key={r.index}>
-                          <TableCell>{r.index}</TableCell>
-                          <TableCell><EditableCell row={r} field="service_code" /></TableCell>
-                          <TableCell><EditableCell row={r} field="name" /></TableCell>
-                          <TableCell><EditableCell row={r} field="category" /></TableCell>
-                          <TableCell><EditableCell row={r} field="base_price" type="number" /></TableCell>
-                          <TableCell><EditableCell row={r} field="commission_eligible" type="checkbox" /></TableCell>
-                          <TableCell><EditableCell row={r} field="is_active" type="checkbox" /></TableCell>
-                          <TableCell>
-                            <ul className="list-disc list-inside text-xs text-red-500">
-                              {r.errors.map((e, i) => <li key={i}>{e}</li>)}
-                            </ul>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {invalidRows.map(row => <TableRow key={row.index}>
+                        <TableCell className="font-mono text-xs">{row.data.id || 'NEW'}</TableCell>
+                        <TableCell><EditableCell row={row} field="service_code" /></TableCell>
+                        <TableCell><EditableCell row={row} field="name" /></TableCell>
+                        <TableCell><EditableCell row={row} field="category" /></TableCell>
+                        <TableCell><EditableCell row={row} field="category_id" /></TableCell>
+                        <TableCell><EditableCell row={row} field="base_price" type="number" /></TableCell>
+                        <TableCell>
+                          <ul className="list-disc list-inside text-xs text-red-500">
+                            {row.errors.map((error, index) => <li key={index}>{error}</li>)}
+                          </ul>
+                        </TableCell>
+                      </TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Edit fields, then click "Revalidate".</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Existing services must include their ID. Blank category UUIDs are resolved only by an exact category-name match.
+                </p>
               </div>
             )}
           </div>
@@ -375,12 +424,10 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          <Button
-            onClick={confirmImport}
+          <Button onClick={confirmImport}
             disabled={validRows.length === 0 || isImporting || isParsing || isRevalidating}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isImporting ? 'Importing...' : `Import ${validRows.length} service(s)`}
+            className="bg-green-600 hover:bg-green-700">
+            {isImporting ? 'Saving...' : 'Apply ' + updateRows + ' update(s) and ' + createRows + ' new service(s)'}
           </Button>
         </DialogFooter>
       </DialogContent>
