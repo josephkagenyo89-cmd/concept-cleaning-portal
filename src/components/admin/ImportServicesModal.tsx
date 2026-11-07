@@ -167,7 +167,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
             estimated_duration: String(read('estimated duration', 'estimated_duration') || ''),
             commission_eligible: parseBoolean(commissionValue, ['yes', 'true', '1', 'y']),
             is_active: statusValue === '' ? true : parseBoolean(statusValue, ['active', 'yes', 'true', '1', 'y']),
-            provided,
+            provided: Object.keys(row).filter(key => hasValue(row[key])),
           },
           errors: [],
         };
