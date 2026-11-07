@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ServiceRow {
   id?: string;
+  category_id?: string | null;
   service_code?: string | null;
   name: string;
   category: string;
@@ -16,9 +17,12 @@ export interface ServiceRow {
   is_active?: boolean;
 }
 
+// Export names use the clearer service_category terminology. The importer also
+// accepts the legacy category/category_id headers for backwards compatibility.
 const CSV_HEADERS = [
-  'service_code', 'name', 'category', 'description', 'short_description', 'base_price',
-  'pricing_unit', 'estimated_duration', 'commission_eligible', 'is_active',
+  'id', 'service_code', 'name', 'service_category', 'service_category_id',
+  'description', 'short_description', 'base_price', 'pricing_unit',
+  'estimated_duration', 'commission_eligible', 'is_active',
 ] as const;
 
 function csvEscape(v: unknown): string {
@@ -29,7 +33,21 @@ function csvEscape(v: unknown): string {
 export function servicesToCsv(services: ServiceRow[]): string {
   const lines = [CSV_HEADERS.join(',')];
   for (const s of services) {
-    lines.push(CSV_HEADERS.map(h => csvEscape((s as any)[h])).join(','));
+    const values = [
+      s.id,
+      s.service_code,
+      s.name,
+      s.category,
+      s.category_id,
+      s.description,
+      s.short_description,
+      s.base_price,
+      s.pricing_unit,
+      s.estimated_duration,
+      s.commission_eligible,
+      s.is_active,
+    ];
+    lines.push(values.map(csvEscape).join(','));
   }
   return lines.join('\n');
 }
