@@ -215,6 +215,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
     let created = 0;
     let updated = 0;
     const failedRows: string[] = [];
+    const failedIndexes = new Set<number>();
 
     try {
       for (const { data: row } of validRows) {
@@ -257,6 +258,8 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
         if (result.error) {
           failedRows.push((row.name || 'Unnamed') + ': ' + result.error.message);
+          const failedPreviewRow = validRows.find(item => item.data.id === row.id && item.data.name === row.name);
+          if (failedPreviewRow) failedIndexes.add(failedPreviewRow.index);
         } else if (row.id) {
           updated++;
         } else {
@@ -273,14 +276,25 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
       });
       if (failedRows.length) console.error('Service import failures:', failedRows);
 
-      if (!failedRows.length) {
+      const remainingRows = [
+        ...invalidRows,
+        ...validRows.filter(row => failedIndexes.has(row.index)),
+      ];
+      if (!remainingRows.length) {
         setPreview([]);
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         onOpenChange(false);
         onSuccess();
       } else {
-        await handleRevalidate();
+        // Remove successful rows from the pending preview so a retry cannot
+        // accidentally create or update them a second time.
+        setPreview(remainingRows);
+        try {
+          setPreview(await validateRows(remainingRows));
+        } catch {
+          // Keep the remaining rows visible if revalidation is temporarily unavailable.
+        }
       }
     } catch (error: any) {
       console.error('Service import error:', error);
