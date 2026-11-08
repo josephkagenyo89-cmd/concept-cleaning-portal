@@ -2343,6 +2343,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          image_key: string
           name: string
           sort_order: number
           updated_at: string
@@ -2352,6 +2353,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          image_key?: string
           name: string
           sort_order?: number
           updated_at?: string
@@ -2361,6 +2363,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          image_key?: string
           name?: string
           sort_order?: number
           updated_at?: string
@@ -2485,6 +2488,7 @@ export type Database = {
         Row: {
           base_price: number
           category: string
+          category_id: string | null
           commission_eligible: boolean
           created_at: string
           description: string | null
@@ -2508,6 +2512,8 @@ export type Database = {
         Insert: {
           base_price?: number
           category?: string
+          category_id?: string | null
+          category_id?: string | null
           commission_eligible?: boolean
           created_at?: string
           description?: string | null
@@ -2551,7 +2557,15 @@ export type Database = {
           short_description?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       signature_tokens: {
         Row: {

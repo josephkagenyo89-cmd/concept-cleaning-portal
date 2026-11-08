@@ -1,0 +1,21 @@
+.env*
+.git
+.vercel
+node_modules
+dist
+dist-ssr
+*.log
+*.tar.gz
+*.before-*
+**/*.before-*
+category-audit.txt
+category-references.txt
+"tatus --short --branch"
+supabase/reviews/
+tatus --short --branch
+update-*.sh
+vercel.json.bak
+bun.lock
+bun.lockb
+
+/supabase/

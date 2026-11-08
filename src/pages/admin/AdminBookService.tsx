@@ -152,7 +152,17 @@ export default function AdminBookService() {
   };
 
   const loadServices = async () => {
-    const { data } = await supabase.from('services').select('*').order('name');
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Could not load active services:', error);
+      return;
+    }
+
     if (data) {
       setServices(data);
       const cats = Array.from(new Set(data.map(s => s.category).filter(Boolean)));

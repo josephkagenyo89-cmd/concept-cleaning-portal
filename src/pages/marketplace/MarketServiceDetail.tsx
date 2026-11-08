@@ -33,6 +33,30 @@ import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount, globalDiscountReason } from '@/lib/globalDiscount';
+import { trackServiceView } from '@/lib/marketplaceBehavior';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { waLink } from '@/components/public/PublicShell';
+
+const normalizeGuestPhone = (value: string) => {
+  const phone = value.trim().replace(/[()\s-]/g, '');
+  if (/^0[17]\d{8}$/.test(phone)) return `+254${phone.slice(1)}`;
+  if (/^254[17]\d{8}$/.test(phone)) return `+${phone}`;
+  return /^\+[1-9]\d{7,14}$/.test(phone) ? phone : '';
+};
+
+const todayNairobi = (): string => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)?.value || '';
+
+  return `${part('year')}-${part('month')}-${part('day')}`;
+};
 
 export default function MarketServiceDetail() {
   const { id } = useParams();
@@ -41,7 +65,15 @@ export default function MarketServiceDetail() {
 
   const quoteMode = params.get('mode') === 'quote';
 
-  const { user, isCustomer, customerClient, refreshProfile } = useAuth();
+  const {
+    user,
+    isCustomer,
+    customerClient,
+    refreshProfile,
+    loading: authLoading,
+  } = useAuth();
+  const { general } = usePublicSettings();
+  const businessPhone = general.phone || '+254796563741';
   const globalDiscount = useGlobalDiscount();
 
   const [service, setService] = useState<MarketService | null>(null);
@@ -50,11 +82,12 @@ export default function MarketServiceDetail() {
   // instant booking / WhatsApp confirmation removed
 
   const [form, setForm] = useState({
-    service_date: '',
-    service_time: '',
-    location: '',
+    customer_name: '',
+    service_date: params.get('date') || '',
+    service_time: params.get('time') || '',
+    location: params.get('location') || '',
     phone: '',
-    notes: '',
+    notes: params.get('size') ? `Size: ${params.get('size')} sq m` : '',
   });
 
   /*
@@ -106,6 +139,7 @@ export default function MarketServiceDetail() {
 
     loadService();
   }, [id]);
+  useEffect(() => { if (service) trackServiceView(service.category); }, [service]);
 
   /*
    * Pre-fill customer information when available.
@@ -125,9 +159,7 @@ export default function MarketServiceDetail() {
    * the SEO-friendly service URL and quotation mode.
    */
   const requireLogin = () => {
-    const currentPath = `/service/${id}${
-      quoteMode ? '?mode=quote' : ''
-    }`;
+    const currentPath = `/service/${id}${window.location.search}`;
 
     navigate(
       `/customer-auth?next=${encodeURIComponent(currentPath)}`
@@ -145,7 +177,134 @@ export default function MarketServiceDetail() {
   const submit = async (mode: 'booking' | 'quotation') => {
     if (!service) return;
 
-    if (!user || !isCustomer || !customerClient) {
+    if (authLoading) {
+      toast({
+        title: 'Please wait',
+        description: 'We are checking your account. Try again shortly.',
+      });
+      return;
+    }
+
+    // Guest requests use the secure endpoint, not the customer CRM workflow.
+    if (!user) {
+      const guestPhone = normalizeGuestPhone(form.phone);
+      const requestedSize = Number(params.get('size'));
+      const isPerSqm = service.base_price <= 0 && service.price_per_sqm > 0;
+
+      if (!form.customer_name.trim()) {
+        toast({ title: 'Enter your name', variant: 'destructive' });
+        return;
+      }
+
+      if (!guestPhone) {
+        toast({
+          title: 'Enter a valid phone number',
+          description: 'Use a Kenyan number such as 0712345678 or +254712345678.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!form.location.trim()) {
+        toast({ title: 'Enter your location', variant: 'destructive' });
+        return;
+      }
+
+      if (!form.service_date || !form.service_time.trim()) {
+        toast({
+          title: 'Select your preferred date and time',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (form.service_date < todayNairobi()) {
+        toast({
+          title: 'Choose a valid service date',
+          description: 'The preferred date cannot be in the past.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (isPerSqm && (!Number.isFinite(requestedSize) || requestedSize <= 0)) {
+        toast({
+          title: 'Enter the service area size',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSaving(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          'submit-guest-service-request',
+          {
+            body: {
+              request_type: mode,
+              service_id: service.id,
+              customer_name: form.customer_name.trim(),
+              customer_phone: guestPhone,
+              customer_notes: form.notes.trim() || null,
+              location: form.location.trim(),
+              preferred_date: form.service_date,
+              preferred_time: form.service_time.trim(),
+              size_sqm:
+                Number.isFinite(requestedSize) && requestedSize > 0
+                  ? requestedSize
+                  : null,
+            },
+          }
+        );
+
+        if (error) throw error;
+
+        if (!data?.success || !data?.request_reference) {
+          throw new Error(
+            data?.error || 'We could not save your request. Please try again.'
+          );
+        }
+
+        const requestLabel =
+          mode === 'booking' ? 'booking request' : 'quotation request';
+        const discountedPrice = Math.max(0, Number(data.estimated_amount) || 0);
+        const discountAmount = Math.max(0, Number(data.discount_amount) || 0);
+        const originalPrice = discountedPrice + discountAmount;
+
+        const message = [
+          'Hello Concept Cleaning Services,',
+          '',
+          `My name is ${form.customer_name.trim()}, and I’ve submitted a ${requestLabel} through your website.`,
+          '',
+          '*REQUEST SUMMARY*',
+          `• Service: ${data.service_name || service.name}`,
+          `• Location: ${form.location.trim()}`,
+          `• Original Price: ${formatKes(originalPrice)}`,
+          `• Discount: ${formatKes(discountAmount)}`,
+          `• Discounted Price: ${formatKes(discountedPrice)}`,
+          `• Request Reference: ${data.request_reference}`,
+          '',
+          'Kindly assist me with the confirmation process and advise me on the next steps.',
+          '',
+          'Thank you.',
+        ].join('\n');
+
+        window.location.assign(waLink(businessPhone, message));
+      } catch (error: any) {
+        toast({
+          title: 'Request not submitted',
+          description: error?.message || 'Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setSaving(false);
+      }
+
+      return;
+    }
+
+    if (!isCustomer || !customerClient) {
       return requireLogin();
     }
 
@@ -175,12 +334,23 @@ export default function MarketServiceDetail() {
 
     setSaving(true);
 
-    const pricing = applyGlobalDiscount(
-      startingPrice(service),
-      globalDiscount
-    );
+    const requestedSize = Number(params.get('size'));
+    const isPerSqm = service.base_price <= 0 && service.price_per_sqm > 0;
+    const originalPrice =
+      isPerSqm && Number.isFinite(requestedSize) && requestedSize > 0
+        ? service.price_per_sqm * requestedSize
+        : startingPrice(service);
+    const pricing = applyGlobalDiscount(originalPrice, globalDiscount);
 
     const price = pricing.final;
+
+
+    const requestNotes = [
+      form.notes.trim(),
+      form.service_time.trim()
+        ? `Preferred time: ${form.service_time.trim()}`
+        : '',
+    ].filter(Boolean).join('\n') || null;
 
     const lineItems = [
       {
@@ -191,7 +361,7 @@ export default function MarketServiceDetail() {
         discount_percent: pricing.percentage,
         discount_amount: pricing.discountAmount,
         total: price,
-        notes: form.notes || null,
+        notes: requestNotes,
       },
     ];
 
@@ -225,7 +395,7 @@ export default function MarketServiceDetail() {
         status: 'new',
         priority: 'normal',
         estimated_value: Math.max(0, price || 0),
-        notes: form.notes || null,
+        notes: requestNotes,
         created_by: user.id,
       };
 
@@ -251,6 +421,10 @@ export default function MarketServiceDetail() {
             service_id: service.id,
             service_date: form.service_date,
             location: form.location.trim(),
+            size_sqm:
+              Number.isFinite(requestedSize) && requestedSize > 0
+                ? requestedSize
+                : null,
             price,
             status: 'pending',
             created_by_name: customerClient.full_name,
@@ -391,10 +565,14 @@ export default function MarketServiceDetail() {
     );
   }
 
-  const pricing = applyGlobalDiscount(
-    startingPrice(service),
-    globalDiscount
-  );
+  const displaySize = Number(params.get('size'));
+  const displayPerSqm =
+    service.base_price <= 0 && service.price_per_sqm > 0;
+  const displayOriginalPrice =
+    displayPerSqm && Number.isFinite(displaySize) && displaySize > 0
+      ? service.price_per_sqm * displaySize
+      : startingPrice(service);
+  const pricing = applyGlobalDiscount(displayOriginalPrice, globalDiscount);
 
   const price = pricing.final;
 
@@ -530,10 +708,27 @@ export default function MarketServiceDetail() {
             </CardHeader>
 
             <CardContent className="space-y-3">
+              {!user && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="customer_name">Your name</Label>
+                  <Input
+                    id="customer_name"
+                    value={form.customer_name}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        customer_name: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="service_date">
                   Preferred date{' '}
-                  {quoteMode && (
+                  {user && isCustomer && quoteMode && (
                     <span className="text-[#5A5752]">
                       (optional)
                     </span>
@@ -543,6 +738,7 @@ export default function MarketServiceDetail() {
                 <Input
                   id="service_date"
                   type="date"
+                  min={todayNairobi()}
                   value={form.service_date}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -628,12 +824,16 @@ export default function MarketServiceDetail() {
                 />
               </div>
 
-              {!isCustomer && (
+              {!user ? (
                 <p className="rounded-lg bg-[#F6F3EC] p-2 text-xs text-foreground">
-                  Sign in or create a customer account to
-                  complete your request.
+                  No account needed. Send your request and our team
+                  will contact you to confirm the details.
                 </p>
-              )}
+              ) : !isCustomer ? (
+                <p className="rounded-lg bg-[#F6F3EC] p-2 text-xs text-foreground">
+                  Please use a customer account to request this service.
+                </p>
+              ) : null}
 
               <div className="rounded-lg border border-[#E4DFD2] bg-[#F6F3EC] p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
@@ -665,7 +865,9 @@ export default function MarketServiceDetail() {
                     ? 'Submitting…'
                     : quoteMode
                       ? 'Request Quotation'
-                      : 'Book Now'}
+                      : !user
+                        ? 'Send booking request'
+                        : 'Book Now'}
                 </Button>
 
                 <Button
@@ -678,7 +880,7 @@ export default function MarketServiceDetail() {
                   }
                 >
                   {quoteMode
-                    ? 'Book instead'
+                    ? !user ? 'Send booking request' : 'Book instead'
                     : 'Get quotation'}
                 </Button>
               </div>

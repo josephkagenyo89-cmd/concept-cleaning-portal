@@ -3,10 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard, BookOpen, Users, Wallet, CreditCard,
+  LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Briefcase, Building2, IdCard, Newspaper,
+  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -17,7 +17,9 @@ import { requestBrowserNotificationPermission } from '@/lib/customerNotification
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
+  { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
   { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
+  { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
   { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },

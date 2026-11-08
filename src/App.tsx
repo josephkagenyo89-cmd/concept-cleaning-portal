@@ -29,6 +29,8 @@ const AgentWallet = lazy(() => import("@/pages/agent/AgentWallet"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
 const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
+const AdminApprovalCentre = lazy(() => import("@/pages/admin/AdminApprovalCentre"));
+const AdminGuestRequests = lazy(() => import("@/pages/admin/AdminGuestRequests"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
 const AdminBookingDetails = lazy(() => import("@/pages/admin/AdminBookingDetails"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
@@ -138,6 +140,7 @@ function AdminGate() {
     <Routes>
       <Route path="/" element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
+        <Route path="approval-centre" element={<AdminApprovalCentre />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="bookings/:id" element={<AdminBookingDetails />} />
         <Route path="discount-approvals" element={<AdminDiscountApprovals />} />
@@ -153,6 +156,7 @@ function AdminGate() {
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="leads/:id" element={<AdminLeadProfile />} />
         <Route path="leads" element={<AdminLeads />} />
+        <Route path="guest-requests" element={<AdminGuestRequests />} />
         <Route path="clients" element={<AdminClients />} />
         <Route path="clients/:id" element={<AdminClientProfile />} />
         <Route path="notices" element={<AdminNotices />} />

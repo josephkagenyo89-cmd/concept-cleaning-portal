@@ -23,11 +23,13 @@ interface PublicShellProps {
   children: ReactNode;
   /** Optional element shown in the header, next to the company name. */
   headerExtra?: ReactNode;
+  hideHeader?: boolean;
+  hideFooter?: boolean;
   /** Set true when a page supplies its own mobile bottom bar. Default keeps the shared bar. */
   hideMobileBar?: boolean;
 }
 
-export default function PublicShell({ children, headerExtra, hideMobileBar = false }: PublicShellProps) {
+export default function PublicShell({ children, headerExtra, hideHeader = false, hideFooter = false, hideMobileBar = false }: PublicShellProps) {
   const { general } = usePublicSettings();
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -46,7 +48,7 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
 
   return (
     <div className={cn('min-h-screen bg-brand-paper text-brand-ink', hideMobileBar ? '' : 'pb-16 md:pb-0')}>
-      <header className="sticky top-0 z-40 border-b border-brand-sand bg-brand-paper/95 text-brand-ink backdrop-blur">
+      {!hideHeader && <header className="sticky top-0 z-40 border-b border-brand-sand bg-brand-paper/95 text-brand-ink backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/" className="flex items-center gap-3 min-w-0" aria-label={company}>
             {general.logo_url ? (
@@ -84,11 +86,11 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
             </div>
           </nav>
         )}
-      </header>
+      </header>}
 
       <main>{children}</main>
 
-      <footer className="mt-16 bg-brand-forest text-brand-cream">
+      {!hideFooter && <footer className="mt-16 bg-brand-forest text-brand-cream">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4 md:px-6">
           <div className="md:col-span-2">
             <p className="text-lg font-bold">{company}</p>
@@ -114,7 +116,7 @@ export default function PublicShell({ children, headerExtra, hideMobileBar = fal
           </div>
         </div>
         <p className="border-t border-background/10 py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} {company}. All rights reserved.</p>
-      </footer>
+      </footer>}
 
       {!hideMobileBar && (
         <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-brand-sand bg-brand-paper text-brand-forest md:hidden">
