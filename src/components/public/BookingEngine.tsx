@@ -43,6 +43,7 @@ import {
 } from '@/lib/marketplace';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
+import { rememberGuestWhatsAppRequest } from '@/lib/guestWhatsAppReturn';
 
 /* The catalogue (~190 rows) is fetched on first focus, not on page load, to keep the landing page light. */
 let cache: MarketService[] | null = null;
@@ -309,6 +310,11 @@ export default function BookingEngine({ phone }: { phone: string }) {
       ].join('\\n');
 
       // Redirect only after the server confirms that the request has been saved.
+      rememberGuestWhatsAppRequest({
+        requestReference: data.request_reference,
+        serviceName: data.service_name || selected.name,
+        requestType: mode,
+      });
       window.location.assign(waLink(phone, message));
     } catch (error: any) {
       setSubmitError(

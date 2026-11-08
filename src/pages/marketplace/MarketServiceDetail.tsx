@@ -36,6 +36,7 @@ import { applyGlobalDiscount, globalDiscountReason } from '@/lib/globalDiscount'
 import { trackServiceView } from '@/lib/marketplaceBehavior';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { waLink } from '@/components/public/PublicShell';
+import { rememberGuestWhatsAppRequest } from '@/lib/guestWhatsAppReturn';
 
 const normalizeGuestPhone = (value: string) => {
   const phone = value.trim().replace(/[()\s-]/g, '');
@@ -288,6 +289,11 @@ export default function MarketServiceDetail() {
           'Please confirm receipt and advise on the next steps.',
         ].join('\n');
 
+        rememberGuestWhatsAppRequest({
+          requestReference: data.request_reference,
+          serviceName: data.service_name || service.name,
+          requestType: mode,
+        });
         window.location.assign(waLink(businessPhone, message));
       } catch (error: any) {
         toast({

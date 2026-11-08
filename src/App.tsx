@@ -18,6 +18,7 @@ import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
 import CustomerProfileRequiredDialog from "@/components/marketplace/CustomerProfileRequiredDialog";
+import GuestWhatsAppReturnDialog from "@/components/marketplace/GuestWhatsAppReturnDialog";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollProgress from "@/components/ScrollProgress";
 import CookieBanner from "@/components/CookieBanner";
@@ -385,6 +386,7 @@ const App = () => (
         <AuthProvider>
           <ErpPwaManager />
           <AppRoutes />
+          <GuestWhatsAppReturnDialog />
           <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
