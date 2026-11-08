@@ -39,6 +39,7 @@ const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
 const AdminPayouts = lazy(() => import("@/pages/admin/AdminPayouts"));
 const AdminServices = lazy(() => import("@/pages/admin/AdminServices"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
+const SystemMonitoring = lazy(() => import("@/pages/admin/SystemMonitoring"));
 const AdminNotices = lazy(() => import("@/pages/admin/AdminNotices"));
 const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
 const ErpDashboard = lazy(() => import("@/pages/admin/ErpDashboard"));
@@ -155,6 +156,7 @@ function AdminGate() {
         <Route path="payouts" element={<AdminPayouts />} />
         <Route path="services" element={<AdminServices />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="system-monitoring" element={<SuperAdminGate />} />
         <Route path="leads/:id" element={<AdminLeadProfile />} />
         <Route path="leads" element={<AdminLeads />} />
         <Route path="guest-requests" element={<AdminGuestRequests />} />
@@ -185,6 +187,22 @@ function AdminGate() {
     </Routes>
     </Suspense>
   );
+}
+
+function SuperAdminGate() {
+  const { loading, isSuperAdmin } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin) return <Navigate to="/admin" replace />;
+
+  return <SystemMonitoring />;
 }
 
 function AgentGate() {

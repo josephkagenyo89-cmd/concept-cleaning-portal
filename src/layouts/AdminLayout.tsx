@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper,
+  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -56,7 +56,7 @@ const erpNavItems = [
 ];
 
 export default function AdminLayout() {
-  const { signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { blockingNotices, refresh } = useBlockingNotices();
 
@@ -128,6 +128,22 @@ export default function AdminLayout() {
               <span className="truncate">{label}</span>
             </NavLink>
           ))}
+
+          {isSuperAdmin && (
+            <NavLink
+              to="/admin/system-monitoring"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
+              }
+            >
+              <Activity className="h-4 w-4 shrink-0" />
+              <span className="truncate">System Monitoring</span>
+            </NavLink>
+          )}
 
           <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Human Resources</p>
           {[hrNavItems, erpNavItems].flatMap((group, gi) => [
