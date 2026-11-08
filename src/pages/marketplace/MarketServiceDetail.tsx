@@ -266,28 +266,26 @@ export default function MarketServiceDetail() {
           );
         }
 
-        const requestLabel =
-          mode === 'booking' ? 'booking request' : 'quotation request';
+        const requestLabel = mode === 'booking' ? 'booking request' : 'quotation request';
         const discountedPrice = Math.max(0, Number(data.estimated_amount) || 0);
         const discountAmount = Math.max(0, Number(data.discount_amount) || 0);
-        const originalPrice = discountedPrice + discountAmount;
 
         const message = [
           'Hello Concept Cleaning Services,',
           '',
-          `My name is ${form.customer_name.trim()}, and I’ve submitted a ${requestLabel} through your website.`,
+          `I'd like to submit a ${requestLabel} through your website.`,
           '',
-          '*REQUEST SUMMARY*',
-          `• Service: ${data.service_name || service.name}`,
-          `• Location: ${form.location.trim()}`,
-          `• Original Price: ${formatKes(originalPrice)}`,
-          `• Discount: ${formatKes(discountAmount)}`,
-          `• Discounted Price: ${formatKes(discountedPrice)}`,
-          `• Request Reference: ${data.request_reference}`,
+          `Name: ${form.customer_name.trim()}`,
+          `Phone: ${guestPhone}`,
+          `Service: ${data.service_name || service.name}`,
+          `Location: ${form.location.trim()}`,
+          `Preferred date: ${form.service_date}`,
+          `Preferred time: ${form.service_time.trim()}`,
+          `Estimated price: ${discountedPrice > 0 ? formatKes(discountedPrice) : 'To be confirmed'}`,
+          ...(discountAmount > 0 ? [`You save: ${formatKes(discountAmount)}`] : []),
+          `Reference: ${data.request_reference}`,
           '',
-          'Kindly assist me with the confirmation process and advise me on the next steps.',
-          '',
-          'Thank you.',
+          'Please confirm receipt and advise on the next steps.',
         ].join('\n');
 
         window.location.assign(waLink(businessPhone, message));
