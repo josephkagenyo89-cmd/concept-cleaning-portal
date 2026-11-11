@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Cookie } from 'lucide-react';
 
-const CONSENT_KEY = 'ccs_cookie_consent_v2';
+const CONSENT_KEY = 'ccs_cookie_consent_v3';
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
@@ -27,7 +27,7 @@ export default function CookieBanner() {
         <div className="flex items-start gap-3">
           <Cookie className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
-            We use essential cookies to operate this site. With your permission, Meta Pixel may use browsing activity to measure our advertising performance. Choose Accept all to allow optional tracking or Reject optional cookies to keep it disabled. Read more in our{' '}
+            We use essential cookies to operate this site. With your permission, Meta Pixel and TikTok Pixel may use browsing activity to measure our advertising performance. Choose Accept all to allow optional tracking or Reject optional cookies to keep it disabled. Read more in our{' '}
             <Link to="/privacy-policy" className="font-medium text-primary hover:underline">Privacy Policy</Link>.
           </p>
         </div>

@@ -105,13 +105,23 @@ function Highlight({ text, q }: { text: string; q: string }) {
   return <>{parts.map((p, i) => (i % 2 ? <mark key={i} className="bg-transparent font-extrabold text-[#0F766E]">{p}</mark> : p))}</>;
 }
 
-/* Meta Pixel events — only after cookie consent (same guard as the booking flow). */
+/* Advertising pixel events — only after optional tracking consent. */
 function trackPixel(event: string, params?: Record<string, unknown>) {
   try {
-    if (localStorage.getItem('ccs_cookie_consent_v2') !== 'accepted') return;
-    const fbq = (window as any).fbq;
-    if (typeof fbq === 'function') fbq('track', event, params);
-  } catch { /* tracking must never break booking */ }
+    if (localStorage.getItem('ccs_cookie_consent_v3') !== 'accepted') return;
+
+    const pixelWindow = window as any;
+
+    if (typeof pixelWindow.fbq === 'function') {
+      pixelWindow.fbq('track', event, params);
+    }
+
+    if (typeof pixelWindow.ttq?.track === 'function') {
+      pixelWindow.ttq.track(event, params);
+    }
+  } catch {
+    /* Tracking must never interrupt the booking experience. */
+  }
 }
 
 const isoDate = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);

@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
           under their own privacy terms when their services are used.
         </p>
 
-        <h2>7. Cookies, Local Storage, and Meta Pixel</h2>
+        <h2>7. Cookies, Local Storage, and Advertising Pixels</h2>
         <p>
           Our website may use cookies, local storage, authentication technologies, and similar
           technical mechanisms to maintain sessions, remember preferences, support security,
@@ -71,21 +71,22 @@ export default function PrivacyPolicy() {
           optional tracking.
         </p>
         <p>
-          If you select “Accept all” in our cookie notice, we enable Meta Pixel, an advertising
-          measurement tool provided by Meta. When enabled, Meta Pixel may receive information
-          about your browser or device, IP address, pages viewed, and interactions with our
-          website, along with identifiers stored by browser technologies. This can help us
-          measure the performance of our advertising and understand activity following an ad.
-          Meta may process this information under its own terms and privacy policies. Depending
-          on the services and settings involved, information may be processed in other countries.
+          If you select “Accept all” in our cookie notice, we enable Meta Pixel, provided by Meta,
+          and TikTok Pixel, provided by TikTok, for advertising measurement. When enabled, these
+          tools may receive information such as your browser or device details, IP address, pages
+          viewed, and interactions with our website, along with identifiers stored by browser
+          technologies. This helps us measure advertising performance and understand activity
+          following an ad. Meta and TikTok may process information under their respective terms
+          and privacy policies. Depending on the services and settings involved, information may
+          be processed in other countries.
         </p>
         <p>
           If you select “Reject optional cookies,” our website saves that choice and does not
-          enable Meta Pixel through this consent feature. Essential website functions may still
-          use necessary technical storage. You can change your saved choice by clearing this
-          website's local storage or site data in your browser and revisiting the website; the
-          consent notice will then be shown again. Clearing site data may also sign you out or
-          remove other saved preferences.
+          enable Meta Pixel or TikTok Pixel through this consent feature. Essential website
+          functions may still use necessary technical storage. You can change your saved choice
+          by clearing this website's local storage or site data in your browser and revisiting
+          the website; the consent notice will then be shown again. Clearing site data may also
+          sign you out or remove other saved preferences.
         </p>
 
         <h2>8. Data Security</h2>
@@ -100,7 +101,7 @@ export default function PrivacyPolicy() {
           Subject to applicable law, you may contact us to ask about your personal information,
           request correction of inaccurate information, object to or ask about certain uses, or
           make another privacy-related request. You can also use the cookie choices described
-          above to accept or reject optional Meta Pixel tracking.
+          above to accept or reject optional Meta Pixel and TikTok Pixel tracking.
         </p>
 
         <h2>10. Account and Data Deletion</h2>

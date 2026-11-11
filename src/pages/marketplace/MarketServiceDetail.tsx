@@ -521,21 +521,27 @@ export default function MarketServiceDetail() {
         });
       }
 
-      // Track Meta pixel lead event
+      // Track quotation lead in both advertising platforms after consent.
       try {
-        if (localStorage.getItem('ccs_cookie_consent_v2') === 'accepted') {
-          const pixel = (window as any).fbq;
-          if (typeof pixel === 'function') {
-            pixel('track', 'Lead', {
-              content_name: service.name,
-              content_category: service.category,
-              value: price,
-              currency: 'KES',
-            });
+        if (localStorage.getItem('ccs_cookie_consent_v3') === 'accepted') {
+          const pixelWindow = window as any;
+          const eventParams = {
+            content_name: service.name,
+            content_category: service.category,
+            value: price,
+            currency: 'KES',
+          };
+
+          if (typeof pixelWindow.fbq === 'function') {
+            pixelWindow.fbq('track', 'Lead', eventParams);
+          }
+
+          if (typeof pixelWindow.ttq?.track === 'function') {
+            pixelWindow.ttq.track('Lead', eventParams);
           }
         }
       } catch (trackingError) {
-        console.warn('Meta Pixel Lead tracking failed:', trackingError);
+        console.warn('Advertising pixel Lead tracking failed:', trackingError);
       }
 
       await refreshProfile();

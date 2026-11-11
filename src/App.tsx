@@ -297,14 +297,16 @@ function RouteTheme() {
   return null;
 }
 
-function MetaPixelPageView() {
+function MarketingPixelPageView() {
   const location = useLocation();
 
   useEffect(() => {
     const trackPageView = () => {
-      if (localStorage.getItem("ccs_cookie_consent_v2") !== "accepted") return;
+      if (localStorage.getItem("ccs_cookie_consent_v3") !== "accepted") return;
 
       const pixelWindow = window as any;
+
+      // Preserve the existing Meta Pixel loader and initialization.
       if (!pixelWindow.fbq) {
         const fbq = function (...args: any[]) {
           if ((fbq as any).callMethod) {
@@ -313,6 +315,7 @@ function MetaPixelPageView() {
             (fbq as any).queue.push(args);
           }
         } as any;
+
         pixelWindow.fbq = fbq;
         if (!pixelWindow._fbq) pixelWindow._fbq = fbq;
         fbq.push = fbq;
@@ -324,18 +327,72 @@ function MetaPixelPageView() {
         script.async = true;
         script.src = "https://connect.facebook.net/en_US/fbevents.js";
         const firstScript = document.getElementsByTagName("script")[0];
+
         if (firstScript?.parentNode) {
           firstScript.parentNode.insertBefore(script, firstScript);
         } else {
           document.head.appendChild(script);
         }
+
         fbq("init", "1436547675288965");
       }
 
+      // Initialize TikTok only after optional tracking consent.
+      if (!pixelWindow.ttq) {
+        const ttq: any = [];
+        pixelWindow.ttq = ttq;
+        ttq.methods = [
+          "page", "track", "identify", "instances", "debug", "on", "off",
+          "once", "ready", "alias", "group", "enableCookie", "disableCookie",
+          "holdConsent", "revokeConsent", "grantConsent"
+        ];
+
+        ttq.setAndDefer = (target: any, method: string) => {
+          target[method] = (...args: any[]) => target.push([method, ...args]);
+        };
+
+        for (const method of ttq.methods) {
+          ttq.setAndDefer(ttq, method);
+        }
+
+        ttq.load = (pixelId: string) => {
+          const scriptUrl = "https://analytics.tiktok.com/i18n/pixel/events.js";
+
+          ttq._i = ttq._i || {};
+          ttq._i[pixelId] = [];
+          ttq._i[pixelId]._u = scriptUrl;
+          ttq._t = ttq._t || {};
+          ttq._t[pixelId] = +new Date();
+          ttq._o = ttq._o || {};
+          ttq._o[pixelId] = {};
+
+          const script = document.createElement("script");
+          script.type = "text/javascript";
+          script.async = true;
+          script.src = `${scriptUrl}?sdkid=${pixelId}&lib=ttq`;
+
+          const firstScript = document.getElementsByTagName("script")[0];
+          if (firstScript?.parentNode) {
+            firstScript.parentNode.insertBefore(script, firstScript);
+          } else {
+            document.head.appendChild(script);
+          }
+        };
+
+        ttq.load("DBQDVPJC77U4J2JRA24G");
+      }
+
       const pageKey = location.pathname + location.search;
-      if (pixelWindow.__ccsMetaLastPageView === pageKey) return;
-      pixelWindow.__ccsMetaLastPageView = pageKey;
-      pixelWindow.fbq("track", "PageView");
+
+      if (pixelWindow.__ccsMetaLastPageView !== pageKey) {
+        pixelWindow.__ccsMetaLastPageView = pageKey;
+        pixelWindow.fbq("track", "PageView");
+      }
+
+      if (pixelWindow.__ccsTikTokLastPageView !== pageKey) {
+        pixelWindow.__ccsTikTokLastPageView = pageKey;
+        pixelWindow.ttq.page();
+      }
     };
 
     trackPageView();
@@ -345,7 +402,6 @@ function MetaPixelPageView() {
 
   return null;
 }
-
 function UTMTracker() {
   captureUTMParams();
   return null;
@@ -397,7 +453,7 @@ const App = () => (
       <NetworkStatus />
       <BrowserRouter>
         <RouteTheme />
-        <MetaPixelPageView />
+        <MarketingPixelPageView />
         <UTMTracker />
         <ScrollProgress />
         <ScrollToTop />
