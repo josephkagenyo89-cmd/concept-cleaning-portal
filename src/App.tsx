@@ -339,8 +339,9 @@ function MarketingPixelPageView() {
 
       // Initialize TikTok only after optional tracking consent.
       if (!pixelWindow.ttq) {
-        const ttq: any = [];
-        pixelWindow.ttq = ttq;
+        pixelWindow.TiktokAnalyticsObject = "ttq";
+
+        const ttq: any = pixelWindow.ttq = [];
         ttq.methods = [
           "page", "track", "identify", "instances", "debug", "on", "off",
           "once", "ready", "alias", "group", "enableCookie", "disableCookie",
@@ -348,23 +349,35 @@ function MarketingPixelPageView() {
         ];
 
         ttq.setAndDefer = (target: any, method: string) => {
-          target[method] = (...args: any[]) => target.push([method, ...args]);
+          target[method] = (...args: any[]) =>
+            target.push([method, ...args]);
         };
 
         for (const method of ttq.methods) {
           ttq.setAndDefer(ttq, method);
         }
 
-        ttq.load = (pixelId: string) => {
-          const scriptUrl = "https://analytics.tiktok.com/i18n/pixel/events.js";
+        ttq.instance = (pixelId: string) => {
+          const instance = ttq._i?.[pixelId] || [];
+          for (const method of ttq.methods) {
+            ttq.setAndDefer(instance, method);
+          }
+          return instance;
+        };
+
+        ttq.load = (pixelId: string, options?: any) => {
+          const scriptUrl =
+            "https://analytics.tiktok.com/i18n/pixel/events.js";
 
           ttq._i = ttq._i || {};
           ttq._i[pixelId] = [];
           ttq._i[pixelId]._u = scriptUrl;
+
           ttq._t = ttq._t || {};
-          ttq._t[pixelId] = +new Date();
+          ttq._t[pixelId] = Date.now();
+
           ttq._o = ttq._o || {};
-          ttq._o[pixelId] = {};
+          ttq._o[pixelId] = options || {};
 
           const script = document.createElement("script");
           script.type = "text/javascript";
@@ -372,6 +385,7 @@ function MarketingPixelPageView() {
           script.src = `${scriptUrl}?sdkid=${pixelId}&lib=ttq`;
 
           const firstScript = document.getElementsByTagName("script")[0];
+
           if (firstScript?.parentNode) {
             firstScript.parentNode.insertBefore(script, firstScript);
           } else {
