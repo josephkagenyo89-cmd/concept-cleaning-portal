@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, ChevronDown, Droplets, Home, MessageCircle, Sofa,
-  Building2, CarFront, Bug, Menu, X, Phone, Sparkles
+  Building2, CarFront, Bug, Menu, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
@@ -126,9 +126,6 @@ export default function LandingPage() {
               <Button asChild className="bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
                 <a href={waHome} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Book on WhatsApp</a>
               </Button>
-            </div>
-            <div className="flex items-center gap-3 lg:hidden">
-              <Link to="/contact" className="text-sm font-semibold text-[var(--muted)]">Contact</Link>
             </div>
             <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] lg:hidden" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(v => !v)}>
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -281,17 +278,6 @@ export default function LandingPage() {
           </div>
         </footer>
 
-        <nav aria-label="Quick actions" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-[#E2E8F0] bg-white/95 pb-[env(safe-area-inset-bottom)] text-[#0F172A] shadow-[0_-6px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
-          <a href={`tel:${phone}`} className="flex min-h-16 flex-col items-center justify-center gap-1 py-2 text-xs font-bold" aria-label="Call Concept Cleaning Services">
-            <Phone className="h-5 w-5" />Call
-          </a>
-          <a href={waHome} target="_blank" rel="noopener noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1 py-2 text-xs font-bold" aria-label="Chat with Concept Cleaning Services on WhatsApp">
-            <MessageCircle className="h-5 w-5" />WhatsApp
-          </a>
-          <Link to="/marketplace" className="flex min-h-16 flex-col items-center justify-center gap-1 bg-[#0F766E] py-2 text-xs font-extrabold text-white" aria-label="Browse and book services">
-            <Sparkles className="h-5 w-5" />Book Now
-          </Link>
-        </nav>
       </main>
     </div>
   );
