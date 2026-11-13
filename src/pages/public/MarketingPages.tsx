@@ -253,7 +253,7 @@ function categoryPurpose(category: ServiceCategory) {
 function CategoryCard({ category }: { category: ServiceCategory }) {
   return (
     <Link
-      to={'/categories?c=' + encodeURIComponent(category.id)}
+      to={'/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name)}
       className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
     >
       <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-52 w-full object-cover transition duration-500 group-hover:scale-[1.02]" />

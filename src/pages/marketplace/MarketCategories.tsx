@@ -2,14 +2,18 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
-import { categoryImage, MarketService } from '@/lib/marketplace';
-import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  CATEGORY_ORDER,
+  categoryImage,
+  fetchMarketCategories,
+  fetchMarketServicesByCategory,
+  MarketService,
+} from '@/lib/marketplace';
 import { trackCategoryClick, trackCategoryView } from '@/lib/marketplaceBehavior';
 
 export default function MarketCategories() {
   const [services, setServices] = useState<MarketService[]>([]);
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [params] = useSearchParams();
@@ -21,45 +25,29 @@ export default function MarketCategories() {
     setLoadError(false);
     setServices([]);
 
-    const load = async () => {
-      const { data: categoryRows, error: categoryError } = await fetchServiceCategories(true);
-      if (categoryError) throw categoryError;
+    const request = active
+      ? fetchMarketServicesByCategory(active)
+      : fetchMarketCategories();
 
-      const availableCategories = categoryRows || [];
-      if (!mounted) return;
-
-      setCategories(availableCategories);
-
-      if (active) {
-        const selectedCategory = availableCategories.find((category) => category.id === active || category.name === active);
-        if (!selectedCategory) {
-          setServices([]);
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('services')
-          .select('id, name, slug, service_code, description, short_description, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
-          .eq('is_active', true)
-          .eq('category_id', selectedCategory.id)
-          .order('name', { ascending: true });
-
-        if (error) throw error;
+    request
+      .then((items) => {
         if (!mounted) return;
 
-        setServices((data || []).map((service: any) => ({
-          ...service,
-          category: selectedCategory.name,
-          slug: service.slug || null,
-          base_price: Number(service.base_price) || 0,
-          price_per_sqm: Number(service.price_per_sqm) || 0,
-          service_features: Array.isArray(service.service_features) ? service.service_features : [],
-        })) as MarketService[]);
-      }
-    };
-
-    load()
+        if (active) {
+          setServices(items as MarketService[]);
+        } else {
+          const rows = items as string[];
+          const order = (category: string) => {
+            const index = CATEGORY_ORDER.indexOf(category);
+            return index < 0 ? 99 : index;
+          };
+          setCategories(
+            [...rows].sort(
+              (a, b) => order(a) - order(b) || a.localeCompare(b)
+            )
+          );
+        }
+      })
       .catch(() => {
         if (mounted) setLoadError(true);
       })
@@ -72,11 +60,9 @@ export default function MarketCategories() {
     };
   }, [active]);
 
-  const activeCategory = categories.find((category) => category.id === active || category.name === active);
-
   useEffect(() => {
-    if (activeCategory) trackCategoryView(activeCategory.name);
-  }, [activeCategory]);
+    if (active) trackCategoryView(active);
+  }, [active]);
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] pb-12 text-[#292824]">
@@ -86,11 +72,11 @@ export default function MarketCategories() {
             The service collection
           </p>
           <h1 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight text-[#292824] sm:text-3xl md:text-4xl">
-            {activeCategory?.name || 'Browse categories'}
+            {active || 'Browse categories'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#77736B]">
             {active
-              ? `Explore the active services listed under ${activeCategory?.name || 'this category'}. Open a service to see its full description, features, pricing details and booking options.`
+              ? `Explore the active services listed under ${active}. Open a service to see its full description, features, pricing details and booking options.`
               : 'Choose a service category to explore its available services, descriptions and pricing details.'}
           </p>
         </header>
@@ -112,17 +98,17 @@ export default function MarketCategories() {
 
           {categories.map((category) => (
             <Link
-              key={category.id}
-              to={`/categories?c=${encodeURIComponent(category.id)}`}
-              onClick={() => trackCategoryClick(category.name)}
-              aria-current={active === category.id ? 'page' : undefined}
+              key={category}
+              to={`/categories?c=${encodeURIComponent(category)}`}
+              onClick={() => trackCategoryClick(category)}
+              aria-current={active === category ? 'page' : undefined}
               className={`text-xs font-semibold transition-colors sm:text-sm ${
-                active === category.id
+                active === category
                   ? 'text-[#9A7A43] underline decoration-[#D5B779] decoration-2 underline-offset-8'
                   : 'text-[#918B80] hover:text-[#292824]'
               }`}
             >
-              {category.name}
+              {category}
             </Link>
           ))}
         </nav>
@@ -170,21 +156,21 @@ export default function MarketCategories() {
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {categories.map((category) => (
               <Link
-                key={category.id}
-                to={`/categories?c=${encodeURIComponent(category.id)}`}
-                onClick={() => trackCategoryClick(category.name)}
+                key={category}
+                to={`/categories?c=${encodeURIComponent(category)}`}
+                onClick={() => trackCategoryClick(category)}
                 className="group overflow-hidden rounded-2xl border border-[#E9E5DC] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#D5B779] hover:shadow-[0_16px_34px_rgba(41,40,36,0.09)]"
               >
                 <div className="overflow-hidden">
                   <ServiceVisual
-                    image={categoryImage(category.name, category.image_key)}
-                    alt={category.name}
+                    image={categoryImage(category)}
+                    alt={category}
                     className="h-36 w-full object-cover transition-transform duration-500 group-hover:scale-105 sm:h-48"
                   />
                 </div>
                 <div className="p-3.5 sm:p-4">
                   <span className="block text-sm font-bold leading-snug text-[#292824]">
-                    {category.name}
+                    {category}
                   </span>
                   <span className="mt-1.5 block text-[11px] text-[#918B80]">
                     Explore services
