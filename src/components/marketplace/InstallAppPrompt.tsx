@@ -44,9 +44,15 @@ export default function InstallAppPrompt() {
       setMountNode(document.getElementById(targetId));
     };
     updateTarget();
+    // LandingPage is lazy-loaded, so observe the header slots appearing after this component mounts.
+    const observer = new MutationObserver(updateTarget);
+    observer.observe(document.body, { childList: true, subtree: true });
     const media = window.matchMedia('(min-width: 1024px)');
     media.addEventListener('change', updateTarget);
-    return () => media.removeEventListener('change', updateTarget);
+    return () => {
+      observer.disconnect();
+      media.removeEventListener('change', updateTarget);
+    };
   }, [isHome, inStaffArea]);
 
   useEffect(() => {
