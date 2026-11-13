@@ -55,10 +55,10 @@ function safeJsonLd(value) {
 
 function safeImageUrl(value) {
   const url = String(value || '').trim();
-  return /^https?:\/\//i.test(url) || url.startsWith('/') ? url : '';
+  return /^https?:\/\//i.test(url) || (url.startsWith('/') && !url.startsWith('//')) ? url : '';
 }
 
-function galleryEntries(value, serviceName) {
+function galleryEntries(value, serviceName, serviceImageUrl) {
   let entries = [];
   if (Array.isArray(value)) entries = value;
   else if (typeof value === 'string') {
@@ -69,14 +69,17 @@ function galleryEntries(value, serviceName) {
       entries = [value];
     }
   } else if (value && typeof value === 'object') entries = Object.values(value);
+  if (serviceImageUrl) entries.unshift(serviceImageUrl);
 
+  const seen = new Set();
   return entries.flatMap((entry) => {
     const record = typeof entry === 'string' ? { url: entry } : (entry && typeof entry === 'object' ? entry : {});
     const url = safeImageUrl(record.url || record.src || record.image_url);
-    if (!url) return [];
+    if (!url || seen.has(url)) return [];
+    seen.add(url);
     return [{
       url,
-      alt: String(record.alt || record.title || (serviceName + ' cleaning project')),
+      alt: String(record.alt || record.title || (serviceName + ' cleaning service')),
       serviceName,
     }];
   });
@@ -193,10 +196,10 @@ async function renderServices(supabase) {
 }
 
 async function renderGallery(supabase) {
-  const { data, error } = await supabase.from('services').select('name,gallery_images').eq('is_active', true).order('name', { ascending: true });
+  const { data, error } = await supabase.from('services').select('name,image_url,gallery_images').eq('is_active', true).order('name', { ascending: true });
   if (error) throw error;
 
-  const images = (data || []).flatMap((service) => galleryEntries(service.gallery_images, service.name));
+  const images = (data || []).flatMap((service) => galleryEntries(service.gallery_images, service.name, service.image_url));
   const content = images.length
     ? '<div class="grid">' + images.map((image) =>
       '<figure class="card"><img src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt) + '" loading="lazy"><figcaption><strong>' + escapeHtml(image.serviceName) + '</strong><p class="muted">' + escapeHtml(image.alt) + '</p></figcaption></figure>'
