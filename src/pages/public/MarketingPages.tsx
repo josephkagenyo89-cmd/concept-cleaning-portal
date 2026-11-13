@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useParams } from 'react-router-dom';
 import {
   ArrowRight, CheckCircle2, Image as ImageIcon, Mail,
   MapPin, Menu, MessageCircle, Phone, Sparkles, X
@@ -233,8 +233,122 @@ function ServiceCard({ service, category }: { service: PublicService; category: 
   );
 }
 
+function categorySlug(name: string) {
+  return name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function categoryPurpose(category: ServiceCategory) {
+  if (category.description?.trim()) return category.description.trim();
+  const name = category.name.toLowerCase();
+  if (/residential|house|home|domestic/.test(name)) return 'Designed for the regular care and detailed cleaning of living spaces. Explore services that help maintain cleaner rooms, kitchens, bathrooms and household surfaces, with options suited to different home sizes and cleaning needs.';
+  if (/commercial|office|business|industrial/.test(name)) return 'For workplaces and business premises that need a clean, orderly and welcoming environment. Explore cleaning options for offices, shared areas and commercial spaces, with service choices based on the property and its day-to-day requirements.';
+  if (/upholstery|sofa|furniture/.test(name)) return 'Focused on the fabric and surfaces of upholstered furniture. Explore services for sofas, seats and other soft furnishings to address embedded dust, everyday marks and accumulated dirt while taking the material into account.';
+  if (/carpet|rug/.test(name)) return 'For carpets and rugs that collect dust, grit and everyday stains through regular use. Explore suitable cleaning options to refresh floor coverings and improve the cleanliness of the rooms in which they are used.';
+  if (/mattress|bed/.test(name)) return 'Focused on the cleaning and care of mattresses and sleeping surfaces. Explore options for addressing accumulated dust, marks and everyday soiling as part of a cleaner, more comfortable bedroom.';
+  if (/car|vehicle|auto|detailing/.test(name)) return 'For the interior spaces and surfaces of vehicles. Explore cleaning options for seats, carpets, mats, dashboards and other interior areas, with attention to the materials and surfaces that need care.';
+  if (/pest|fumig|cockroach|bedbug|rodent|termite/.test(name)) return 'For properties that need professional pest management. Explore the available inspection, treatment and prevention services for common household or business pest concerns, and choose the option that matches the pest issue and property.';
+  return 'Explore the services grouped under ' + category.name + '. This category helps you compare the available options for the relevant space, surface or cleaning requirement, review each service’s details and choose the most suitable next step for your property.';
+}
+
+function CategoryCard({ category }: { category: ServiceCategory }) {
+  return (
+    <Link
+      to={'/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name)}
+      className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+    >
+      <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-52 w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
+      <div className="p-6">
+        <h2 className="text-xl font-black text-slate-900 group-hover:text-teal-700">{category.name}</h2>
+        <p className="mt-3 text-sm leading-7 text-slate-600">{categoryPurpose(category)}</p>
+        <span className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-teal-700">Explore category <ArrowRight className="h-4 w-4" /></span>
+      </div>
+    </Link>
+  );
+}
+
 export function ServicesPage() {
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    fetchServiceCategories(true)
+      .then(({ data, error: queryError }) => {
+        if (!mounted) return;
+        if (queryError) setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
+        else setCategories(data || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (mounted) {
+          setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
+          setLoading(false);
+        }
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Cleaning and Pest-Control Service Categories in Nairobi',
+    description: 'Browse the service categories offered by Concept Cleaning Services in Nairobi and surrounding areas.',
+    url: SITE_URL + '/services',
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: categories.map((category, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: SITE_URL + '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name),
+        name: category.name,
+        description: categoryPurpose(category),
+      })),
+    },
+  };
+
+  return (
+    <MarketingLayout>
+      <PageSeo
+        title="Cleaning & Pest-Control Categories in Nairobi | Concept Cleaning Services"
+        description="Browse cleaning and pest-control service categories from Concept Cleaning Services in Nairobi. Choose a category to explore its services and booking options."
+        path="/services"
+        schema={schema}
+      />
+      <PageHero
+        eyebrow="Our services"
+        title="Explore our cleaning and pest-control categories"
+        description="Start with the type of cleaning or property-care service you need. Each category explains what it is for and takes you to the services available within it."
+      />
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Browse by category</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Find the right type of service</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Choose a category to understand its purpose and see the specific services available. Individual services are shown on their respective category pages.</p>
+          </div>
+          <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700">Open booking marketplace <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">Loading service categories…</div>
+        ) : error ? (
+          <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">{error}</div>
+        ) : categories.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">No active service categories are currently available.</div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {categories.map((category) => <CategoryCard key={category.id} category={category} />)}
+          </div>
+        )}
+      </section>
+      <PageCta title="Need help choosing a category?" description="I would like help finding the right cleaning or pest-control category for my property." />
+    </MarketingLayout>
+  );
+}
+
+export function ServiceCategoryPage() {
+  const { categoryId = '', categorySlug: routeSlug = '' } = useParams();
+  const [category, setCategory] = useState<ServiceCategory | null>(null);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -244,140 +358,104 @@ export function ServicesPage() {
     const load = async () => {
       setLoading(true);
       setError('');
-      const [categoryResult, serviceResult] = await Promise.all([
-        fetchServiceCategories(true),
-        (supabase.from('services') as any)
-          .select('id,name,slug,short_description,description,image_url,category_id')
-          .eq('is_active', true)
-          .order('name', { ascending: true }),
-      ]);
-
-      if (!mounted) return;
-      if (categoryResult.error || serviceResult.error) {
-        setError('The service catalogue is temporarily unavailable. Please try again shortly or contact our team.');
-      } else {
-        setCategories(categoryResult.data || []);
-        setServices((serviceResult.data || []) as PublicService[]);
+      const categoryResult = await fetchServiceCategories(true);
+      if (categoryResult.error) throw categoryResult.error;
+      const selected = (categoryResult.data || []).find((item) => item.id === categoryId);
+      if (!selected) {
+        if (mounted) { setCategory(null); setServices([]); setLoading(false); }
+        return;
       }
-      setLoading(false);
+      const { data, error: serviceError } = await (supabase.from('services') as any)
+        .select('id,name,slug,short_description,description,image_url,category_id')
+        .eq('is_active', true)
+        .eq('category_id', selected.id)
+        .order('name', { ascending: true });
+      if (serviceError) throw serviceError;
+      if (mounted) {
+        setCategory(selected);
+        setServices((data || []) as PublicService[]);
+        setLoading(false);
+      }
     };
-
     void load().catch(() => {
       if (mounted) {
-        setError('The service catalogue is temporarily unavailable. Please try again shortly or contact our team.');
+        setError('This category could not be loaded right now. Please try again shortly or contact our team.');
         setLoading(false);
       }
     });
-
     return () => { mounted = false; };
-  }, []);
+  }, [categoryId]);
 
-  const grouped = useMemo(() => categories
-    .map((category) => ({
-      category,
-      services: services.filter((service) => service.category_id === category.id),
-    }))
-    .filter((group) => group.services.length > 0), [categories, services]);
+  useEffect(() => {
+    if (category && routeSlug !== categorySlug(category.name)) {
+      window.history.replaceState(null, '', '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name));
+    }
+  }, [category, routeSlug]);
 
-  const unassigned = useMemo(() => services.filter((service) => !service.category_id || !categories.some((category) => category.id === service.category_id)), [services, categories]);
-
-  const schema = {
+  const description = category ? categoryPurpose(category) : '';
+  const canonicalPath = category ? '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name) : '/services';
+  const schema = category ? {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Cleaning Services in Nairobi',
-    description: 'Explore the active cleaning and pest-control services offered by Concept Cleaning Services.',
-    url: SITE_URL + '/services',
+    name: category.name + ' Services in Nairobi | Concept Cleaning Services',
+    description,
+    url: SITE_URL + canonicalPath,
     mainEntity: {
       '@type': 'ItemList',
       itemListElement: services.map((service, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        url: SITE_URL + '/service/' + encodeURIComponent(service.slug || service.id),
         name: service.name,
+        url: SITE_URL + '/service/' + encodeURIComponent(service.slug || service.id),
       })),
     },
-  };
+  } : { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Service category' };
 
   return (
     <MarketingLayout>
-      <PageSeo
-        title="Cleaning Services in Nairobi | Concept Cleaning Services"
-        description="Explore professional residential, commercial, upholstery, carpet, car interior cleaning, fumigation and pest-control services in Nairobi and surrounding areas."
-        path="/services"
+      {category && <PageSeo
+        title={category.name + ' Services in Nairobi | Concept Cleaning Services'}
+        description={description}
+        path={canonicalPath}
         schema={schema}
-      />
-      <PageHero
-        eyebrow="Our services"
-        title="Professional cleaning and pest-control services in Nairobi"
-        description="Explore the services available from Concept Cleaning Services. Browse the catalogue by category, review each service's details and follow its page to see the available booking options."
-      />
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Browse the catalogue</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Services available to book</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">The catalogue below is loaded from the active services and official service categories configured for the website.</p>
-          </div>
-          <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700">Open booking marketplace <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">Loading the service catalogue…</div>
-        ) : error ? (
-          <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">{error}</div>
-        ) : services.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">No active services are currently available in the public catalogue.</div>
-        ) : (
-          <div className="space-y-14">
-            {grouped.map(({ category, services: categoryServices }) => (
-              <section key={category.id} aria-labelledby={'category-' + category.id}>
-                <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-20 w-28 rounded-xl object-cover" />
-                  <div>
-                    <h2 id={'category-' + category.id} className="text-xl font-black text-slate-900 sm:text-2xl">{category.name}</h2>
-                    {category.description && <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{category.description}</p>}
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{categoryServices.length} {categoryServices.length === 1 ? 'service' : 'services'}</p>
-                  </div>
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {categoryServices.map((service) => <ServiceCard key={service.id} service={service} category={category} />)}
-                </div>
-              </section>
-            ))}
-            {unassigned.length > 0 && (
-              <section aria-labelledby="other-services">
-                <h2 id="other-services" className="mb-5 text-xl font-black text-slate-900">Other available services</h2>
-                <p className="mb-5 max-w-3xl text-sm leading-6 text-slate-600">These active services are listed in the catalogue but are not currently assigned to an active category.</p>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {unassigned.map((service) => (
-                    <article key={service.id} className="rounded-2xl border border-slate-200 bg-white p-5">
-                      <h3 className="font-extrabold text-slate-900">{service.name}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{service.short_description || service.description || 'View the service details and booking options.'}</p>
-                      <Link to={'/service/' + encodeURIComponent(service.slug || service.id)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700">View service <ArrowRight className="h-4 w-4" /></Link>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        )}
-      </section>
-      <section className="bg-white py-12">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 md:grid-cols-3 lg:px-8">
-          {[
-            ['Residential and commercial spaces', 'Explore services for homes, offices and other properties.'],
-            ['Specialist cleaning', 'Review upholstery, carpet, mattress and car interior cleaning options.'],
-            ['Pest-control services', 'Find the available fumigation and pest-control services in the catalogue.'],
-          ].map(([heading, text]) => (
-            <div key={heading} className="rounded-2xl border border-slate-200 p-6">
-              <CheckCircle2 className="h-6 w-6 text-teal-700" />
-              <h3 className="mt-3 font-extrabold text-slate-900">{heading}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+      />}
+      {loading ? (
+        <section className="mx-auto max-w-7xl px-4 py-20 text-sm text-slate-600">Loading category…</section>
+      ) : error ? (
+        <section role="alert" className="mx-auto max-w-7xl px-4 py-20 text-sm text-amber-900">{error}</section>
+      ) : !category ? (
+        <section className="mx-auto max-w-7xl px-4 py-20">
+          <h1 className="text-2xl font-black text-slate-900">Category not found</h1>
+          <p className="mt-3 text-sm text-slate-600">This category may no longer be available.</p>
+          <Link to="/services" className="mt-5 inline-flex items-center gap-2 font-bold text-teal-700">Browse all categories <ArrowRight className="h-4 w-4" /></Link>
+        </section>
+      ) : (
+        <>
+          <PageHero eyebrow="Service category" title={category.name} description={description} />
+          <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Available in this category</p>
+                <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Explore {category.name}</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
+              </div>
+              <Link to="/services" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700"><ArrowRight className="h-4 w-4 rotate-180" /> All categories</Link>
             </div>
-          ))}
-        </div>
-      </section>
-      <PageCta title="Need help choosing a service?" description="I would like help choosing the right cleaning or pest-control service." />
+            {services.length ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {services.map((service) => <ServiceCard key={service.id} service={service} category={category} />)}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-8">
+                <h3 className="font-extrabold text-slate-900">Services are being updated</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">There are no active services listed in this category at the moment. Contact our team if you need help with this type of service.</p>
+                <Link to="/contact" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700">Contact our team <ArrowRight className="h-4 w-4" /></Link>
+              </div>
+            )}
+          </section>
+          <PageCta title={'Need help with ' + category.name.toLowerCase() + '?'} description={'I would like help choosing a ' + category.name.toLowerCase() + ' service.'} />
+        </>
+      )}
     </MarketingLayout>
   );
 }
