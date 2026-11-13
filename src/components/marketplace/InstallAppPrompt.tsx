@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   attachCustomerManifest,
   canShowCustomerInstallPrompt,
@@ -95,7 +96,10 @@ export default function InstallAppPrompt() {
   }, [isHome, inStaffArea]);
 
   const install = async () => {
-    if (!deferred) return;
+    if (!deferred) {
+      toast('One-tap installation is not currently available in this browser. Try Chrome or Edge on this device.');
+      return;
+    }
 
     try {
       await deferred.prompt();
@@ -111,7 +115,7 @@ export default function InstallAppPrompt() {
     }
   };
 
-  if (!isHome || inStaffArea || installed || isStandaloneApp() || !canShowCustomerInstallPrompt() || !mountNode || !deferred) {
+  if (!isHome || inStaffArea || installed || isStandaloneApp() || !canShowCustomerInstallPrompt() || !mountNode) {
     return null;
   }
 
