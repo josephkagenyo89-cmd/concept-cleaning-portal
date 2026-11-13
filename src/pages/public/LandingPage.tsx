@@ -17,6 +17,19 @@ import BookingEngine from '@/components/public/BookingEngine';
 
 const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
 
+function categoryPurposeText(category: ServiceCategory) {
+  if (category.description?.trim()) return category.description.trim();
+  const name = category.name.toLowerCase();
+  if (/residential|house|home|domestic/.test(name)) return 'Designed for the regular care and detailed cleaning of living spaces, including rooms, kitchens, bathrooms and household surfaces. Explore options suited to different home sizes and cleaning needs.';
+  if (/commercial|office|business|industrial/.test(name)) return 'For workplaces and business premises that need a clean, orderly and welcoming environment. Explore options for offices, shared areas and commercial spaces based on the property’s requirements.';
+  if (/upholstery|sofa|furniture/.test(name)) return 'Focused on upholstered furniture such as sofas and seats. Explore cleaning options that address embedded dust, everyday marks and accumulated dirt while taking the fabric or material into account.';
+  if (/carpet|rug/.test(name)) return 'For carpets and rugs that collect dust, grit and everyday stains. Explore suitable cleaning options to refresh floor coverings and improve the cleanliness of the rooms in which they are used.';
+  if (/mattress|bed/.test(name)) return 'Focused on mattresses and sleeping surfaces. Explore options for addressing accumulated dust, marks and everyday soiling as part of a cleaner, more comfortable bedroom.';
+  if (/car|vehicle|auto|detailing/.test(name)) return 'For vehicle interiors and their surfaces. Explore cleaning options for seats, carpets, mats, dashboards and other interior areas, with attention to the materials that need care.';
+  if (/pest|fumig|cockroach|bedbug|rodent|termite/.test(name)) return 'For properties that need professional pest management. Explore available treatment and prevention services for common household or business pest concerns.';
+  return 'Explore the services grouped under ' + category.name + '. Compare the available options for the relevant space, surface or cleaning requirement, review each service’s details and choose the next step for your property.';
+}
+
 const FAQS = [
   {
     q: 'How do I find the right service?',
@@ -220,7 +233,7 @@ export default function LandingPage() {
                     <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
                     <span className="min-w-0">
                       <span className="block text-base font-extrabold text-[var(--text)] group-hover:text-[var(--primary)]">{category.name}</span>
-                      {category.description && <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{category.description}</span>}
+                      <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{categoryPurposeText(category)}</span>
                       <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[var(--primary)]">View services <ArrowRight className="h-4 w-4" /></span>
                     </span>
                   </Link>
