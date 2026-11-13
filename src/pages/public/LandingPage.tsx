@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 
-const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -17,6 +16,8 @@ import {
   fetchMarketCategories,
 } from '@/lib/marketplace';
 import BookingEngine from '@/components/public/BookingEngine';
+
+const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
 
 const FAQS = [
   {
