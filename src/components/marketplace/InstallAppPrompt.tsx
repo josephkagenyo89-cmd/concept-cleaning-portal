@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Download, X, Share, Sparkles } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import {
   attachCustomerManifest,
   canShowCustomerInstallPrompt,
   detachCustomerManifest,
   isIos,
   isStandaloneApp,
-  markCustomerInstallDismissed,
   markCustomerInstalled,
 } from '@/lib/customerPwa';
 
@@ -17,107 +15,148 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-/** Delay so the prompt appears after the visitor has had a look around. */
-const SHOW_AFTER_MS = 12000;
-
 /**
- * Professional, non-intrusive install invitation for the customer portal.
- * Never forces installation, and stays hidden once installed or dismissed.
+ * Homepage-only, compact PWA install control.
+ * It expands on mouse hover/focus or briefly while the visitor scrolls.
+ * Touch visitors tap once to reveal the label and again to install/open help.
  */
 export default function InstallAppPrompt() {
   const location = useLocation();
-  const inErp = location.pathname.startsWith('/admin');
+  const inStaffArea = location.pathname.startsWith('/admin') || location.pathname.startsWith('/agent');
+  const isHome = location.pathname === '/';
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const collapseTimer = useRef<number | null>(null);
 
-  // Customer manifest is attached only outside the ERP so each app installs its own scope.
   useEffect(() => {
-    if (inErp) detachCustomerManifest();
+    if (inStaffArea) detachCustomerManifest();
     else attachCustomerManifest();
-  }, [inErp]);
+  }, [inStaffArea]);
 
   useEffect(() => {
-    if (inErp) return;
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
+    if (inStaffArea) return;
+
+    const onPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferred(event as BeforeInstallPromptEvent);
     };
     const onInstalled = () => {
       markCustomerInstalled();
-      setVisible(false);
+      setInstalled(true);
+      setShowInstructions(false);
       setDeferred(null);
     };
+
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, [inErp]);
+  }, [inStaffArea]);
+
+  useEffect(() => () => {
+    if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+  }, []);
 
   useEffect(() => {
-    if (inErp || isStandaloneApp() || !canShowCustomerInstallPrompt()) return;
-    // Android/desktop wait for the browser event; iOS shows manual instructions.
-    if (!deferred && !isIos()) return;
-    const id = window.setTimeout(() => setVisible(true), SHOW_AFTER_MS);
-    return () => window.clearTimeout(id);
-  }, [deferred, inErp]);
-
-  const dismiss = () => {
-    markCustomerInstallDismissed();
-    setVisible(false);
-  };
+    if (!isHome || inStaffArea || isStandaloneApp()) return;
+    const revealOnScroll = () => {
+      setExpanded(true);
+      if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+      collapseTimer.current = window.setTimeout(() => setExpanded(false), 1800);
+    };
+    window.addEventListener('scroll', revealOnScroll, { passive: true });
+    return () => window.removeEventListener('scroll', revealOnScroll);
+  }, [isHome, inStaffArea]);
 
   const install = async () => {
-    if (!deferred) return;
-    await deferred.prompt();
-    const { outcome } = await deferred.userChoice;
-    if (outcome === 'accepted') markCustomerInstalled();
-    else markCustomerInstallDismissed();
-    setVisible(false);
-    setDeferred(null);
+    if (!deferred) {
+      setShowInstructions(true);
+      setExpanded(true);
+      return;
+    }
+
+    try {
+      await deferred.prompt();
+      const { outcome } = await deferred.userChoice;
+      if (outcome === 'accepted') {
+        markCustomerInstalled();
+        setInstalled(true);
+      } else {
+        setShowInstructions(true);
+      }
+    } catch {
+      setShowInstructions(true);
+    } finally {
+      setDeferred(null);
+    }
   };
 
-  if (!visible || inErp) return null;
+  if (!isHome || inStaffArea || installed || isStandaloneApp() || !canShowCustomerInstallPrompt()) {
+    return null;
+  }
+
+  const instructions = isIos()
+    ? 'In Safari, tap the Share icon, choose “Add to Home Screen”, then tap Add.'
+    : 'Open your browser menu and choose “Install app” or “Add to Home screen”.';
 
   return (
-    <div className="fixed inset-x-0 bottom-24 z-50 px-4 md:bottom-6 md:left-auto md:right-6 md:w-96 md:px-0">
-      <div className="relative rounded-2xl border bg-card p-4 shadow-xl">
-        <button
-          onClick={dismiss}
-          aria-label="Dismiss install prompt"
-          className="absolute right-2 top-2 rounded-full p-1 text-muted-foreground hover:bg-muted"
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_5.25rem)] right-4 z-[70] md:bottom-6">
+      {showInstructions && (
+        <div
+          id="ccs-install-help"
+          role="dialog"
+          aria-label="How to install Concept Cleaning Services"
+          className="absolute bottom-[calc(100%_+_0.75rem)] right-0 w-80 max-w-[calc(100vw_-_2rem)] rounded-2xl border border-[#E2E8F0] bg-white p-4 text-[#0F172A] shadow-2xl"
         >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-market/10 text-market">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 pr-4">
-            <p className="text-sm font-bold">Install our app</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Book faster, track your services and open your documents straight from your home screen.
-            </p>
-
-            {deferred ? (
-              <div className="mt-3 flex gap-2">
-                <Button size="sm" className="bg-market text-market-foreground hover:bg-market/90" onClick={install}>
-                  <Download className="mr-1.5 h-4 w-4" /> Install app
-                </Button>
-                <Button size="sm" variant="ghost" onClick={dismiss}>Not now</Button>
-              </div>
-            ) : (
-              <div className="mt-3 space-y-2">
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Share className="h-3.5 w-3.5" /> Tap Share, then “Add to Home Screen”.
-                </p>
-                <Button size="sm" variant="ghost" onClick={dismiss}>Got it</Button>
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowInstructions(false)}
+            aria-label="Close installation instructions"
+            className="absolute right-2 top-2 rounded-full p-2 text-[#64748B] hover:bg-[#F1F5F9]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p className="pr-6 text-sm font-extrabold">Install Concept Cleaning Services</p>
+          <p className="mt-2 text-sm leading-6 text-[#475569]">{instructions}</p>
+          <p className="mt-2 text-xs leading-5 text-[#64748B]">The app opens from your home screen like an app, without needing to search for the website again.</p>
         </div>
-      </div>
+      )}
+
+      <button
+        type="button"
+        aria-label="Install App"
+        aria-expanded={expanded || showInstructions}
+        aria-controls={showInstructions ? 'ccs-install-help' : undefined}
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') setExpanded(true);
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType === 'mouse' && !showInstructions) setExpanded(false);
+        }}
+        onFocus={(event) => {
+          if (event.currentTarget.matches(':focus-visible')) setExpanded(true);
+        }}
+        onBlur={() => {
+          if (!showInstructions) setExpanded(false);
+        }}
+        onClick={() => {
+          if (!expanded) {
+            setExpanded(true);
+            return;
+          }
+          void install();
+        }}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-[#0F172A] px-3.5 text-white shadow-[0_8px_28px_rgba(15,23,42,0.28)] transition-all duration-200 hover:bg-[#1E293B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D6B56D] focus-visible:ring-offset-2"
+      >
+        <Download className="h-5 w-5 shrink-0" />
+        <span className={`overflow-hidden whitespace-nowrap text-sm font-bold transition-all duration-200 ${expanded || showInstructions ? 'max-w-24 opacity-100' : 'max-w-0 opacity-0'}`}>
+          Install App
+        </span>
+      </button>
     </div>
   );
 }

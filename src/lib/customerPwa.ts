@@ -11,8 +11,6 @@ const MANIFEST_ID = 'customer-manifest';
 const MANIFEST_HREF = '/customer.webmanifest';
 const DISMISS_KEY = 'ccs_customer_pwa_dismissed_at';
 const INSTALLED_KEY = 'ccs_customer_pwa_installed';
-/** Don't nag: re-offer only after 14 days. */
-const DISMISS_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function attachCustomerManifest() {
   if (document.getElementById(MANIFEST_ID)) return;
@@ -47,13 +45,14 @@ export function canShowCustomerInstallPrompt(): boolean {
   if (isStandaloneApp()) return false;
   try {
     if (localStorage.getItem(INSTALLED_KEY) === '1') return false;
-    const at = Number(localStorage.getItem(DISMISS_KEY) || 0);
-    if (at && Date.now() - at < DISMISS_COOLDOWN_MS) return false;
   } catch { /* ignore */ }
   return true;
 }
 
 /** iOS Safari never fires beforeinstallprompt — we show manual instructions. */
 export function isIos(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const ua = navigator.userAgent;
+  const classicIos = /iPad|iPhone|iPod/.test(ua);
+  const ipadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  return (classicIos || ipadOs) && !(window as any).MSStream;
 }

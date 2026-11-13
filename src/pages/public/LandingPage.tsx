@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, ChevronDown, Droplets, Home, MessageCircle, Sofa,
-  Building2, CarFront, Bug, Menu, X
+  Building2, CarFront, Bug, Menu, X, Phone, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
@@ -102,7 +102,7 @@ export default function LandingPage() {
         <meta name="twitter:image" content="https://www.conceptcleaningservices.co.ke/og-image.png" />
       </Helmet>
 
-      <main className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ "--primary": "#0F766E", "--primary-dark": "#115E59", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
+      <main className="min-h-screen bg-[var(--bg)] pb-[calc(4rem_+_env(safe-area-inset-bottom))] text-[var(--text)] lg:pb-0 style={{ "--primary": "#0F766E", "--primary-dark": "#115E59", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
         <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="Concept Cleaning Services home">
@@ -119,7 +119,7 @@ export default function LandingPage() {
               <Link to="/gallery" className="transition-colors hover:text-black">Gallery</Link>
               <Link to="/contact" className="transition-colors hover:text-black">Contact</Link>
             </nav>
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               <Button asChild variant="outline" className="border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[#f5f5f5]">
                 <Link to="/marketplace">Browse services</Link>
               </Button>
@@ -127,16 +127,16 @@ export default function LandingPage() {
                 <a href={waHome} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Book on WhatsApp</a>
               </Button>
             </div>
-            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] sm:hidden" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(v => !v)}>
+            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] lg:hidden" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(v => !v)}>
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
-          {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 sm:hidden" aria-label="Mobile navigation">
-            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Services</Link>
-            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</Link>
-            <Link to="/gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</Link>
-            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</Link>
-            <Link to="/my/account" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">My Account</Link>
+          {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 lg:hidden" aria-label="Mobile navigation">
+            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Services</Link>
+            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</Link>
+            <Link to="/gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</Link>
+            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</Link>
+            <Link to="/my/account" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">My Account</Link>
             <Button asChild className="mt-1 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]"><Link to="/marketplace">Browse services</Link></Button>
           </nav>}
         </header>
@@ -159,7 +159,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="services" className="scroll-mt-24 overflow-hidden bg-[#F1F8F8] py-16 sm:py-20">
+        <section id="services" className="scroll-mt-24 overflow-hidden bg-[#F1F8F8] py-12 sm:py-20">
           <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-4 sm:flex-row sm:items-end sm:px-6 lg:px-8">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#0F766E]">What we do</p>
@@ -196,6 +196,7 @@ export default function LandingPage() {
           </div>
           <style>{`
             .service-marquee { overflow: hidden; width: 100%; }
+            @media (hover:none) and (pointer:coarse) { .service-marquee { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; } .service-marquee::-webkit-scrollbar { display: none; } .service-marquee__track { animation: none; } }
             .service-marquee__track { display: flex; width: max-content; animation: ccs-service-marquee 42s linear infinite; }
             .service-marquee:hover .service-marquee__track, .service-marquee:focus-within .service-marquee__track { animation-play-state: paused; }
             .service-marquee__group { display: flex; flex: none; gap: 18px; padding: 0 9px; }
@@ -212,7 +213,7 @@ export default function LandingPage() {
           `}</style>
         </section>
 
-        <section id="service-categories" className="scroll-mt-24 border-b border-[var(--border)] bg-white py-16 sm:py-20">
+        <section id="service-categories" className="scroll-mt-24 border-b border-[var(--border)] bg-white py-12 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
@@ -227,10 +228,10 @@ export default function LandingPage() {
               </Link>
             </div>
             {serviceCategories.length > 0 ? (
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-8 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {serviceCategories.map((category) => (
-                  <Link key={category.id} to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="group flex min-h-40 items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
-                    <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
+                  <Link key={category.id} to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="group flex min-h-36 items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition sm:min-h-40 sm:gap-4 sm:p-5 hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
+                    <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-16 w-20 shrink-0 rounded-xl object-cover sm:h-20 sm:w-24" />
                     <span className="min-w-0">
                       <span className="block text-base font-extrabold text-[var(--text)] group-hover:text-[var(--primary)]">{category.name}</span>
                       <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{categoryPurposeText(category)}</span>
@@ -276,6 +277,18 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/services" className="hover:text-black">Services</Link><Link to="/about" className="hover:text-black">About Us</Link><Link to="/gallery" className="hover:text-black">Gallery</Link><Link to="/contact" className="hover:text-black">Contact</Link><Link to="/blog" className="hover:text-black">Blog</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
           </div>
         </footer>
+
+        <nav aria-label="Quick actions" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-[#E2E8F0] bg-white/95 pb-[env(safe-area-inset-bottom)] text-[#0F172A] shadow-[0_-6px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
+          <a href={`tel:${phone}`} className="flex min-h-16 flex-col items-center justify-center gap-1 py-2 text-xs font-bold" aria-label="Call Concept Cleaning Services">
+            <Phone className="h-5 w-5" />Call
+          </a>
+          <a href={waHome} target="_blank" rel="noopener noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1 py-2 text-xs font-bold" aria-label="Chat with Concept Cleaning Services on WhatsApp">
+            <MessageCircle className="h-5 w-5" />WhatsApp
+          </a>
+          <Link to="/marketplace" className="flex min-h-16 flex-col items-center justify-center gap-1 bg-[#0F766E] py-2 text-xs font-extrabold text-white" aria-label="Browse and book services">
+            <Sparkles className="h-5 w-5" />Book Now
+          </Link>
+        </nav>
       </main>
     </div>
   );
