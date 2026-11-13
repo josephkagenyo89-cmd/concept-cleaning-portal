@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, NavLink } from 'react-router-dom';
 import {
-  ArrowRight, CheckCircle2, Clock3, Image as ImageIcon, Mail,
+  ArrowRight, CheckCircle2, Image as ImageIcon, Mail,
   MapPin, Menu, MessageCircle, Phone, Sparkles, X
 } from 'lucide-react';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
@@ -467,9 +467,9 @@ function normalizeGalleryImages(value: unknown, serviceName: string): GalleryIte
   }
 
   return items.flatMap((item) => {
-    const record = typeof item === 'string' ? { url: item } : (item && typeof item === 'object' ? item as Record<string, unknown> : {});
+    const record: Record<string, unknown> = typeof item === 'string' ? { url: item } : (item && typeof item === 'object' ? item as Record<string, unknown> : {});
     const url = String(record.url || record.src || record.image_url || '').trim();
-    if (!url || (!/^https?:\/\//i.test(url) && !url.startsWith('/'))) return [];
+    if (!url || (!/^https?:\/\//i.test(url) && !/^\/(?!\/)/.test(url))) return [];
     return [{
       url,
       alt: String(record.alt || record.title || (serviceName + ' cleaning project')).trim(),
