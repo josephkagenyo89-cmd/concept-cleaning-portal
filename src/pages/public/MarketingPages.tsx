@@ -452,8 +452,9 @@ export function AboutPage() {
 
 type GalleryItem = { url: string; alt: string; serviceName: string };
 
-function normalizeGalleryImages(value: unknown, serviceName: string): GalleryItem[] {
+function normalizeGalleryImages(value: unknown, serviceName: string, serviceImageUrl?: string | null): GalleryItem[] {
   let items: unknown[] = [];
+  if (serviceImageUrl) items.push(serviceImageUrl);
   if (Array.isArray(value)) items = value;
   else if (typeof value === 'string') {
     try {
@@ -466,13 +467,15 @@ function normalizeGalleryImages(value: unknown, serviceName: string): GalleryIte
     items = Object.values(value as Record<string, unknown>);
   }
 
+  const seen = new Set<string>();
   return items.flatMap((item) => {
     const record: Record<string, unknown> = typeof item === 'string' ? { url: item } : (item && typeof item === 'object' ? item as Record<string, unknown> : {});
     const url = String(record.url || record.src || record.image_url || '').trim();
-    if (!url || (!/^https?:\/\//i.test(url) && !/^\/(?!\/)/.test(url))) return [];
+    if (!url || (!/^https?:\/\//i.test(url) && !/^\/(?!\/)/.test(url)) || seen.has(url)) return [];
+    seen.add(url);
     return [{
       url,
-      alt: String(record.alt || record.title || (serviceName + ' cleaning project')).trim(),
+      alt: String(record.alt || record.title || (serviceName + ' cleaning service')).trim(),
       serviceName,
     }];
   });
@@ -487,7 +490,7 @@ export function GalleryPage() {
     let mounted = true;
     const load = async () => {
       const { data, error: queryError } = await (supabase.from('services') as any)
-        .select('name,gallery_images')
+        .select('name,image_url,gallery_images')
         .eq('is_active', true)
         .order('name', { ascending: true });
       if (!mounted) return;
@@ -495,7 +498,7 @@ export function GalleryPage() {
         setError(true);
       } else {
         const gallery = (data || []).flatMap((service: { name: string; gallery_images: unknown }) =>
-          normalizeGalleryImages(service.gallery_images, service.name)
+          normalizeGalleryImages(service.gallery_images, service.name, service.image_url)
         );
         setItems(gallery);
       }
@@ -644,12 +647,12 @@ export function HomeGalleryPreview() {
     let mounted = true;
     void (async () => {
       const { data } = await (supabase.from('services') as any)
-        .select('name,gallery_images')
+        .select('name,image_url,gallery_images')
         .eq('is_active', true)
         .order('name', { ascending: true });
       if (!mounted) return;
       setItems((data || []).flatMap((service: { name: string; gallery_images: unknown }) =>
-        normalizeGalleryImages(service.gallery_images, service.name)
+        normalizeGalleryImages(service.gallery_images, service.name, service.image_url)
       ).slice(0, 3));
     })();
     return () => { mounted = false; };
