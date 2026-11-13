@@ -6,6 +6,50 @@
       "destination": "/api/sitemap.xml"
     },
     {
+      "source": "/services",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Googlebot|Applebot|Bingbot|Discordbot|redditbot|Pinterest"
+        }
+      ],
+      "destination": "/api/public-page-meta/services"
+    },
+    {
+      "source": "/about",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Googlebot|Applebot|Bingbot|Discordbot|redditbot|Pinterest"
+        }
+      ],
+      "destination": "/api/public-page-meta/about"
+    },
+    {
+      "source": "/gallery",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Googlebot|Applebot|Bingbot|Discordbot|redditbot|Pinterest"
+        }
+      ],
+      "destination": "/api/public-page-meta/gallery"
+    },
+    {
+      "source": "/contact",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Googlebot|Applebot|Bingbot|Discordbot|redditbot|Pinterest"
+        }
+      ],
+      "destination": "/api/public-page-meta/contact"
+    },
+    {
       "source": "/service/:slug",
       "has": [
         {
