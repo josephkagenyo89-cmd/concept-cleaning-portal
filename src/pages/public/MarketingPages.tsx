@@ -267,25 +267,39 @@ function CategoryCard({ category }: { category: ServiceCategory }) {
 }
 
 export function ServicesPage() {
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
-    fetchServiceCategories(true)
-      .then(({ data, error: queryError }) => {
-        if (!mounted) return;
-        if (queryError) setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
-        else setCategories(data || []);
+    const loadCategories = async () => {
+      const { data, error: queryError } = await (supabase.from('services') as any)
+        .select('category')
+        .eq('is_active', true)
+        .not('category', 'is', null)
+        .order('category', { ascending: true })
+        .limit(191);
+
+      if (!mounted) return;
+      if (queryError) {
+        setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
+      } else {
+        setCategories(Array.from(new Set(
+          (data || [])
+            .map((row: { category: string | null }) => String(row.category || '').trim())
+            .filter(Boolean)
+        )));
+      }
+      setLoading(false);
+    };
+
+    void loadCategories().catch(() => {
+      if (mounted) {
+        setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
         setLoading(false);
-      })
-      .catch(() => {
-        if (mounted) {
-          setError('The service categories are temporarily unavailable. Please try again shortly or contact our team.');
-          setLoading(false);
-        }
-      });
+      }
+    });
     return () => { mounted = false; };
   }, []);
 
@@ -293,16 +307,14 @@ export function ServicesPage() {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'Cleaning and Pest-Control Service Categories in Nairobi',
-    description: 'Browse the service categories offered by Concept Cleaning Services in Nairobi and surrounding areas.',
+    description: 'Browse the active cleaning and pest-control service categories offered by Concept Cleaning Services in Nairobi and surrounding areas.',
     url: SITE_URL + '/services',
     mainEntity: {
       '@type': 'ItemList',
       itemListElement: categories.map((category, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        url: SITE_URL + '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name),
-        name: category.name,
-        description: categoryPurpose(category),
+        name: category,
       })),
     },
   };
@@ -311,23 +323,20 @@ export function ServicesPage() {
     <MarketingLayout>
       <PageSeo
         title="Cleaning & Pest-Control Categories in Nairobi | Concept Cleaning Services"
-        description="Browse cleaning and pest-control service categories from Concept Cleaning Services in Nairobi. Choose a category to explore its services and booking options."
+        description="Browse active cleaning and pest-control service categories from Concept Cleaning Services in Nairobi."
         path="/services"
         schema={schema}
       />
       <PageHero
         eyebrow="Our services"
         title="Explore our cleaning and pest-control categories"
-        description="Start with the type of cleaning or property-care service you need. Each category explains what it is for and takes you to the services available within it."
+        description="Browse the service categories currently available in our active services catalogue."
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Browse by category</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Find the right type of service</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Choose a category to understand its purpose and see the specific services available. Individual services are shown on their respective category pages.</p>
-          </div>
-          <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700">Open booking marketplace <ArrowRight className="h-4 w-4" /></Link>
+        <div className="mb-8">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Browse by category</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Available service categories</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">These categories are taken directly from active services in our catalogue.</p>
         </div>
         {loading ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">Loading service categories…</div>
@@ -336,12 +345,20 @@ export function ServicesPage() {
         ) : categories.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">No active service categories are currently available.</div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => <CategoryCard key={category.id} category={category} />)}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {categories.map((category) => (
+              <article key={category} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <img src={categoryImage(category)} alt="" loading="lazy" className="h-48 w-full object-cover" />
+                <div className="p-5">
+                  <h2 className="text-lg font-black text-slate-900">{category}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Explore the cleaning and property-care services available under {category}.</p>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
-      <PageCta title="Need help choosing a category?" description="I would like help finding the right cleaning or pest-control category for my property." />
+      <PageCta title="Need help choosing a service?" description="I would like help finding the right cleaning or pest-control service for my property." />
     </MarketingLayout>
   );
 }
