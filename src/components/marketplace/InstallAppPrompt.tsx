@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import {
@@ -28,7 +29,25 @@ export default function InstallAppPrompt() {
   const [expanded, setExpanded] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [installed, setInstalled] = useState(false);
+  const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
   const collapseTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isHome || inStaffArea) {
+      setMountNode(null);
+      return;
+    }
+    const updateTarget = () => {
+      const targetId = window.matchMedia('(min-width: 1024px)').matches
+        ? 'ccs-install-app-slot-desktop'
+        : 'ccs-install-app-slot-mobile';
+      setMountNode(document.getElementById(targetId));
+    };
+    updateTarget();
+    const media = window.matchMedia('(min-width: 1024px)');
+    media.addEventListener('change', updateTarget);
+    return () => media.removeEventListener('change', updateTarget);
+  }, [isHome, inStaffArea]);
 
   useEffect(() => {
     if (inStaffArea) detachCustomerManifest();
@@ -95,7 +114,7 @@ export default function InstallAppPrompt() {
     }
   };
 
-  if (!isHome || inStaffArea || installed || isStandaloneApp() || !canShowCustomerInstallPrompt()) {
+  if (!isHome || inStaffArea || installed || isStandaloneApp() || !canShowCustomerInstallPrompt() || !mountNode) {
     return null;
   }
 
@@ -103,14 +122,14 @@ export default function InstallAppPrompt() {
     ? 'In Safari, tap the Share icon, choose “Add to Home Screen”, then tap Add.'
     : 'Open your browser menu and choose “Install app” or “Add to Home screen”.';
 
-  return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_5.25rem)] right-4 z-[70] md:bottom-6">
+  return createPortal(
+    <div className="relative z-[70]">
       {showInstructions && (
         <div
           id="ccs-install-help"
           role="dialog"
           aria-label="How to install Concept Cleaning Services"
-          className="absolute bottom-[calc(100%_+_0.75rem)] right-0 w-80 max-w-[calc(100vw_-_2rem)] rounded-2xl border border-[#E2E8F0] bg-white p-4 text-[#0F172A] shadow-2xl"
+          className="absolute right-0 top-[calc(100%_+_0.75rem)] w-80 max-w-[calc(100vw_-_2rem)] rounded-2xl border border-[#E2E8F0] bg-white p-4 text-[#0F172A] shadow-2xl"
         >
           <button
             type="button"
@@ -157,6 +176,7 @@ export default function InstallAppPrompt() {
           Install App
         </span>
       </button>
-    </div>
+    </div>,
+    mountNode,
   );
 }

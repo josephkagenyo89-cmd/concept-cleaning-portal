@@ -118,6 +118,7 @@ export default function LandingPage() {
               <Link to="/about" className="transition-colors hover:text-black">About Us</Link>
               <Link to="/gallery" className="transition-colors hover:text-black">Gallery</Link>
               <Link to="/contact" className="transition-colors hover:text-black">Contact</Link>
+              <div id="ccs-install-app-slot-desktop" className="flex items-center" />
             </nav>
             <div className="hidden items-center gap-2 lg:flex">
               <Button asChild variant="outline" className="border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[#f5f5f5]">
@@ -126,6 +127,10 @@ export default function LandingPage() {
               <Button asChild className="bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
                 <a href={waHome} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Book on WhatsApp</a>
               </Button>
+            </div>
+            <div className="flex items-center gap-3 lg:hidden">
+              <Link to="/contact" className="text-sm font-semibold text-[var(--muted)]">Contact</Link>
+              <div id="ccs-install-app-slot-mobile" className="flex items-center" />
             </div>
             <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] lg:hidden" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(v => !v)}>
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
