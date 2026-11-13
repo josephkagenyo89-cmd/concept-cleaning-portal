@@ -11,10 +11,8 @@ import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import commercialHero from '@/assets/market/commercial.jpg';
 import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
-import {
-  categoryImage,
-  fetchMarketCategories,
-} from '@/lib/marketplace';
+import { categoryImage } from '@/lib/marketplace';
+import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
 import BookingEngine from '@/components/public/BookingEngine';
 
 const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
@@ -49,17 +47,21 @@ export default function LandingPage() {
   const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like to enquire about your services.');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [marketCategories, setMarketCategories] = useState<string[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
 
   useEffect(() => {
     let mounted = true;
 
-    fetchMarketCategories()
-      .then((categories) => {
-        if (mounted) setMarketCategories(categories);
+    fetchServiceCategories(true)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Landing service categories could not be loaded:', error);
+          return;
+        }
+        if (mounted) setServiceCategories(data || []);
       })
       .catch((error) => {
-        console.error('Landing categories could not be loaded:', error);
+        console.error('Landing service categories could not be loaded:', error);
       });
 
     return () => {
@@ -161,17 +163,17 @@ export default function LandingPage() {
                   className="service-marquee__group"
                   aria-hidden={copy === 1 ? true : undefined}
                 >
-                  {marketCategories.map((category) => (
+                  {serviceCategories.map((category) => (
                     <Link
-                      key={category}
-                      to={`/categories?c=${encodeURIComponent(category)}`}
+                      key={category.id}
+                      to={`/services#category-${category.id}`}
                       tabIndex={copy === 1 ? -1 : undefined}
                       className="service-marquee__card group"
                     >
-                      <img src={categoryImage(category)} alt={copy === 1 ? '' : category} loading="lazy" />
+                      <img src={categoryImage(category.name, category.image_key)} alt={copy === 1 ? '' : category.name} loading="lazy" />
                       <span className="service-marquee__shade" />
                       <span className="service-marquee__icon"><Droplets className="h-5 w-5" /></span>
-                      <span className="service-marquee__title">{category}</span>
+                      <span className="service-marquee__title">{category.name}</span>
                       <span className="service-marquee__arrow"><ArrowRight className="h-4 w-4" /></span>
                     </Link>
                   ))}
@@ -197,26 +199,42 @@ export default function LandingPage() {
           `}</style>
         </section>
 
-        <section id="why-us" className="scroll-mt-24 border-b border-[var(--border)]">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:items-center lg:px-8">
-            <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--muted)]">Before you book</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Know the service before you request it.</h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--muted)] sm:text-base">
-                Each service page brings together the information available for that service, including its description, recorded features, estimated duration and pricing details. Review these details before submitting your booking request.
-              </p>
-              <Button asChild className="mt-7 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
-                <Link to="/services">Browse the service catalogue <ArrowRight className="ml-2 h-4 w-4" /></Link>
-              </Button>
+        <section id="service-categories" className="scroll-mt-24 border-b border-[var(--border)] bg-white py-16 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--primary)]">Cleaning and pest control</p>
+                <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">What can we help you with?</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-base">
+                  From homes and offices to furniture, carpets, vehicle interiors and pest control, explore our services by category.
+                </p>
+              </div>
+              <Link to="/services" className="inline-flex shrink-0 items-center gap-2 text-sm font-extrabold text-[var(--primary)] hover:text-[var(--primary-dark)]">
+                See all services <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
-              <h3 className="text-lg font-extrabold">What to check on a service page</h3>
-              <ul className="mt-5 space-y-4 text-sm leading-6 text-[var(--muted)]">
-                <li><strong className="text-[var(--text)]">Description:</strong> Read the service description to understand the listed scope.</li>
-                <li><strong className="text-[var(--text)]">Features:</strong> Check the specific features recorded for that service.</li>
-                <li><strong className="text-[var(--text)]">Duration:</strong> Review the estimated duration where one is provided.</li>
-                <li><strong className="text-[var(--text)]">Pricing:</strong> Check whether the service is fixed-price, unit-based, area-based or quotation-based.</li>
-              </ul>
+            {serviceCategories.length > 0 ? (
+              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {serviceCategories.map((category) => (
+                  <Link key={category.id} to={`/services#category-${category.id}`} className="group flex min-h-40 items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
+                    <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
+                    <span className="min-w-0">
+                      <span className="block text-base font-extrabold text-[var(--text)] group-hover:text-[var(--primary)]">{category.name}</span>
+                      {category.description && <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{category.description}</span>}
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[var(--primary)]">View services <ArrowRight className="h-4 w-4" /></span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 text-sm text-[var(--muted)]">
+                Browse the full service catalogue to see the cleaning and pest-control options currently available.
+              </p>
+            )}
+            <div className="mt-8">
+              <Button asChild className="bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
+                <Link to="/services">See all service categories <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
             </div>
           </div>
         </section>
