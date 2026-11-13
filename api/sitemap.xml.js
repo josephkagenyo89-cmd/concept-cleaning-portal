@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       auth: { persistSession: false },
     });
 
-    const [blogResult, serviceResult] = await Promise.all([
+    const [blogResult, serviceResult, categoryResult] = await Promise.all([
       supabase
         .from('blog_posts')
         .select('slug,published_at,updated_at')
@@ -60,10 +60,17 @@ export default async function handler(req, res) {
         .from('services')
         .select('id,slug,updated_at')
         .eq('is_active', true),
+
+      supabase
+        .from('service_categories')
+        .select('id,name,updated_at')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
     ]);
 
     if (blogResult.error) throw blogResult.error;
     if (serviceResult.error) throw serviceResult.error;
+    if (categoryResult.error) throw categoryResult.error;
 
     const staticUrls = [
       { loc: '/', changefreq: 'weekly', priority: '1.0' },
@@ -88,6 +95,25 @@ export default async function handler(req, res) {
           lastmod: post.updated_at || post.published_at,
           changefreq: 'monthly',
           priority: '0.7',
+        })
+      );
+    }
+
+    for (const category of categoryResult.data || []) {
+      if (!category.id || !category.name) continue;
+
+      const categorySlug = String(category.name)
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      urls.push(
+        sitemapUrl(`/services/category/${encodeURIComponent(category.id)}/${categorySlug}`, {
+          lastmod: category.updated_at,
+          changefreq: 'weekly',
+          priority: '0.8',
         })
       );
     }
