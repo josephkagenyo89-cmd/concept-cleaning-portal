@@ -31,7 +31,7 @@ export default function MarketCategories() {
       setCategories(availableCategories);
 
       if (active) {
-        const selectedCategory = availableCategories.find((category) => category.id === active);
+        const selectedCategory = availableCategories.find((category) => category.id === active || category.name === active);
         if (!selectedCategory) {
           setServices([]);
           setLoading(false);
@@ -72,7 +72,7 @@ export default function MarketCategories() {
     };
   }, [active]);
 
-  const activeCategory = categories.find((category) => category.id === active);
+  const activeCategory = categories.find((category) => category.id === active || category.name === active);
 
   useEffect(() => {
     if (activeCategory) trackCategoryView(activeCategory.name);
