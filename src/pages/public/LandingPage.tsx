@@ -166,7 +166,7 @@ export default function LandingPage() {
                   {serviceCategories.map((category) => (
                     <Link
                       key={category.id}
-                      to={`/services#category-${category.id}`}
+                      to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
                       tabIndex={copy === 1 ? -1 : undefined}
                       className="service-marquee__card group"
                     >
@@ -216,7 +216,7 @@ export default function LandingPage() {
             {serviceCategories.length > 0 ? (
               <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {serviceCategories.map((category) => (
-                  <Link key={category.id} to={`/services#category-${category.id}`} className="group flex min-h-40 items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
+                  <Link key={category.id} to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="group flex min-h-40 items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
                     <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
                     <span className="min-w-0">
                       <span className="block text-base font-extrabold text-[var(--text)] group-hover:text-[var(--primary)]">{category.name}</span>
