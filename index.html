@@ -8,41 +8,9 @@
     <meta name="description" content="Professional cleaning services in Nairobi, Kenya. We offer house cleaning, carpet cleaning, sofa cleaning, fumigation, car detailing & more. Book online today." />
     <meta name="author" content="Concept Cleaning Services" />
     <meta name="theme-color" content="#0F766E" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Concept Clean" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="preconnect" href="https://bauvxqckhcymtdbttafv.supabase.co" />
     <link rel="dns-prefetch" href="https://bauvxqckhcymtdbttafv.supabase.co" />
     <link rel="icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-
-    <!-- Declare the customer manifest in the initial HTML so Chromium can evaluate installability.
-         On staff routes, switch the same link to the isolated ERP manifest before the app starts. -->
-    <link id="customer-manifest" rel="manifest" href="/customer.webmanifest" />
-    <script>
-      (function () {
-        var path = window.location.pathname;
-        var manifest = document.getElementById('customer-manifest');
-        var isAdminRoute = path.startsWith('/admin');
-        var isAgentRoute = path.startsWith('/agent');
-
-        if (isAdminRoute) {
-          manifest.id = 'erp-manifest';
-          manifest.href = '/admin.webmanifest';
-        } else if (isAgentRoute) {
-          manifest.remove();
-        } else {
-          window.addEventListener('beforeinstallprompt', function (event) {
-            if (window.location.pathname.startsWith('/admin') ||
-                window.location.pathname.startsWith('/agent')) return;
-
-            event.preventDefault();
-            window.__ccsCustomerInstallPrompt = event;
-            window.dispatchEvent(new Event('ccs-customer-install-available'));
-          });
-        }
-      })();
-    </script>
 
     <meta property="og:url" content="https://www.conceptcleaningservices.co.ke/" />
     <meta property="og:title" content="Concept Cleaning Services | Professional Cleaning in Nairobi, Kenya" />
