@@ -497,7 +497,7 @@ export function GalleryPage() {
       if (queryError) {
         setError(true);
       } else {
-        const gallery = (data || []).flatMap((service: { name: string; gallery_images: unknown }) =>
+        const gallery = (data || []).flatMap((service: { name: string; image_url: string | null; gallery_images: unknown }) =>
           normalizeGalleryImages(service.gallery_images, service.name, service.image_url)
         );
         setItems(gallery);
@@ -651,7 +651,7 @@ export function HomeGalleryPreview() {
         .eq('is_active', true)
         .order('name', { ascending: true });
       if (!mounted) return;
-      setItems((data || []).flatMap((service: { name: string; gallery_images: unknown }) =>
+      setItems((data || []).flatMap((service: { name: string; image_url: string | null; gallery_images: unknown }) =>
         normalizeGalleryImages(service.gallery_images, service.name, service.image_url)
       ).slice(0, 3));
     })();
