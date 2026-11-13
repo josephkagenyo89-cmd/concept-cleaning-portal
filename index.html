@@ -16,6 +16,32 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
 
+    <!-- Discover the customer manifest and capture its install event before the React app loads.
+         Staff routes intentionally do not receive the customer manifest. -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var isStaffRoute = path.startsWith('/admin') || path.startsWith('/agent');
+
+        if (!isStaffRoute) {
+          var manifest = document.createElement('link');
+          manifest.id = 'customer-manifest';
+          manifest.rel = 'manifest';
+          manifest.href = '/customer.webmanifest';
+          document.head.appendChild(manifest);
+
+          window.addEventListener('beforeinstallprompt', function (event) {
+            if (window.location.pathname.startsWith('/admin') ||
+                window.location.pathname.startsWith('/agent')) return;
+
+            event.preventDefault();
+            window.__ccsCustomerInstallPrompt = event;
+            window.dispatchEvent(new Event('ccs-customer-install-available'));
+          });
+        }
+      })();
+    </script>
+
     <meta property="og:url" content="https://www.conceptcleaningservices.co.ke/" />
     <meta property="og:title" content="Concept Cleaning Services | Professional Cleaning in Nairobi, Kenya" />
     <meta property="og:description" content="Professional cleaning services in Nairobi, Kenya. We offer house cleaning, carpet cleaning, sofa cleaning, fumigation, car detailing & more. Book online today." />
