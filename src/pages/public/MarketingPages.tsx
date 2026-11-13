@@ -347,13 +347,18 @@ export function ServicesPage() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((category) => (
-              <article key={category} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <img src={categoryImage(category)} alt="" loading="lazy" className="h-48 w-full object-cover" />
+              <Link
+                key={category}
+                to={'/services/category/legacy-' + encodeURIComponent(category) + '/' + categorySlug(category)}
+                className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                <img src={categoryImage(category)} alt="" loading="lazy" className="h-48 w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
                 <div className="p-5">
-                  <h2 className="text-lg font-black text-slate-900">{category}</h2>
+                  <h2 className="text-lg font-black text-slate-900 group-hover:text-teal-700">{category}</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">Explore the cleaning and property-care services available under {category}.</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700">Explore services <ArrowRight className="h-4 w-4" /></span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}
@@ -375,19 +380,44 @@ export function ServiceCategoryPage() {
     const load = async () => {
       setLoading(true);
       setError('');
-      const categoryResult = await fetchServiceCategories(true);
-      if (categoryResult.error) throw categoryResult.error;
-      const selected = (categoryResult.data || []).find((item) => item.id === categoryId);
+
+      const isLegacyCategory = categoryId.startsWith('legacy-');
+      let selected: ServiceCategory | null = null;
+
+      if (isLegacyCategory) {
+        const categoryName = categoryId.slice('legacy-'.length).trim();
+        if (categoryName) {
+          selected = {
+            id: categoryId,
+            name: categoryName,
+            description: null,
+            sort_order: 0,
+            is_active: true,
+            image_key: '',
+          };
+        }
+      } else {
+        const categoryResult = await fetchServiceCategories(true);
+        if (categoryResult.error) throw categoryResult.error;
+        selected = (categoryResult.data || []).find((item) => item.id === categoryId) || null;
+      }
+
       if (!selected) {
         if (mounted) { setCategory(null); setServices([]); setLoading(false); }
         return;
       }
-      const { data, error: serviceError } = await (supabase.from('services') as any)
+
+      let serviceQuery = (supabase.from('services') as any)
         .select('id,name,slug,short_description,description,image_url,category_id')
-        .eq('is_active', true)
-        .eq('category_id', selected.id)
-        .order('name', { ascending: true });
+        .eq('is_active', true);
+
+      serviceQuery = isLegacyCategory
+        ? serviceQuery.eq('category', selected.name)
+        : serviceQuery.eq('category_id', selected.id);
+
+      const { data, error: serviceError } = await serviceQuery.order('name', { ascending: true });
       if (serviceError) throw serviceError;
+
       if (mounted) {
         setCategory(selected);
         setServices((data || []) as PublicService[]);
@@ -405,12 +435,18 @@ export function ServiceCategoryPage() {
 
   useEffect(() => {
     if (category && routeSlug !== categorySlug(category.name)) {
-      window.history.replaceState(null, '', '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name));
+      const categoryPathId = category.id.startsWith('legacy-')
+        ? 'legacy-' + encodeURIComponent(category.name)
+        : encodeURIComponent(category.id);
+      window.history.replaceState(null, '', '/services/category/' + categoryPathId + '/' + categorySlug(category.name));
     }
   }, [category, routeSlug]);
 
   const description = category ? categoryPurpose(category) : '';
-  const canonicalPath = category ? '/services/category/' + encodeURIComponent(category.id) + '/' + categorySlug(category.name) : '/services';
+  const canonicalCategoryId = category
+    ? (category.id.startsWith('legacy-') ? 'legacy-' + encodeURIComponent(category.name) : encodeURIComponent(category.id))
+    : '';
+  const canonicalPath = category ? '/services/category/' + canonicalCategoryId + '/' + categorySlug(category.name) : '/services';
   const schema = category ? {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
