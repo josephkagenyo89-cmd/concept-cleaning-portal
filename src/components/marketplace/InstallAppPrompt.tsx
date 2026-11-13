@@ -103,7 +103,6 @@ export default function InstallAppPrompt() {
       if (outcome === 'accepted') {
         markCustomerInstalled();
         setInstalled(true);
-      } else {
       }
     } catch {
       // The browser owns the native installation UI.
