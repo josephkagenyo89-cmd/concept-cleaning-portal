@@ -63,7 +63,7 @@ export default async function handler(req, res) {
 
       supabase
         .from('service_categories')
-        .select('id,name,updated_at')
+        .select('id,name')
         .eq('is_active', true)
         .order('sort_order', { ascending: true }),
     ]);
@@ -111,7 +111,6 @@ export default async function handler(req, res) {
 
       urls.push(
         sitemapUrl(`/services/category/${encodeURIComponent(category.id)}/${categorySlug}`, {
-          lastmod: category.updated_at,
           changefreq: 'weekly',
           priority: '0.8',
         })
