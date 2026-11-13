@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
       devOptions: { enabled: false },
       manifest: false,
       workbox: {
+        // Keep first-install precaching light; JS chunks and images are cached only as visitors use them.
+        globPatterns: ["**/*.html", "**/*.css"],
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
