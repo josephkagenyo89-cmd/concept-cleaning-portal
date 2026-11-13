@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import { MarketService, categoryImage, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
@@ -23,6 +24,20 @@ export default function MarketHome() {
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] pb-12 text-[#292824]">
+      <Helmet>
+        <title>Cleaning Services in Nairobi | Concept Cleaning Services</title>
+        <meta name="description" content="Explore home, office, upholstery, carpet, car interior cleaning, fumigation and pest-control services in Nairobi and nearby areas." />
+        <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/marketplace" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.conceptcleaningservices.co.ke/marketplace" />
+        <meta property="og:title" content="Cleaning Services in Nairobi | Concept Cleaning Services" />
+        <meta property="og:description" content="Explore home, office, upholstery, carpet, car interior cleaning, fumigation and pest-control services in Nairobi and nearby areas." />
+        <meta property="og:image" content="https://www.conceptcleaningservices.co.ke/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Cleaning Services in Nairobi | Concept Cleaning Services" />
+        <meta name="twitter:description" content="Explore home, office, upholstery, carpet, car interior cleaning, fumigation and pest-control services in Nairobi and nearby areas." />
+        <meta name="twitter:image" content="https://www.conceptcleaningservices.co.ke/og-image.png" />
+      </Helmet>
       <section className="mx-auto max-w-7xl px-4 pb-9 pt-7 md:px-8 md:pb-12 md:pt-11">
         <div className="mb-6 flex items-end justify-between gap-3 md:mb-8">
           <div>

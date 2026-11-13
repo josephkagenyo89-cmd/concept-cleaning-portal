@@ -73,9 +73,15 @@ export default function LandingPage() {
         <title>{title}</title>
         <meta name="description" content={description} />
         <link rel="canonical" href="https://www.conceptcleaningservices.co.ke/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.conceptcleaningservices.co.ke/" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://www.conceptcleaningservices.co.ke/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content="https://www.conceptcleaningservices.co.ke/og-image.png" />
       </Helmet>
 
       <main className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ "--primary": "#0F766E", "--primary-dark": "#115E59", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
