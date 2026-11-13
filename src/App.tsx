@@ -87,7 +87,7 @@ const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNot
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
-const ServicesPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServicesPage })));
+const ServicesPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServicesPage })));\nconst ServiceCategoryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServiceCategoryPage })));
 const AboutPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.AboutPage })));
 const GalleryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.GalleryPage })));
 const ContactPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ContactPage })));
@@ -99,7 +99,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const marketplaceRoutes = (
   <>
   <Route path="/" element={<LandingPage />} />
-  <Route path="/services" element={<ServicesPage />} />
+  <Route path="/services" element={<ServicesPage />} />\n  <Route path="/services/category/:categoryId/:categorySlug" element={<ServiceCategoryPage />} />
   <Route path="/about" element={<AboutPage />} />
   <Route path="/gallery" element={<GalleryPage />} />
   <Route path="/contact" element={<ContactPage />} />
