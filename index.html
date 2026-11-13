@@ -16,20 +16,22 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
 
-    <!-- Discover the customer manifest and capture its install event before the React app loads.
-         Staff routes intentionally do not receive the customer manifest. -->
+    <!-- Declare the customer manifest in the initial HTML so Chromium can evaluate installability.
+         On staff routes, switch the same link to the isolated ERP manifest before the app starts. -->
+    <link id="customer-manifest" rel="manifest" href="/customer.webmanifest" />
     <script>
       (function () {
         var path = window.location.pathname;
-        var isStaffRoute = path.startsWith('/admin') || path.startsWith('/agent');
+        var manifest = document.getElementById('customer-manifest');
+        var isAdminRoute = path.startsWith('/admin');
+        var isAgentRoute = path.startsWith('/agent');
 
-        if (!isStaffRoute) {
-          var manifest = document.createElement('link');
-          manifest.id = 'customer-manifest';
-          manifest.rel = 'manifest';
-          manifest.href = '/customer.webmanifest';
-          document.head.appendChild(manifest);
-
+        if (isAdminRoute) {
+          manifest.id = 'erp-manifest';
+          manifest.href = '/admin.webmanifest';
+        } else if (isAgentRoute) {
+          manifest.remove();
+        } else {
           window.addEventListener('beforeinstallprompt', function (event) {
             if (window.location.pathname.startsWith('/admin') ||
                 window.location.pathname.startsWith('/agent')) return;
