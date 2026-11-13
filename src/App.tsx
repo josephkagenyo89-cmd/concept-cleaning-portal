@@ -100,7 +100,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const marketplaceRoutes = (
   <>
   <Route path="/" element={<LandingPage />} />
-  <Route path="/services" element={<ServicesPage />} />
+  <Route path="/services" element={<MarketCategories />} />
   <Route path="/services/category/:categoryId/:categorySlug" element={<ServiceCategoryPage />} />
   <Route path="/about" element={<AboutPage />} />
   <Route path="/gallery" element={<GalleryPage />} />
