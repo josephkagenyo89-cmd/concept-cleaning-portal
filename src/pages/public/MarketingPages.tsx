@@ -454,7 +454,6 @@ type GalleryItem = { url: string; alt: string; serviceName: string };
 
 function normalizeGalleryImages(value: unknown, serviceName: string, serviceImageUrl?: string | null): GalleryItem[] {
   let items: unknown[] = [];
-  if (serviceImageUrl) items.push(serviceImageUrl);
   if (Array.isArray(value)) items = value;
   else if (typeof value === 'string') {
     try {
@@ -466,6 +465,7 @@ function normalizeGalleryImages(value: unknown, serviceName: string, serviceImag
   } else if (value && typeof value === 'object') {
     items = Object.values(value as Record<string, unknown>);
   }
+  if (serviceImageUrl) items.unshift(serviceImageUrl);
 
   const seen = new Set<string>();
   return items.flatMap((item) => {
