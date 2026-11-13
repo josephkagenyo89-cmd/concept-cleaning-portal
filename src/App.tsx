@@ -15,7 +15,6 @@ const AdminLayout = lazy(() => import("@/layouts/AdminLayout"));
 const ClientSignature = lazy(() => import("@/pages/ClientSignature"));
 import NetworkStatus from "@/components/NetworkStatus";
 import ErpPwaManager from "@/components/ErpPwaManager";
-import InstallAppPrompt from "@/components/marketplace/InstallAppPrompt";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
 import CustomerProfileRequiredDialog from "@/components/marketplace/CustomerProfileRequiredDialog";
@@ -484,7 +483,6 @@ const App = () => (
         <ScrollToTop />
         <AuthProvider>
           <ErpPwaManager />
-          <InstallAppPrompt />
           <AppRoutes />
           <GuestWhatsAppReturnDialog />
           <CookieBanner />
