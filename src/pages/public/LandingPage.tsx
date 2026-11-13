@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  ArrowRight, ChevronDown, Droplets, Home, MessageCircle, Sofa,
+  ArrowLeft, ArrowRight, ChevronDown, Droplets, Home, MessageCircle, Sofa,
   Building2, CarFront, Bug, Menu, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [categoryDirection, setCategoryDirection] = useState<'left' | 'right'>('left');
 
   useEffect(() => {
     let mounted = true;
@@ -166,10 +167,20 @@ export default function LandingPage() {
               <h2 className="mt-3 text-3xl font-black tracking-tight text-[#102A2A] sm:text-4xl">Our Services</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#475569] sm:text-base">Specialist care for every space, from everyday home cleaning to professional pest control.</p>
             </div>
-            <Link to="/services" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1" role="group" aria-label="Choose category image direction">
+                <button type="button" onClick={() => setCategoryDirection('left')} aria-label="Move category images from right to left" aria-pressed={categoryDirection === 'left'} className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E] focus-visible:ring-offset-2 ${categoryDirection === 'left' ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-[#CBD5E1] bg-white text-[#334155] hover:border-[#0F766E]'}`}>
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => setCategoryDirection('right')} aria-label="Move category images from left to right" aria-pressed={categoryDirection === 'right'} className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E] focus-visible:ring-offset-2 ${categoryDirection === 'right' ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-[#CBD5E1] bg-white text-[#334155] hover:border-[#0F766E]'}`}>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              <Link to="/services" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
+            </div>
           </div>
           <div className="service-marquee mt-8" aria-label="Cleaning service categories">
-            <div className="service-marquee__track">
+            <div className={"service-marquee__track " + (categoryDirection === "right" ? "service-marquee__track--right" : "")}>
               {[0, 1].map((copy) => (
                 <div
                   key={copy}
@@ -196,8 +207,9 @@ export default function LandingPage() {
           </div>
           <style>{`
             .service-marquee { overflow: hidden; width: 100%; }
-            @media (hover:none) and (pointer:coarse) { .service-marquee { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; } .service-marquee::-webkit-scrollbar { display: none; } .service-marquee__track { animation: none; } }
+            @media (hover:none) and (pointer:coarse) { .service-marquee { touch-action: pan-y; } }
             .service-marquee__track { display: flex; width: max-content; animation: ccs-service-marquee 42s linear infinite; }
+            .service-marquee__track--right { animation-direction: reverse; }
             .service-marquee:hover .service-marquee__track, .service-marquee:focus-within .service-marquee__track { animation-play-state: paused; }
             .service-marquee__group { display: flex; flex: none; gap: 18px; padding: 0 9px; }
             .service-marquee__card { position: relative; display: flex; width: 270px; height: 300px; flex: none; overflow: hidden; flex-direction: column; justify-content: flex-end; border-radius: 18px; background: #0F766E; color: white; box-shadow: 0 10px 28px rgb(15 23 42 / 12%); }
