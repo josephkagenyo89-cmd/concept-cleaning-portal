@@ -67,6 +67,10 @@ export default async function handler(req, res) {
 
     const staticUrls = [
       { loc: '/', changefreq: 'weekly', priority: '1.0' },
+      { loc: '/services', changefreq: 'weekly', priority: '0.9' },
+      { loc: '/about', changefreq: 'monthly', priority: '0.7' },
+      { loc: '/gallery', changefreq: 'monthly', priority: '0.7' },
+      { loc: '/contact', changefreq: 'monthly', priority: '0.7' },
       { loc: '/categories', changefreq: 'weekly', priority: '0.8' },
       { loc: '/marketplace', changefreq: 'weekly', priority: '0.9' },
       { loc: '/blog', changefreq: 'weekly', priority: '0.8' },
