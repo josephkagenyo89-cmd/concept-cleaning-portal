@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+
+const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -96,10 +98,10 @@ export default function LandingPage() {
             </Link>
             <nav className="hidden items-center gap-7 text-sm font-semibold text-[var(--muted)] lg:flex" aria-label="Main navigation">
               <a href="#home" className="transition-colors hover:text-black">Home</a>
-              <a href="#services" className="transition-colors hover:text-black">Services</a>
-              <a href="#why-us" className="transition-colors hover:text-black">About Us</a>
-              <a href="#gallery" className="transition-colors hover:text-black">Gallery</a>
-              <a href="#contact" className="transition-colors hover:text-black">Contact</a>
+              <Link to="/services" className="transition-colors hover:text-black">Services</Link>
+              <Link to="/about" className="transition-colors hover:text-black">About Us</Link>
+              <Link to="/gallery" className="transition-colors hover:text-black">Gallery</Link>
+              <Link to="/contact" className="transition-colors hover:text-black">Contact</Link>
             </nav>
             <div className="hidden items-center gap-2 sm:flex">
               <Button asChild variant="outline" className="border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[#f5f5f5]">
@@ -114,11 +116,11 @@ export default function LandingPage() {
             </button>
           </div>
           {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 sm:hidden" aria-label="Mobile navigation">
-            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Services</a>
-            <a href="#why-us" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</a>
+            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Services</Link>
+            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</Link>
+            <Link to="/gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</Link>
+            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</Link>
             <Link to="/my/account" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">My Account</Link>
-            <a href="#gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</a>
-            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</a>
             <Button asChild className="mt-1 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]"><Link to="/marketplace">Browse services</Link></Button>
           </nav>}
         </header>
@@ -148,7 +150,7 @@ export default function LandingPage() {
               <h2 className="mt-3 text-3xl font-black tracking-tight text-[#102A2A] sm:text-4xl">Our Services</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#475569] sm:text-base">Specialist care for every space, from everyday home cleaning to professional pest control.</p>
             </div>
-            <Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/services" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <div className="service-marquee mt-8" aria-label="Cleaning service categories">
             <div className="service-marquee__track">
@@ -203,7 +205,7 @@ export default function LandingPage() {
                 Each service page brings together the information available for that service, including its description, recorded features, estimated duration and pricing details. Review these details before submitting your booking request.
               </p>
               <Button asChild className="mt-7 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
-                <Link to="/marketplace">Browse the service catalogue <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to="/services">Browse the service catalogue <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
@@ -217,6 +219,10 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        <Suspense fallback={<section id="gallery" className="bg-white py-16"><div className="mx-auto max-w-7xl px-4 text-sm text-slate-500">Loading gallery preview…</div></section>}>
+          <HomeGalleryPreview />
+        </Suspense>
 
         <section id="contact" className="scroll-mt-24 px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 rounded-3xl bg-[var(--primary)] p-7 text-white sm:p-10 lg:flex-row lg:items-center lg:p-12">
@@ -235,7 +241,7 @@ export default function LandingPage() {
         <footer className="border-t border-[var(--border)] bg-[var(--bg)]">
           <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
             <div><p className="font-extrabold tracking-tight">CONCEPT CLEANING SERVICES</p><p className="mt-1 text-sm text-[var(--muted)]">Professional cleaning and pest control in Nairobi, Kenya.</p><p className="mt-2 text-xs text-[#888888]">© {new Date().getFullYear()} Concept Cleaning Services.</p></div>
-            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/marketplace" className="hover:text-black">Services</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/services" className="hover:text-black">Services</Link><Link to="/about" className="hover:text-black">About Us</Link><Link to="/gallery" className="hover:text-black">Gallery</Link><Link to="/contact" className="hover:text-black">Contact</Link><Link to="/blog" className="hover:text-black">Blog</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
           </div>
         </footer>
       </main>
