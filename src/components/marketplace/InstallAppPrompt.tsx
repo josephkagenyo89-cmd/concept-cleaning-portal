@@ -16,10 +16,16 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+declare global {
+  interface Window {
+    __ccsCustomerInstallPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
 /**
  * Homepage-only, compact PWA install control.
- * It expands on mouse hover/focus or briefly while the visitor scrolls.
- * Touch visitors tap the icon once to invoke the browser's native install prompt.
+ * The native browser event is captured in index.html before React starts,
+ * then handed to this component when its header slot becomes available.
  */
 export default function InstallAppPrompt() {
   const location = useLocation();
@@ -62,20 +68,22 @@ export default function InstallAppPrompt() {
   useEffect(() => {
     if (inStaffArea) return;
 
-    const onPrompt = (event: Event) => {
-      event.preventDefault();
-      setDeferred(event as BeforeInstallPromptEvent);
+    const syncPrompt = () => {
+      setDeferred(window.__ccsCustomerInstallPrompt ?? null);
     };
     const onInstalled = () => {
       markCustomerInstalled();
+      window.__ccsCustomerInstallPrompt = null;
       setInstalled(true);
       setDeferred(null);
     };
 
-    window.addEventListener('beforeinstallprompt', onPrompt);
+    // The event may have fired before React mounted; read the captured event first.
+    syncPrompt();
+    window.addEventListener('ccs-customer-install-available', syncPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('ccs-customer-install-available', syncPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
   }, [inStaffArea]);
@@ -96,14 +104,15 @@ export default function InstallAppPrompt() {
   }, [isHome, inStaffArea]);
 
   const install = async () => {
-    if (!deferred) {
-      toast('One-tap installation is not currently available in this browser. Try Chrome or Edge on this device.');
+    const promptEvent = deferred ?? window.__ccsCustomerInstallPrompt ?? null;
+    if (!promptEvent) {
+      toast('The browser has not offered the native install prompt for this page yet. The site must meet the browser’s installability requirements before the prompt can appear.');
       return;
     }
 
     try {
-      await deferred.prompt();
-      const { outcome } = await deferred.userChoice;
+      await promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         markCustomerInstalled();
         setInstalled(true);
@@ -111,6 +120,7 @@ export default function InstallAppPrompt() {
     } catch {
       // The browser owns the native installation UI.
     } finally {
+      window.__ccsCustomerInstallPrompt = null;
       setDeferred(null);
     }
   };
