@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  ArrowLeft, ArrowRight, ChevronDown, Droplets, Home, MessageCircle, Sofa,
+  ArrowRight, ChevronDown, Home, MessageCircle, Sofa,
   Building2, CarFront, Bug, Menu, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,24 +11,9 @@ import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import commercialHero from '@/assets/market/commercial.jpg';
 import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
-import { categoryImage } from '@/lib/marketplace';
-import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
 import BookingEngine from '@/components/public/BookingEngine';
 
 const HomeBlogPreview = lazy(() => import('./BlogIndex').then((module) => ({ default: module.HomeBlogPreview })));
-
-function categoryPurposeText(category: ServiceCategory) {
-  if (category.description?.trim()) return category.description.trim();
-  const name = category.name.toLowerCase();
-  if (/residential|house|home|domestic/.test(name)) return 'Designed for the regular care and detailed cleaning of living spaces, including rooms, kitchens, bathrooms and household surfaces. Explore options suited to different home sizes and cleaning needs.';
-  if (/commercial|office|business|industrial/.test(name)) return 'For workplaces and business premises that need a clean, orderly and welcoming environment. Explore options for offices, shared areas and commercial spaces based on the property’s requirements.';
-  if (/upholstery|sofa|furniture/.test(name)) return 'Focused on upholstered furniture such as sofas and seats. Explore cleaning options that address embedded dust, everyday marks and accumulated dirt while taking the fabric or material into account.';
-  if (/carpet|rug/.test(name)) return 'For carpets and rugs that collect dust, grit and everyday stains. Explore suitable cleaning options to refresh floor coverings and improve the cleanliness of the rooms in which they are used.';
-  if (/mattress|bed/.test(name)) return 'Focused on mattresses and sleeping surfaces. Explore options for addressing accumulated dust, marks and everyday soiling as part of a cleaner, more comfortable bedroom.';
-  if (/car|vehicle|auto|detailing/.test(name)) return 'For vehicle interiors and their surfaces. Explore cleaning options for seats, carpets, mats, dashboards and other interior areas, with attention to the materials that need care.';
-  if (/pest|fumig|cockroach|bedbug|rodent|termite/.test(name)) return 'For properties that need professional pest management. Explore available treatment and prevention services for common household or business pest concerns.';
-  return 'Explore the services grouped under ' + category.name + '. Compare the available options for the relevant space, surface or cleaning requirement, review each service’s details and choose the next step for your property.';
-}
 
 const FAQS = [
   {
@@ -60,29 +45,6 @@ export default function LandingPage() {
   const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like to enquire about your services.');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
-  const [categoryDirection, setCategoryDirection] = useState<'left' | 'right'>('left');
-
-  useEffect(() => {
-    let mounted = true;
-
-    fetchServiceCategories(true)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('Landing service categories could not be loaded:', error);
-          return;
-        }
-        if (mounted) setServiceCategories(data || []);
-      })
-      .catch((error) => {
-        console.error('Landing service categories could not be loaded:', error);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const title = 'Professional Cleaning Services in Nairobi, Kenya | Concept Cleaning';
   const description = 'Concept Cleaning Services provides professional residential, office, commercial, carpet, sofa, mattress and post-construction cleaning, plus pest control in Nairobi and nearby areas.';
 
@@ -161,111 +123,6 @@ export default function LandingPage() {
               <div className="w-full max-w-3xl">
                 <BookingEngine phone={phone} />
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="services" className="scroll-mt-24 overflow-hidden bg-[#F1F8F8] py-12 sm:py-20">
-          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-4 sm:flex-row sm:items-end sm:px-6 lg:px-8">
-            <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#0F766E]">What we do</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-[#102A2A] sm:text-4xl">Our Services</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#475569] sm:text-base">Specialist care for every space, from everyday home cleaning to professional pest control.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1" role="group" aria-label="Choose category image direction">
-                <button type="button" onClick={() => setCategoryDirection('left')} aria-label="Move category images from right to left" aria-pressed={categoryDirection === 'left'} className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E] focus-visible:ring-offset-2 ${categoryDirection === 'left' ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-[#CBD5E1] bg-white text-[#334155] hover:border-[#0F766E]'}`}>
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => setCategoryDirection('right')} aria-label="Move category images from left to right" aria-pressed={categoryDirection === 'right'} className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E] focus-visible:ring-offset-2 ${categoryDirection === 'right' ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-[#CBD5E1] bg-white text-[#334155] hover:border-[#0F766E]'}`}>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              <Link to="/services" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0F766E] hover:text-[#115E59]">View All Services <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-          </div>
-          <div className="service-marquee mt-8" aria-label="Cleaning service categories">
-            <div className={"service-marquee__track " + (categoryDirection === "right" ? "service-marquee__track--right" : "")}>
-              {[0, 1].map((copy) => (
-                <div
-                  key={copy}
-                  className="service-marquee__group"
-                  aria-hidden={copy === 1 ? true : undefined}
-                >
-                  {serviceCategories.map((category) => (
-                    <Link
-                      key={category.id}
-                      to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
-                      tabIndex={copy === 1 ? -1 : undefined}
-                      className="service-marquee__card group"
-                    >
-                      <img src={categoryImage(category.name, category.image_key)} alt={copy === 1 ? '' : category.name} loading="lazy" />
-                      <span className="service-marquee__shade" />
-                      <span className="service-marquee__icon"><Droplets className="h-5 w-5" /></span>
-                      <span className="service-marquee__title">{category.name}</span>
-                      <span className="service-marquee__arrow"><ArrowRight className="h-4 w-4" /></span>
-                    </Link>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          <style>{`
-            .service-marquee { overflow: hidden; width: 100%; }
-            @media (hover:none) and (pointer:coarse) { .service-marquee { touch-action: pan-y; } }
-            .service-marquee__track { display: flex; width: max-content; animation: ccs-service-marquee 42s linear infinite; }
-            .service-marquee__track--right { animation-direction: reverse; }
-            .service-marquee:hover .service-marquee__track, .service-marquee:focus-within .service-marquee__track { animation-play-state: paused; }
-            .service-marquee__group { display: flex; flex: none; gap: 18px; padding: 0 9px; }
-            .service-marquee__card { position: relative; display: flex; width: 270px; height: 300px; flex: none; overflow: hidden; flex-direction: column; justify-content: flex-end; border-radius: 18px; background: #0F766E; color: white; box-shadow: 0 10px 28px rgb(15 23 42 / 12%); }
-            .service-marquee__card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 450ms ease; }
-            .service-marquee__card:hover img { transform: scale(1.06); }
-            .service-marquee__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(3 28 30 / 3%) 20%, rgb(3 28 30 / 88%) 100%); }
-            .service-marquee__icon { position: absolute; top: 18px; left: 18px; display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 1px solid rgb(255 255 255 / 40%); border-radius: 13px; background: rgb(7 59 58 / 55%); backdrop-filter: blur(8px); }
-            .service-marquee__title { position: relative; z-index: 1; max-width: 220px; padding: 0 20px 22px; font-size: 20px; font-weight: 800; line-height: 1.2; }
-            .service-marquee__arrow { position: absolute; right: 16px; bottom: 18px; z-index: 1; display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 999px; background: #F97316; color: #172033; }
-            @keyframes ccs-service-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-            @media (max-width: 640px) { .service-marquee__card { width: 230px; height: 260px; } .service-marquee__group { gap: 12px; padding: 0 6px; } .service-marquee__track { animation-duration: 34s; } }
-            @media (prefers-reduced-motion: reduce) { .service-marquee__track { animation: none; } .service-marquee { overflow-x: auto; } }
-          `}</style>
-        </section>
-
-        <section id="service-categories" className="scroll-mt-24 border-b border-[var(--border)] bg-white py-12 sm:py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--primary)]">Cleaning and pest control</p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">What can we help you with?</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-base">
-                  From homes and offices to furniture, carpets, vehicle interiors and pest control, explore our services by category.
-                </p>
-              </div>
-              <Link to="/services" className="inline-flex shrink-0 items-center gap-2 text-sm font-extrabold text-[var(--primary)] hover:text-[var(--primary-dark)]">
-                See all services <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            {serviceCategories.length > 0 ? (
-              <div className="mt-8 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-                {serviceCategories.map((category) => (
-                  <Link key={category.id} to={`/services/category/${encodeURIComponent(category.id)}/${category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="group flex min-h-36 items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition sm:min-h-40 sm:gap-4 sm:p-5 hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-md">
-                    <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-16 w-20 shrink-0 rounded-xl object-cover sm:h-20 sm:w-24" />
-                    <span className="min-w-0">
-                      <span className="block text-base font-extrabold text-[var(--text)] group-hover:text-[var(--primary)]">{category.name}</span>
-                      <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{categoryPurposeText(category)}</span>
-                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[var(--primary)]">View services <ArrowRight className="h-4 w-4" /></span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 text-sm text-[var(--muted)]">
-                Browse the full service catalogue to see the cleaning and pest-control options currently available.
-              </p>
-            )}
-            <div className="mt-8">
-              <Button asChild className="bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
-                <Link to="/services">See all service categories <ArrowRight className="ml-2 h-4 w-4" /></Link>
-              </Button>
             </div>
           </div>
         </section>
