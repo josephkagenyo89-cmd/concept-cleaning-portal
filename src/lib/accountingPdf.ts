@@ -31,7 +31,7 @@ function safeFileName(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'accounting-report';
 }
 
-export async function downloadAccountingPdf(input: AccountingPdfInput) {
+export async function buildAccountingPdf(input: AccountingPdfInput): Promise<Blob> {
   const settings = await loadAllSettings();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -125,5 +125,21 @@ export async function downloadAccountingPdf(input: AccountingPdfInput) {
     doc.setTextColor(110, 118, 129);
     doc.text('Page ' + page + ' of ' + pageCount, pageWidth - 14, pageHeight - 8, { align: 'right' });
   }
-  doc.save(safeFileName(input.title) + '-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  return doc.output('blob');
+}
+
+export function downloadAccountingPdfBlob(blob: Blob, title: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = safeFileName(title) + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function downloadAccountingPdf(input: AccountingPdfInput) {
+  const blob = await buildAccountingPdf(input);
+  downloadAccountingPdfBlob(blob, input.title);
 }

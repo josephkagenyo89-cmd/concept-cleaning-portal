@@ -144,6 +144,7 @@ export async function loadAllSettings(force = false): Promise<AllSettings> {
         }
       }
     }
+    result.tax = { ...result.tax, vat_enabled: false, vat_percentage: 0 };
     cache = result;
     cachePromise = null;
     return result;
@@ -153,9 +154,12 @@ export async function loadAllSettings(force = false): Promise<AllSettings> {
 }
 
 export async function saveSettings<C extends SettingsCategory>(category: C, value: AllSettings[C]) {
+  const safeValue = (category === 'tax'
+    ? { ...(value as TaxSettings), vat_enabled: false, vat_percentage: 0 }
+    : value) as AllSettings[C];
   const { error } = await supabase
     .from('system_settings' as any)
-    .upsert({ category, value: value as any }, { onConflict: 'category' });
+    .upsert({ category, value: safeValue as any }, { onConflict: 'category' });
   if (error) throw error;
   cache = null; // invalidate
 }

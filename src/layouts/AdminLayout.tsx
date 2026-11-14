@@ -21,6 +21,7 @@ const navItems = [
   { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
   { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
   { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
+  { to: '/admin/contracts', icon: Building2, label: 'Commercial Contracts' },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
   { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
   { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },

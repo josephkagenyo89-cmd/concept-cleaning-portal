@@ -14,14 +14,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Banknote, BookOpen, Building2, CalendarDays,
-  CheckCircle2, CircleDollarSign, ClipboardCheck, Download, FileText, Landmark,
+  CheckCircle2, CircleDollarSign, ClipboardCheck, Download, Eye, FileText, Landmark,
   Plus, RefreshCw, ShieldCheck, TrendingDown, TrendingUp, Wallet, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ErpInvoices from '@/pages/admin/ErpInvoices';
 import ErpIncome from '@/pages/admin/ErpIncome';
 import ErpExpenses from '@/pages/admin/ErpExpenses';
-import { downloadAccountingPdf } from '@/lib/accountingPdf';
+import { buildAccountingPdf, downloadAccountingPdfBlob } from '@/lib/accountingPdf';
 
 type Row = Record<string, any>;
 const db = (table: string) => (supabase as any).from(table);
@@ -47,11 +47,11 @@ const sections = [
   { id: 'approvals', label: 'Accounting Approvals', description: 'Maker-checker review of accounting submissions' },
 ] as const;
 
-const accountTypes = ['asset', 'liability', 'equity', 'revenue', 'expense'];
+const accountTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
 const money = (value: any) => Number(value || 0);
 
-function PageTitle({ title, description, onExport, onRefresh }: {
-  title: string; description: string; onExport?: () => void; onRefresh?: () => void;
+function PageTitle({ title, description, onView, onExport, onRefresh }: {
+  title: string; description: string; onView?: () => void; onExport?: () => void; onRefresh?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -65,7 +65,8 @@ function PageTitle({ title, description, onExport, onRefresh }: {
       </div>
       <div className="flex shrink-0 gap-2">
         {onRefresh && <Button variant="outline" size="sm" onClick={onRefresh}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}
-        {onExport && <Button size="sm" onClick={onExport}><Download className="mr-2 h-4 w-4" />Export PDF</Button>}
+        {onView && <Button variant="outline" size="sm" onClick={onView}><Eye className="mr-2 h-4 w-4" />View PDF</Button>}
+        {onExport && <Button size="sm" onClick={onExport}><Download className="mr-2 h-4 w-4" />Download PDF</Button>}
       </div>
     </div>
   );
@@ -103,6 +104,9 @@ export default function AccountingFinance() {
   const [approvalTarget, setApprovalTarget] = useState<Row | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; blob: Blob; title: string } | null>(null);
+
+  useEffect(() => () => { if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url); }, [pdfPreview?.url]);
 
   // General ledger journal composer
   const [journalOpen, setJournalOpen] = useState(false);
@@ -219,13 +223,39 @@ export default function AccountingFinance() {
         result.budgets = budgets.data || []; result.years = years.data || []; result.periods = periods.data || [];
         result.accounts = accounts.data || []; result.lines = lines.data || [];
       } else if (section === 'financial-reports') {
-        const [entries, accounts] = await Promise.all([
-          db('journal_entries').select('id,entry_date,entry_number,description').eq('status', 'posted').gte('entry_date', fromDate).lte('entry_date', toDate).order('entry_date'),
-          db('accounting_accounts').select('id,code,name,account_type').eq('is_active', true).order('code'),
-        ]);
-        const ids = (entries.data || []).map((r: Row) => r.id);
-        const lines = ids.length ? await db('journal_lines').select('journal_entry_id,account_id,debit,credit,description').in('journal_entry_id', ids) : { data: [], error: null };
-        result.entries = entries.data || []; result.accounts = accounts.data || []; result.lines = lines.data || [];
+        const { data: accounts, error: accountsError } = await db('accounting_accounts')
+          .select('id,code,name,account_type').order('code');
+        if (accountsError) throw accountsError;
+        const entries: Row[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data: batch, error } = await db('journal_entries')
+            .select('id,entry_date,entry_number,description')
+            .eq('status', 'posted').lte('entry_date', toDate)
+            .order('entry_date').range(offset, offset + 999);
+          if (error) throw error;
+          entries.push(...(batch || []));
+          if (!batch || batch.length < 1000) break;
+        }
+        const allLines: Row[] = [];
+        for (let offset = 0; offset < entries.length; offset += 300) {
+          const ids = entries.slice(offset, offset + 300).map((entry: Row) => entry.id);
+          for (let lineOffset = 0; ; lineOffset += 1000) {
+            const { data: batch, error } = await db('journal_lines')
+              .select('journal_entry_id,account_id,debit,credit,description')
+              .in('journal_entry_id', ids).range(lineOffset, lineOffset + 999);
+            if (error) throw error;
+            allLines.push(...(batch || []));
+            if (!batch || batch.length < 1000) break;
+          }
+        }
+        const entryDates = new Map(entries.map((entry: Row) => [entry.id, entry.entry_date]));
+        result.entries = entries;
+        result.accounts = accounts || [];
+        result.lines = allLines;
+        result.periodLines = allLines.filter((line: Row) => {
+          const entryDate = entryDates.get(line.journal_entry_id) as string | undefined;
+          return !!entryDate && entryDate >= fromDate && entryDate <= toDate;
+        });
       } else if (section === 'tax-compliance' || section === 'accounting-settings') {
         const [settings, accounts] = await Promise.all([
           db('accounting_settings').select('*').eq('is_default', true).maybeSingle(),
@@ -269,8 +299,8 @@ export default function AccountingFinance() {
   useEffect(() => {
     if (data.settings) {
       setSettingsForm({
-        vat_registered: !!data.settings.vat_registered,
-        vat_rate: String(data.settings.vat_rate ?? 0),
+        vat_registered: false,
+        vat_rate: '0',
         tax_registration_notes: data.settings.tax_registration_notes || '',
         currency_code: data.settings.currency_code || 'KES',
       });
@@ -278,21 +308,27 @@ export default function AccountingFinance() {
   }, [data.settings]);
 
   const accountById = useMemo(() => new Map((data.accounts || []).map((a: Row) => [a.id, a])), [data.accounts]);
-  const reportRows = useMemo(() => {
+  const buildReportRows = useCallback((lines: Row[]) => {
     const totals = new Map<string, Row>();
-    (data.lines || []).forEach((line: Row) => {
+    (lines || []).forEach((line: Row) => {
       const account = accountById.get(line.account_id) as Row | undefined;
       if (!account) return;
       const current = totals.get(line.account_id) || { account_id: line.account_id, code: account.code, name: account.name, account_type: account.account_type, debit: 0, credit: 0 };
-      current.debit += money(line.debit); current.credit += money(line.credit);
+      current.debit += money(line.debit);
+      current.credit += money(line.credit);
       totals.set(line.account_id, current);
     });
-    return Array.from(totals.values()).map((row) => ({ ...row, balance: ['liability','equity','revenue'].includes(row.account_type) ? row.credit - row.debit : row.debit - row.credit }));
-  }, [data.lines, accountById]);
+    return (data.accounts || []).map((account: Row) => {
+      const row = totals.get(account.id) || { account_id: account.id, code: account.code, name: account.name, account_type: account.account_type, debit: 0, credit: 0 };
+      return { ...row, balance: ['liability', 'equity', 'income'].includes(row.account_type) ? row.credit - row.debit : row.debit - row.credit };
+    });
+  }, [data.accounts, accountById]);
+  const reportRows = useMemo(() => buildReportRows(data.lines || []), [data.lines, buildReportRows]);
+  const periodReportRows = useMemo(() => buildReportRows(data.periodLines || []), [data.periodLines, buildReportRows]);
 
   const overview = useMemo(() => {
     const balanceFor = (codes: string[]) => reportRows.filter((r: Row) => codes.includes(r.code)).reduce((sum: number, r: Row) => sum + r.balance, 0);
-    const income = reportRows.filter((r: Row) => r.account_type === 'revenue').reduce((s: number, r: Row) => s + r.balance, 0);
+    const income = reportRows.filter((r: Row) => r.account_type === 'income').reduce((s: number, r: Row) => s + r.balance, 0);
     const expense = reportRows.filter((r: Row) => r.account_type === 'expense').reduce((s: number, r: Row) => s + r.balance, 0);
     const cash = balanceFor(['1000','1010','1020','1030']);
     const receivable = balanceFor(['1100']);
@@ -300,15 +336,22 @@ export default function AccountingFinance() {
     return { cash, receivable, payable, income, expense, profit: income - expense };
   }, [reportRows]);
 
-  const exportRows = (title: string, columns: string[], rows: any[][], totals?: string[]) => {
-    downloadAccountingPdf({
-      title,
-      period: fromDate + ' to ' + toDate,
-      columns,
-      rows,
-      totals,
-      filters: ['Date range: ' + fromDate + ' — ' + toDate, 'Currency: KES'],
-    });
+  const exportRows = async (title: string, columns: string[], rows: any[][], totals?: string[], mode: 'view' | 'download' = 'download') => {
+    try {
+      const blob = await buildAccountingPdf({
+        title, period: fromDate + ' to ' + toDate, columns, rows, totals,
+        filters: ['Date range: ' + fromDate + ' — ' + toDate, 'Currency: KES', 'VAT: Not charged'],
+      });
+      if (mode === 'view') {
+        const url = URL.createObjectURL(blob);
+        setPdfPreview((current) => {
+          if (current?.url) URL.revokeObjectURL(current.url);
+          return { url, blob, title };
+        });
+      } else downloadAccountingPdfBlob(blob, title);
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not generate accounting PDF');
+    }
   };
 
   const approve = async (approval: Row, decision: 'approved' | 'rejected', note?: string) => {
@@ -465,8 +508,8 @@ export default function AccountingFinance() {
 
   const saveTaxSettings = async () => {
     const { error } = await db('accounting_settings').update({
-      vat_registered: settingsForm.vat_registered,
-      vat_rate: settingsForm.vat_registered ? money(settingsForm.vat_rate) : 0,
+      vat_registered: false,
+      vat_rate: 0,
       tax_registration_notes: settingsForm.tax_registration_notes || null,
       currency_code: settingsForm.currency_code || 'KES',
       updated_by: user?.id || null, updated_at: new Date().toISOString(),
@@ -498,50 +541,98 @@ export default function AccountingFinance() {
     toast.success(year.name + ' closed'); load();
   };
 
-  const exportOverview = () => exportRows('Financial Overview', ['Account', 'Debit', 'Credit', 'Balance'], reportRows.map((r: Row) => [r.code + ' ' + r.name, kes(r.debit), kes(r.credit), kes(r.balance)]));
-  const exportLedger = () => exportRows('General Ledger', ['Entry No.', 'Date', 'Description', 'Status', 'Approval'], (data.entries || []).map((r: Row) => [String(r.entry_number), dateLabel(r.entry_date), r.description, r.status, r.approval_status]));
-  const exportApprovals = () => exportRows('Accounting Approvals', ['Type', 'Record ID', 'Submitted', 'Submitted By'], (data.approvals || []).map((r: Row) => [r.entity_type, r.entity_id, dateLabel(r.submitted_at), r.submitted_by]));
-  const exportAr = () => exportRows('Accounts Receivable', ['Invoice', 'Client', 'Date', 'Amount', 'Paid', 'Outstanding', 'Status'], (data.invoices || []).map((r: Row) => {
+  const exportOverview = (mode: 'view' | 'download' = 'download') => exportRows('Financial Overview', ['Account', 'Debit', 'Credit', 'Balance'], reportRows.map((r: Row) => [r.code + ' ' + r.name, kes(r.debit), kes(r.credit), kes(r.balance)]), undefined, mode);
+  const exportLedger = (mode: 'view' | 'download' = 'download') => exportRows('General Ledger', ['Entry No.', 'Date', 'Description', 'Status', 'Approval'], (data.entries || []).map((r: Row) => [String(r.entry_number), dateLabel(r.entry_date), r.description, r.status, r.approval_status]), undefined, mode);
+  const exportApprovals = (mode: 'view' | 'download' = 'download') => exportRows('Accounting Approvals', ['Type', 'Record ID', 'Submitted', 'Submitted By'], (data.approvals || []).map((r: Row) => [r.entity_type, r.entity_id, dateLabel(r.submitted_at), r.submitted_by]), undefined, mode);
+  const exportAr = (mode: 'view' | 'download' = 'download') => exportRows('Accounts Receivable', ['Invoice', 'Client', 'Date', 'Amount', 'Paid', 'Outstanding', 'Status'], (data.invoices || []).map((r: Row) => {
     const paid = (data.payments || []).filter((p: Row) => p.invoice_id === r.id && p.approval_status === 'approved').reduce((s: number, p: Row) => s + money(p.amount), 0);
     return [r.invoice_number, r.client_name, dateLabel(r.date), kes(r.amount), kes(paid), kes(Math.max(0, money(r.amount) - paid)), r.payment_status];
-  }));
-  const exportAp = () => exportRows('Accounts Payable', ['Type','Date','Description','Amount','Approval','Payment'], [...(data.expenses || []).filter((r: Row) => r.approval_status === 'approved').map((r: Row) => ['Expense',dateLabel(r.date),r.description || r.category,kes(r.amount),r.approval_status,r.paid_at ? 'Paid' : 'Unpaid']), ...(data.assets || []).map((r: Row) => ['Fixed asset',dateLabel(r.purchase_date),r.name,kes(r.purchase_cost),r.status,r.paid_at ? 'Paid' : 'Unpaid'])]);
-  const exportAssets = () => exportRows('Fixed Asset Register', ['Code', 'Asset', 'Purchase Date', 'Cost', 'Accumulated Depreciation', 'Net Book Value', 'Payment', 'Status'], (data.assets || []).map((r: Row) => [r.asset_code, r.name, dateLabel(r.purchase_date), kes(r.purchase_cost), kes(r.accumulated_depreciation), kes(money(r.purchase_cost) - money(r.accumulated_depreciation)), r.paid_at ? 'Paid' : 'Unpaid', r.status]));
-  const exportBudgets = () => exportRows('Budgets & Planning', ['Budget', 'Financial Year', 'Status', 'Allocations'], (data.budgets || []).map((r: Row) => [r.name, (data.years || []).find((y: Row) => y.id === r.financial_year_id)?.name || '', r.status, kes((data.lines || []).filter((l: Row) => l.budget_id === r.id).reduce((s: number, l: Row) => s + money(l.amount), 0))]));
-  const exportBanking = () => exportRows('Banking & Cash', ['Account', 'Bank', 'Account Name', 'Masked Number', 'Opening Balance', 'Status'], (data.banks || []).map((r: Row) => [r.accounting_accounts?.code || '', r.bank_name, r.account_name, r.account_number_masked, kes(r.opening_balance), r.is_active ? 'Active' : 'Inactive']));
-  const exportPeriods = () => exportRows('Accounting Periods', ['Financial Year', 'Period', 'Start', 'End', 'Status'], (data.periods || []).map((r: Row) => [(data.years || []).find((y: Row) => y.id === r.financial_year_id)?.name || '', r.name, dateLabel(r.starts_on), dateLabel(r.ends_on), r.status]));
+  }), undefined, mode);
+  const exportAp = (mode: 'view' | 'download' = 'download') => exportRows('Accounts Payable', ['Type','Date','Description','Amount','Approval','Payment'], [...(data.expenses || []).filter((r: Row) => r.approval_status === 'approved').map((r: Row) => ['Expense',dateLabel(r.date),r.description || r.category,kes(r.amount),r.approval_status,r.paid_at ? 'Paid' : 'Unpaid']), ...(data.assets || []).map((r: Row) => ['Fixed asset',dateLabel(r.purchase_date),r.name,kes(r.purchase_cost),r.status,r.paid_at ? 'Paid' : 'Unpaid'])], undefined, mode);
+  const exportAssets = (mode: 'view' | 'download' = 'download') => exportRows('Fixed Asset Register', ['Code', 'Asset', 'Purchase Date', 'Cost', 'Accumulated Depreciation', 'Net Book Value', 'Payment', 'Status'], (data.assets || []).map((r: Row) => [r.asset_code, r.name, dateLabel(r.purchase_date), kes(r.purchase_cost), kes(r.accumulated_depreciation), kes(money(r.purchase_cost) - money(r.accumulated_depreciation)), r.paid_at ? 'Paid' : 'Unpaid', r.status]), undefined, mode);
+  const exportBudgets = (mode: 'view' | 'download' = 'download') => exportRows('Budgets & Planning', ['Budget', 'Financial Year', 'Status', 'Allocations'], (data.budgets || []).map((r: Row) => [r.name, (data.years || []).find((y: Row) => y.id === r.financial_year_id)?.name || '', r.status, kes((data.lines || []).filter((l: Row) => l.budget_id === r.id).reduce((s: number, l: Row) => s + money(l.amount), 0))]), undefined, mode);
+  const exportBanking = (mode: 'view' | 'download' = 'download') => exportRows('Banking & Cash', ['Account', 'Bank', 'Account Name', 'Masked Number', 'Opening Balance', 'Status'], (data.banks || []).map((r: Row) => [r.accounting_accounts?.code || '', r.bank_name, r.account_name, r.account_number_masked, kes(r.opening_balance), r.is_active ? 'Active' : 'Inactive']), undefined, mode);
+  const exportPeriods = (mode: 'view' | 'download' = 'download') => exportRows('Accounting Periods', ['Financial Year', 'Period', 'Start', 'End', 'Status'], (data.periods || []).map((r: Row) => [(data.years || []).find((y: Row) => y.id === r.financial_year_id)?.name || '', r.name, dateLabel(r.starts_on), dateLabel(r.ends_on), r.status]), undefined, mode);
 
   const reports = useMemo(() => {
-    const rows = reportRows;
-    if (reportType === 'profit_loss') return rows.filter((r: Row) => ['revenue','expense'].includes(r.account_type));
-    if (reportType === 'balance_sheet') return rows.filter((r: Row) => ['asset','liability','equity'].includes(r.account_type));
-    if (reportType === 'cash_flow') return rows.filter((r: Row) => ['1000','1010','1020','1030'].includes(r.code));
-    return rows;
-  }, [reportRows, reportType]);
+    if (reportType === 'profit_loss') return periodReportRows.filter((r: Row) => ['income', 'expense'].includes(r.account_type));
+    if (reportType === 'balance_sheet') {
+      const balances = reportRows.filter((r: Row) => ['asset', 'liability', 'equity'].includes(r.account_type));
+      const currentEarnings = reportRows.filter((r: Row) => r.account_type === 'income').reduce((sum: number, r: Row) => sum + money(r.balance), 0)
+        - reportRows.filter((r: Row) => r.account_type === 'expense').reduce((sum: number, r: Row) => sum + money(r.balance), 0);
+      if (Math.abs(currentEarnings) >= 0.005) balances.push({
+        account_id: 'current-earnings', code: '3999', name: 'Current earnings (unclosed)', account_type: 'equity',
+        debit: currentEarnings < 0 ? Math.abs(currentEarnings) : 0,
+        credit: currentEarnings > 0 ? currentEarnings : 0,
+        balance: currentEarnings,
+      });
+      return balances;
+    }
+    if (reportType === 'cash_flow') {
+      const cashCodes = new Set(['1000', '1010', '1020', '1030']);
+      const totals: Record<string, { inflow: number; outflow: number }> = {
+        operating: { inflow: 0, outflow: 0 }, investing: { inflow: 0, outflow: 0 }, financing: { inflow: 0, outflow: 0 },
+      };
+      const journalGroups = new Map<string, Row[]>();
+      (data.periodLines || []).forEach((line: Row) => {
+        const group = journalGroups.get(line.journal_entry_id) || [];
+        group.push(line); journalGroups.set(line.journal_entry_id, group);
+      });
+      journalGroups.forEach((journalLines) => {
+        const cashLines = journalLines.filter((line) => cashCodes.has(String((accountById.get(line.account_id) as Row | undefined)?.code || '')));
+        const counterparts = journalLines.filter((line) => !cashCodes.has(String((accountById.get(line.account_id) as Row | undefined)?.code || '')));
+        const classifications = counterparts.map((line) => {
+          const account = accountById.get(line.account_id) as Row | undefined;
+          const code = String(account?.code || '');
+          const category = account?.account_type === 'equity' || code === '3200' ? 'financing'
+            : account?.account_type === 'asset' && /^15/.test(code) ? 'investing' : 'operating';
+          return { category, weight: Math.abs(money(line.debit) - money(line.credit)) };
+        }).filter((item) => item.weight > 0);
+        const weightTotal = classifications.reduce((sum, item) => sum + item.weight, 0);
+        const netCashMovement = cashLines.reduce((sum, line) => sum + money(line.debit) - money(line.credit), 0);
+        if (Math.abs(netCashMovement) < 0.005) return;
+        const amount = Math.abs(netCashMovement);
+        const shares = weightTotal > 0 ? classifications : [{ category: 'operating', weight: 1 }];
+        const shareTotal = shares.reduce((sum, item) => sum + item.weight, 0);
+        shares.forEach((item) => {
+          const share = amount * item.weight / shareTotal;
+          if (netCashMovement > 0) totals[item.category].inflow += share;
+          else totals[item.category].outflow += share;
+        });
+      });
+      return Object.entries(totals).map(([category, value]) => ({
+        account_id: category, code: category === 'operating' ? 'O' : category === 'investing' ? 'I' : 'F',
+        name: category[0].toUpperCase() + category.slice(1) + ' activities', account_type: 'cash_flow',
+        debit: value.outflow, credit: value.inflow, balance: value.inflow - value.outflow,
+      }));
+    }
+    return reportRows;
+  }, [reportRows, periodReportRows, data.periodLines, reportType, accountById]);
 
-  const exportReports = () => exportRows(
-    reportType === 'profit_loss' ? 'Income Statement' : reportType === 'balance_sheet' ? 'Balance Sheet' : reportType === 'cash_flow' ? 'Cash Flow Summary' : 'Trial Balance',
-    ['Code','Account','Type','Debit','Credit','Net Balance'],
-    reports.map((r: Row) => [r.code,r.name,r.account_type,kes(r.debit),kes(r.credit),kes(r.balance)])
+  const exportReports = (mode: 'view' | 'download' = 'download') => exportRows(
+    reportType === 'profit_loss' ? 'Income Statement' : reportType === 'balance_sheet' ? 'Balance Sheet' : reportType === 'cash_flow' ? 'Cash Flow Statement' : 'Trial Balance',
+    ['Code','Account / Activity','Type','Debit / Outflow','Credit / Inflow','Net Balance'],
+    reports.map((r: Row) => [r.code,r.name,r.account_type,kes(r.debit),kes(r.credit),kes(r.balance)]),
+    undefined, mode
   );
 
   const setLine = (index: number, key: string, value: any) => setJournalLines((current) => current.map((line, i) => i === index ? { ...line, [key]: value } : line));
   const addLine = () => setJournalLines((current) => [...current, { account_id: '', debit: '', credit: '', description: '' }]);
 
-  const exportCurrent = () => {
-    if (section === 'overview') return exportOverview();
-    if (section === 'general-ledger') return exportLedger();
-    if (section === 'approvals') return exportApprovals();
-    if (section === 'accounts-receivable') return exportAr();
-    if (section === 'accounts-payable') return exportAp();
-    if (section === 'assets-depreciation') return exportAssets();
-    if (section === 'budgets-planning') return exportBudgets();
-    if (section === 'banking-cash') return exportBanking();
-    if (section === 'accounting-periods') return exportPeriods();
-    if (section === 'financial-reports') return exportReports();
-    if (section === 'tax-compliance') return exportRows('Tax & Compliance', ['Setting','Value'], [['VAT registered',settingsForm.vat_registered ? 'Yes' : 'No'],['VAT rate',settingsForm.vat_registered ? settingsForm.vat_rate + '%' : 'Disabled'],['Currency',settingsForm.currency_code],['Notes',settingsForm.tax_registration_notes || '—']]);
-    if (section === 'accounting-settings') return exportRows('Accounting Settings', ['Code','Account','Type','System','Status'], accounts.map((a: Row) => [a.code,a.name,a.account_type,a.is_system_account ? 'Protected' : 'No',a.is_active ? 'Active' : 'Inactive']));
-    return exportRows(active.label, ['Name','Status'], []);
+  const exportCurrent = (mode: 'view' | 'download' = 'download') => {
+    if (section === 'overview') return exportOverview(mode);
+    if (section === 'general-ledger') return exportLedger(mode);
+    if (section === 'approvals') return exportApprovals(mode);
+    if (section === 'accounts-receivable') return exportAr(mode);
+    if (section === 'accounts-payable') return exportAp(mode);
+    if (section === 'assets-depreciation') return exportAssets(mode);
+    if (section === 'budgets-planning') return exportBudgets(mode);
+    if (section === 'banking-cash') return exportBanking(mode);
+    if (section === 'accounting-periods') return exportPeriods(mode);
+    if (section === 'financial-reports') return exportReports(mode);
+    if (section === 'tax-compliance') return exportRows('Tax & Compliance', ['Setting','Value'], [['VAT charging','Disabled'],['Currency',settingsForm.currency_code],['Notes',settingsForm.tax_registration_notes || '—']], undefined, mode);
+    if (section === 'accounting-settings') return exportRows('Accounting Settings', ['Code','Account','Type','System','Status'], accounts.map((a: Row) => [a.code,a.name,a.account_type,a.is_system_account ? 'Protected' : 'No',a.is_active ? 'Active' : 'Inactive']), undefined, mode);
+    return exportRows(active.label, ['Name','Status'], [], undefined, mode);
   };
 
   const heading = section === 'overview' ? 'Financial Overview' : active.label;
@@ -562,7 +653,7 @@ export default function AccountingFinance() {
 
   return (
     <div className="space-y-6">
-      <PageTitle title={heading} description={active.description} onExport={exportCurrent} onRefresh={load} />
+      <PageTitle title={heading} description={active.description} onView={() => exportCurrent('view')} onExport={() => exportCurrent('download')} onRefresh={load} />
 
       {(section === 'overview' || section === 'financial-reports') && (
         <Card><CardContent className="flex flex-wrap items-end gap-3 p-4">
@@ -678,7 +769,7 @@ export default function AccountingFinance() {
       {!loading && section === 'financial-reports' && (
         <>
           <div className="grid gap-3 sm:grid-cols-3"><Stat label="Total debits" value={kes(reportTotals.debit)} icon={TrendingDown} /><Stat label="Total credits" value={kes(reportTotals.credit)} icon={TrendingUp} /><Stat label="Difference" value={kes(reportTotals.debit-reportTotals.credit)} icon={ShieldCheck} /></div>
-          <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Account</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Debit</TableHead><TableHead className="text-right">Credit</TableHead><TableHead className="text-right">Net Balance</TableHead></TableRow></TableHeader><TableBody>{reports.map((r: Row) => <TableRow key={r.account_id}><TableCell className="font-mono">{r.code}</TableCell><TableCell>{r.name}</TableCell><TableCell className="capitalize">{r.account_type}</TableCell><TableCell className="text-right">{kes(r.debit)}</TableCell><TableCell className="text-right">{kes(r.credit)}</TableCell><TableCell className="text-right font-semibold">{kes(r.balance)}</TableCell></TableRow>)}{!reports.length && <TableRow><TableCell colSpan={6}><Empty>No posted ledger activity in this date range.</Empty></TableCell></TableRow>}</TableBody></Table></div></CardContent></Card>
+          <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Account</TableHead><TableHead>Type</TableHead><TableHead className="text-right">{reportType === 'cash_flow' ? 'Cash Outflow' : 'Debit'}</TableHead><TableHead className="text-right">{reportType === 'cash_flow' ? 'Cash Inflow' : 'Credit'}</TableHead><TableHead className="text-right">{reportType === 'cash_flow' ? 'Net Movement' : 'Net Balance'}</TableHead></TableRow></TableHeader><TableBody>{reports.map((r: Row) => <TableRow key={r.account_id}><TableCell className="font-mono">{r.code}</TableCell><TableCell>{r.name}</TableCell><TableCell className="capitalize">{r.account_type}</TableCell><TableCell className="text-right">{kes(r.debit)}</TableCell><TableCell className="text-right">{kes(r.credit)}</TableCell><TableCell className="text-right font-semibold">{kes(r.balance)}</TableCell></TableRow>)}{!reports.length && <TableRow><TableCell colSpan={6}><Empty>No posted ledger activity in this date range.</Empty></TableCell></TableRow>}</TableBody></Table></div></CardContent></Card>
           <Alert><AlertDescription>Reports use posted journals only. Pending approvals, draft journals and unverified historical income/expenses are excluded to prevent double counting.</AlertDescription></Alert>
         </>
       )}
@@ -686,8 +777,7 @@ export default function AccountingFinance() {
       {!loading && section === 'tax-compliance' && (
         <Card><CardHeader><CardTitle>Tax configuration</CardTitle></CardHeader><CardContent className="max-w-2xl space-y-4">
           <Alert><AlertDescription>VAT is disabled by default in this accounting configuration. Do not enable VAT or add VAT to invoices unless the business registration and applicable obligations have been confirmed.</AlertDescription></Alert>
-          <div className="flex items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium">VAT registered</p><p className="text-xs text-muted-foreground">Only enable if registration is confirmed.</p></div><input type="checkbox" checked={settingsForm.vat_registered} onChange={(e) => setSettingsForm((f) => ({ ...f, vat_registered: e.target.checked }))} /></div>
-          <div><Label>VAT rate (%)</Label><Input type="number" min="0" max="100" value={settingsForm.vat_rate} disabled={!settingsForm.vat_registered} onChange={(e) => setSettingsForm((f) => ({ ...f, vat_rate: e.target.value }))} /></div>
+          <div className="rounded-lg border p-3"><p className="font-medium">VAT charging is disabled</p><p className="text-xs text-muted-foreground">VAT will not be added to quotations, invoices, receipts or accounting calculations under the current business instruction.</p></div>
           <div><Label>Tax registration / compliance notes</Label><Textarea value={settingsForm.tax_registration_notes} onChange={(e) => setSettingsForm((f) => ({ ...f, tax_registration_notes: e.target.value }))} placeholder="Record confirmed tax registrations, filing notes and adviser guidance." /></div>
           <Button onClick={saveTaxSettings}>Save tax settings</Button>
         </CardContent></Card>
@@ -828,6 +918,16 @@ export default function AccountingFinance() {
 
       {/* Rejection reason */}
       <Dialog open={!!approvalTarget} onOpenChange={(open) => !open && setApprovalTarget(null)}><DialogContent><DialogHeader><DialogTitle>Reject accounting submission</DialogTitle></DialogHeader><div><Label>Reason for rejection *</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Explain what needs correction before resubmission." /></div><DialogFooter><Button variant="outline" onClick={() => setApprovalTarget(null)}>Cancel</Button><Button variant="destructive" disabled={!rejectReason.trim() || busy} onClick={() => approvalTarget && approve(approvalTarget,'rejected',rejectReason)}>Reject submission</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={!!pdfPreview} onOpenChange={(open) => !open && setPdfPreview(null)}>
+        <DialogContent className="flex h-[92vh] max-w-6xl flex-col">
+          <DialogHeader><DialogTitle>{pdfPreview?.title || 'Accounting report'}</DialogTitle></DialogHeader>
+          {pdfPreview && <iframe title={pdfPreview.title} src={pdfPreview.url} className="min-h-0 w-full flex-1 rounded-md border" />}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPdfPreview(null)}>Close</Button>
+            {pdfPreview && <Button onClick={() => downloadAccountingPdfBlob(pdfPreview.blob, pdfPreview.title)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

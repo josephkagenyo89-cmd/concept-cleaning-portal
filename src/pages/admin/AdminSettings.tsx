@@ -213,22 +213,10 @@ export default function AdminSettings() {
           <Card>
             <CardHeader><CardTitle>Tax (VAT)</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <Label>Enable VAT</Label>
-                  <p className="text-xs text-muted-foreground">When enabled, VAT is added to invoices and quotations.</p>
-                </div>
-                <Switch checked={s.tax.vat_enabled} disabled={!canEdit}
-                  onCheckedChange={v => setS({ ...s, tax: { ...s.tax, vat_enabled: v } })} />
+              <div className="rounded-lg border p-4">
+                <p className="font-medium">VAT charging is disabled</p>
+                <p className="mt-1 text-xs text-muted-foreground">Concept Cleaning Services is not charging VAT at present. VAT is excluded from quotations, invoices, receipts and service booking totals. This control is locked to prevent accidental tax additions.</p>
               </div>
-              <div>
-                <Label>VAT Percentage (%)</Label>
-                <Input type="number" min={0} max={100} step="0.01" value={s.tax.vat_percentage}
-                  disabled={!canEdit || !s.tax.vat_enabled}
-                  onChange={e => setS({ ...s, tax: { ...s.tax, vat_percentage: Number(e.target.value) } })} />
-              </div>
-              <SaveBar disabled={!canEdit} saving={saving === 'tax'}
-                onSave={() => persist('tax', s.tax)} onReset={() => resetCategory('tax')} />
             </CardContent>
           </Card>
         </TabsContent>
