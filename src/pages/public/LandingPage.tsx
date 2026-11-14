@@ -83,8 +83,8 @@ export default function LandingPage() {
     };
   }, []);
 
-  const title = 'Concept Cleaning Services | Professional Cleaning in Nairobi';
-  const description = 'Book professional home, office, upholstery, carpet and car interior cleaning, plus fumigation and pest control in Nairobi and nearby areas.';
+  const title = 'Professional Cleaning Services in Nairobi, Kenya | Concept Cleaning';
+  const description = 'Concept Cleaning Services provides professional residential, office, commercial, carpet, sofa, mattress and post-construction cleaning, plus pest control in Nairobi and nearby areas.';
 
   return (
     <div className="min-h-screen bg-brand-paper text-brand-ink">
@@ -153,6 +153,11 @@ export default function LandingPage() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#062F30]/50 via-transparent to-black/10" aria-hidden="true" />
           <div className="mx-auto flex min-h-[520px] max-w-7xl items-center justify-center px-4 py-10 sm:min-h-[560px] sm:px-6 sm:py-14 lg:min-h-[600px] lg:px-8 lg:py-16">
             <div className="w-full max-w-4xl text-white">
+              <div className="mb-6 max-w-3xl">
+                <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/80">Concept Cleaning Services · Nairobi, Kenya</p>
+                <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Professional Cleaning Services in Nairobi, Kenya</h1>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 sm:text-base">Reliable cleaning solutions for homes, offices and commercial properties. Find the service you need, request a quotation or start your booking below.</p>
+              </div>
               <div className="w-full max-w-3xl">
                 <BookingEngine phone={phone} />
               </div>
@@ -261,6 +266,103 @@ export default function LandingPage() {
               <Button asChild className="bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]">
                 <Link to="/services">See all service categories <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
+            </div>
+          </div>
+        </section>
+
+        <section id="cleaning-services-nairobi" className="border-y border-[var(--border)] bg-white py-14 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--primary)]">Cleaning for homes and businesses</p>
+              <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-[var(--text)] sm:text-4xl">Your Professional Cleaning Services Company in Nairobi, Kenya</h2>
+              <p className="mt-5 text-base leading-8 text-[var(--muted)]">
+                Concept Cleaning Services provides customised residential and commercial cleaning services in Nairobi, Kenya. Whether you need help maintaining a home, preparing a property for occupation, refreshing carpets and upholstery or keeping a workplace clean, we help you find a service suited to your space and requirements.
+              </p>
+              <p className="mt-4 text-base leading-8 text-[var(--muted)]">
+                If you are looking for affordable cleaning services in Nairobi without compromising on professional standards, our team can help you choose the right service. We focus on careful work, suitable cleaning methods and equipment, and clear communication from enquiry through to service delivery.
+              </p>
+            </div>
+
+            <div className="mt-12">
+              <div className="max-w-3xl">
+                <h2 className="text-2xl font-black tracking-tight text-[var(--text)] sm:text-3xl">Cleaning Services We Provide</h2>
+                <p className="mt-3 text-sm leading-7 text-[var(--muted)] sm:text-base">Explore some of the cleaning solutions available for residential and commercial properties. Service availability and the recommended approach depend on the property, surface and scope of work.</p>
+              </div>
+              <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Office Cleaning Services</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Maintain a clean, organised and welcoming workplace with professional office cleaning in Nairobi. Cleaning can be arranged around your premises and operating routine, including work areas, floors, shared spaces, kitchens and washrooms.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Our commercial cleaning options can also cover janitorial support, washroom hygiene, carpet care, hard-floor cleaning and scheduled or one-off deep cleaning.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Carpet and Rug Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Carpets and rugs collect dust, grit and everyday marks through regular use. Professional carpet cleaning helps refresh floor coverings and care for the fibres using methods and equipment selected for the material and its condition.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Ask us about carpet cleaning for homes, offices and other spaces in Nairobi.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Sofa and Upholstery Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Sofas and upholstered furniture need the right care to remove accumulated dust and everyday soiling. Our sofa cleaning process starts with an assessment and preparation of the upholstery, followed by suitable cleaning for the fabric or material.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">We clean different types of sofa upholstery, taking the material and its condition into account when selecting the appropriate method.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Mattress Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Mattresses can accumulate dust, perspiration and everyday contaminants over time. Professional mattress cleaning helps refresh the sleeping surface as part of a cleaner bedroom and a more comfortable home.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Contact our team to discuss the mattress type, its condition and the most suitable cleaning option.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Post-Construction Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">After renovation or construction, a property needs detailed cleaning before it is ready for use. Post-construction cleaning may include removal of loose debris, high-dust cleaning, wall and surface washing where suitable, vacuuming, sweeping and mopping.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">We can also address details such as door frames, baseboards, windows and other accessible surfaces according to the agreed scope.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Housekeeping and Domestic Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Keep your home in order with one-off or recurring domestic cleaning. Housekeeping can be tailored to your priorities and may include bedrooms, living areas, kitchens, bathrooms and general household surfaces.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Whether you need help with routine home care or a more detailed clean, tell us what matters most and we can discuss a suitable arrangement.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Commercial and Industrial Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">A clean business environment supports a more pleasant experience for staff, customers and visitors. Our commercial cleaning services are suitable for a range of business premises, with the work planned around the property and its cleaning requirements.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Enquire about cleaning for offices, shops, schools, colleges, restaurants, warehouses, factories, shopping centres, gyms, studios and other commercial spaces.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Residential Cleaning Services</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Our residential cleaning options support apartments, houses and other living spaces. Choose a one-off clean or enquire about regular domestic cleaning based on your schedule, property size and priorities.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">We aim to make it easier to care for your home while you focus on the rest of your day.</p>
+                </article>
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6">
+                  <h3 className="text-lg font-extrabold text-[var(--text)]">Deep Cleaning and Move-In / Move-Out Cleaning</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Some spaces need more than routine cleaning. A detailed deep clean can focus on built-up dirt and areas that need extra attention. Move-in and move-out cleaning helps prepare a property for new occupants or handover.</p>
+                  <p className="mt-3 text-sm leading-7 text-[var(--muted)]">The scope is discussed before work begins so the service can be planned around the property's condition and your requirements.</p>
+                </article>
+              </div>
+            </div>
+
+            <div className="mt-14 grid gap-8 rounded-3xl bg-[#F1F8F8] p-6 sm:p-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0F766E]">For every kind of property</p>
+                <h2 className="mt-3 text-2xl font-black tracking-tight text-[#102A2A] sm:text-3xl">Residential and Commercial Cleaning Across Nairobi</h2>
+                <p className="mt-4 text-sm leading-7 text-[#475569] sm:text-base">Concept Cleaning Services supports homes and a variety of business environments. Depending on the service, property requirements and agreed scope, we can discuss cleaning for:</p>
+                <ul className="mt-5 grid gap-2 text-sm font-semibold text-[#334155] sm:grid-cols-2">
+                  {['Homes and apartments', 'Offices and business premises', 'Shops and retail spaces', 'Schools and learning institutions', 'Restaurants and hospitality spaces', 'Warehouses and industrial premises', 'Gyms, studios and shared facilities', 'Common areas and managed properties'].map((item) => <li key={item} className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0F766E]" />{item}</li>)}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xl font-black tracking-tight text-[#102A2A]">Why Choose Concept Cleaning Services?</h3>
+                <div className="mt-5 space-y-4">
+                  <div><h4 className="font-extrabold text-[#102A2A]">Cleaning planned around your needs</h4><p className="mt-1 text-sm leading-7 text-[#475569]">We discuss your priorities and the property requirements so the work can be tailored to the areas that matter to you.</p></div>
+                  <div><h4 className="font-extrabold text-[#102A2A]">Professional cleaning approach</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Our team uses suitable cleaning methods and equipment for the task, surface and material being cleaned.</p></div>
+                  <div><h4 className="font-extrabold text-[#102A2A]">Options for homes and businesses</h4><p className="mt-1 text-sm leading-7 text-[#475569]">From domestic housekeeping to office and commercial cleaning, you can enquire about services for different property types.</p></div>
+                  <div><h4 className="font-extrabold text-[#102A2A]">Straightforward booking and enquiries</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Use the booking engine above to find a service, request a quotation or send an enquiry to our team.</p></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-12 flex flex-col items-start justify-between gap-5 rounded-2xl border border-[var(--border)] p-6 sm:flex-row sm:items-center sm:p-8">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-[var(--text)] sm:text-2xl">Looking for cleaning services in Nairobi and nearby areas?</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--muted)]">We serve customers in Nairobi and selected surrounding areas, including parts of Kiambu, Kajiado and Machakos. Share your location and the service you need so our team can confirm availability.</p>
+              </div>
+              <a href={waQuote} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-extrabold text-white transition hover:bg-[var(--primary-dark)]"><MessageCircle className="h-4 w-4" />Enquire on WhatsApp</a>
             </div>
           </div>
         </section>
