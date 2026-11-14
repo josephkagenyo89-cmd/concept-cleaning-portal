@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
     const { data, error } = await db.from('customer_feedback')
       .select('id, client_name, rating, comment, service_name')
       .eq('source', 'signature').eq('public_display_consent', true).eq('publication_status', 'approved')
-      .eq('is_complaint', false).not('comment', 'is', null).neq('comment', '')
+      .not('comment', 'is', null).neq('comment', '')
       .order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(6);
     if (error) throw error;
     const reviews = (data || []).map(r => ({ id: r.id, display_name: (r.client_name || 'Customer').trim().split(/\s+/)[0], rating: r.rating, comment: r.comment, service_name: r.service_name }));
