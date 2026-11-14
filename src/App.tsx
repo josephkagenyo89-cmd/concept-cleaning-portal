@@ -47,6 +47,7 @@ const ErpIncome = lazy(() => import("@/pages/admin/ErpIncome"));
 const ErpExpenses = lazy(() => import("@/pages/admin/ErpExpenses"));
 const ErpInvoices = lazy(() => import("@/pages/admin/ErpInvoices"));
 const ErpReports = lazy(() => import("@/pages/admin/ErpReports"));
+const AccountingFinance = lazy(() => import("@/pages/admin/AccountingFinance"));
 const AdminBookService = lazy(() => import("@/pages/admin/AdminBookService"));
 const AdminQuotations = lazy(() => import("@/pages/admin/AdminQuotations"));
 const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
@@ -192,6 +193,8 @@ function AdminGate() {
         <Route path="erp/expenses" element={<ErpExpenses />} />
         <Route path="erp/invoices" element={<ErpInvoices />} />
         <Route path="erp/reports" element={<ErpReports />} />
+        <Route path="accounting" element={<Navigate to="/admin/accounting/overview" replace />} />
+        <Route path="accounting/:section" element={<AccountingFinance />} />
       </Route>
     </Routes>
     </Suspense>
@@ -298,7 +301,7 @@ function RouteTheme() {
     // Apply the new brand tokens everywhere except the ERP module.
     const root = document.getElementById("root");
     if (!root) return;
-    const isErpRoute = location.pathname === "/admin/erp" || location.pathname.startsWith("/admin/erp/");
+    const isErpRoute = location.pathname === "/admin/erp" || location.pathname.startsWith("/admin/erp/") || location.pathname.startsWith("/admin/accounting");
     root.classList.toggle("ccs-modern-theme", !isErpRoute);
     return () => root.classList.remove("ccs-modern-theme");
   }, [location.pathname]);

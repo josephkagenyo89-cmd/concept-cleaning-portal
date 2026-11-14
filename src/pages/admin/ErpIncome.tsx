@@ -34,7 +34,7 @@ const PAYMENT_METHODS = ['cash', 'mpesa', 'bank_transfer', 'cheque', 'other'];
 const STATUS_OPTIONS = ['all', 'pending_approval', 'approved', 'rejected'];
 
 export default function ErpIncome() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const [records, setRecords] = useState<IncomeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -94,14 +94,16 @@ export default function ErpIncome() {
       setApproving(false);
       return;
     }
-    const { error } = await supabase.from('income_records').update({
-      status: 'approved',
-      mpesa_code: mpesaCode.trim(),
-      approved_by: user!.id,
-      approved_at: new Date().toISOString(),
-    } as any).eq('id', approvalRecord.id);
-    if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); }
-    else { toast({ title: 'Income approved ✓' }); }
+    const { error: refError } = await supabase.from('income_records').update({ mpesa_code: mpesaCode.trim() } as any).eq('id', approvalRecord.id);
+    if (refError) { toast({ title: 'Error', description: refError.message, variant: 'destructive' }); setApproving(false); return; }
+    const { data: approval } = await (supabase.from('accounting_approvals').select('id') as any)
+      .eq('entity_type', 'income').eq('entity_id', approvalRecord.id).eq('status', 'pending_approval').maybeSingle();
+    if (!approval?.id) { toast({ title: 'Approval request not found', variant: 'destructive' }); setApproving(false); return; }
+    const { error } = await (supabase as any).rpc('accounting_decide_approval', {
+      p_approval_id: approval.id, p_decision: 'approved', p_note: null,
+    });
+    if (error) toast({ title: 'Approval failed', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Income approved through Accounting & Finance' });
     setApproving(false);
     setApprovalRecord(null);
     setMpesaCode('');
@@ -109,8 +111,16 @@ export default function ErpIncome() {
   };
 
   const handleReject = async (id: string) => {
-    await supabase.from('income_records').update({ status: 'rejected' } as any).eq('id', id);
-    toast({ title: 'Income record rejected' });
+    const note = window.prompt('Reason for rejecting this income record:');
+    if (!note?.trim()) return;
+    const { data: approval } = await (supabase.from('accounting_approvals').select('id') as any)
+      .eq('entity_type', 'income').eq('entity_id', id).eq('status', 'pending_approval').maybeSingle();
+    if (!approval?.id) return toast({ title: 'Approval request not found', variant: 'destructive' });
+    const { error } = await (supabase as any).rpc('accounting_decide_approval', {
+      p_approval_id: approval.id, p_decision: 'rejected', p_note: note.trim(),
+    });
+    if (error) toast({ title: 'Rejection failed', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Income record rejected' });
     fetchRecords();
   };
 
@@ -224,7 +234,7 @@ export default function ErpIncome() {
                       <TableCell className="max-w-[200px] truncate">{r.description || '—'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          {r.status === 'pending_approval' && isSuperAdmin && (
+                          {r.status === 'pending_approval' && (isAdmin || isSuperAdmin) && (
                             <>
                               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setApprovalRecord(r); setMpesaCode(''); }}>
                                 <CheckCircle className="h-3 w-3 mr-1" />Approve
@@ -234,7 +244,7 @@ export default function ErpIncome() {
                               </Button>
                             </>
                           )}
-                          {r.status !== 'approved' && (
+                          {r.status === 'rejected' && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(r.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

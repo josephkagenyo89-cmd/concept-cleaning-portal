@@ -11,13 +11,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, CheckCircle2, Download, FileText, RefreshCw, Pencil, Banknote, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { computePay, downloadCsv, kes, MONTHS, payslipPdf, runStatusClass, type Line, type PayrollItem, type PayrollRun } from '@/lib/payroll';
 import { generatePayrollItems, recalcRunTotals } from './HrPayroll';
 
 export default function HrPayrollRun() {
   const { id } = useParams();
-  const { profile } = useAuth();
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [items, setItems] = useState<PayrollItem[]>([]);
   const [edit, setEdit] = useState<PayrollItem | null>(null);
@@ -70,12 +68,12 @@ export default function HrPayrollRun() {
   };
 
   const transition = async () => {
-    const patch: any = confirm === 'approve' ? { status: 'approved', approved_by_name: (profile as any)?.full_name || null }
+    const patch: any = confirm === 'approve' ? { status: 'pending_approval' }
       : confirm === 'paid' ? { status: 'paid', payment_reference: payRef || null } : { status: 'cancelled' };
     const { error } = await supabase.from('payroll_runs').update(patch).eq('id', run.id);
     setConfirm(null);
     if (error) return toast.error(error.message);
-    toast.success(`Payroll ${patch.status}`); load();
+    toast.success(confirm === 'approve' ? 'Payroll submitted for independent accounting approval' : `Payroll ${patch.status}`); load();
   };
 
   const exportCsv = () => downloadCsv(`${run.payroll_code}.csv`, [
@@ -105,7 +103,7 @@ export default function HrPayrollRun() {
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Payroll CSV</Button>
           <Button variant="outline" size="sm" onClick={exportBank}><Download className="h-4 w-4 mr-1" />Payment list</Button>
           {draft && <Button variant="outline" size="sm" onClick={() => setConfirm('cancel')}><XCircle className="h-4 w-4 mr-1" />Cancel</Button>}
-          {draft && <Button size="sm" onClick={() => setConfirm('approve')} disabled={!items.length}><CheckCircle2 className="h-4 w-4 mr-1" />Approve</Button>}
+          {draft && <Button size="sm" onClick={() => setConfirm('approve')} disabled={!items.length}><CheckCircle2 className="h-4 w-4 mr-1" />Submit for Approval</Button>}
           {run.status === 'approved' && <Button size="sm" onClick={() => setConfirm('paid')}><Banknote className="h-4 w-4 mr-1" />Mark as paid</Button>}
         </div>
       </CardContent></Card>
@@ -159,9 +157,9 @@ export default function HrPayrollRun() {
       <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{confirm === 'approve' ? 'Approve payroll?' : confirm === 'paid' ? 'Mark payroll as paid?' : 'Cancel payroll?'}</AlertDialogTitle>
+            <AlertDialogTitle>{confirm === 'approve' ? 'Submit payroll for approval?' : confirm === 'paid' ? 'Mark payroll as paid?' : 'Cancel payroll?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm === 'approve' ? `Net pay of ${kes(run.total_net)} for ${run.employee_count} employees will be locked. No further edits are possible.`
+              {confirm === 'approve' ? `Net pay of ${kes(run.total_net)} for ${run.employee_count} employees will be submitted to Accounting & Finance for review by a different authorised administrator.`
                 : confirm === 'paid' ? 'Every employee will be marked paid and a timeline entry recorded.' : 'This run will be voided so you can start again for this month.'}
             </AlertDialogDescription>
           </AlertDialogHeader>

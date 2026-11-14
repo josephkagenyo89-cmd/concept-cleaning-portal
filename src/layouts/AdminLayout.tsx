@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity,
+  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator, ChevronDown,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -47,17 +47,22 @@ const hrNavItems = [
   { to: '/admin/hr/positions', icon: IdCard, label: 'Positions' },
   { to: '/admin/hr/payroll', icon: Wallet, label: 'Payroll' },
 ];
-const erpNavItems = [
-  { to: '/admin/erp', icon: Landmark, label: 'Finance Dashboard', end: true },
-  { to: '/admin/erp/income', icon: DollarSign, label: 'Income' },
-  { to: '/admin/erp/expenses', icon: Receipt, label: 'Expenses' },
-  { to: '/admin/erp/invoices', icon: FileText, label: 'Invoices' },
-  { to: '/admin/erp/reports', icon: PieChart, label: 'Reports' },
-];
+const accountingNavItems = [
+  ['overview', 'Financial Overview'], ['general-ledger', 'General Ledger'],
+  ['sales-revenue', 'Sales & Revenue'], ['expenses-purchases', 'Expenses & Purchases'],
+  ['banking-cash', 'Banking & Cash'], ['accounts-receivable', 'Accounts Receivable'],
+  ['accounts-payable', 'Accounts Payable'], ['assets-depreciation', 'Assets & Depreciation'],
+  ['budgets-planning', 'Budgets & Planning'], ['financial-reports', 'Financial Reports'],
+  ['tax-compliance', 'Tax & Compliance'], ['accounting-periods', 'Accounting Periods'],
+  ['accounting-settings', 'Accounting Settings'], ['approvals', 'Accounting Approvals'],
+] as const;
 
 export default function AdminLayout() {
   const { signOut, isAdmin, isSuperAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [accountingExpanded, setAccountingExpanded] = useState(true);
+  const location = useLocation();
+  useEffect(() => { if (location.pathname.startsWith('/admin/accounting')) setAccountingExpanded(true); }, [location.pathname]);
   const { blockingNotices, refresh } = useBlockingNotices();
 
   // Preload system settings into PDF generator + cache on admin entry
@@ -146,25 +151,30 @@ export default function AdminLayout() {
           )}
 
           <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Human Resources</p>
-          {[hrNavItems, erpNavItems].flatMap((group, gi) => [
-            gi === 1 ? <p key="erp-label" className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">ERP & Accounting</p> : null,
-            ...group.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{label}</span>
+          {hrNavItems.map(({ to, icon: Icon, label, end }) => (
+            <NavLink key={to} to={to} end={end} onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                isActive ? 'bg-primary text-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}>
+              <Icon className="h-4 w-4 shrink-0" /><span className="truncate">{label}</span>
             </NavLink>
-          ))])}
+          ))}
+          <div className="pt-3">
+            <button type="button" onClick={() => setAccountingExpanded((value) => !value)} aria-expanded={accountingExpanded}
+              className={cn('flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors',
+                location.pathname.startsWith('/admin/accounting') ? 'text-primary' : 'text-sidebar-foreground/85 hover:bg-sidebar-accent')}>
+              <Calculator className="h-4 w-4 shrink-0" /><span className="flex-1 text-left">Accounting & Finance</span>
+              <ChevronDown className={cn('h-4 w-4 transition-transform', accountingExpanded ? 'rotate-180' : '')} />
+            </button>
+            {accountingExpanded && <div className="ml-3 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
+              {accountingNavItems.map(([section, label]) => (
+                <NavLink key={section} to={`/admin/accounting/${section}`} onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) => cn('rounded-md px-3 py-2 text-xs transition-colors',
+                    isActive ? 'bg-primary text-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}>
+                  <span className="block truncate">{label}</span>
+                </NavLink>
+              ))}
+            </div>}
+          </div>
         </nav>
 
         {/* Support card */}
