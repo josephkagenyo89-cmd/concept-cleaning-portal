@@ -15,7 +15,7 @@ import { categoryImage } from '@/lib/marketplace';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
 import BookingEngine from '@/components/public/BookingEngine';
 
-const HomeGalleryPreview = lazy(() => import('./MarketingPages').then((module) => ({ default: module.HomeGalleryPreview })));
+const HomeBlogPreview = lazy(() => import('./BlogIndex').then((module) => ({ default: module.HomeBlogPreview })));
 
 function categoryPurposeText(category: ServiceCategory) {
   if (category.description?.trim()) return category.description.trim();
@@ -117,7 +117,7 @@ export default function LandingPage() {
               <a href="#home" className="transition-colors hover:text-black">Home</a>
               <Link to="/services" className="transition-colors hover:text-black">Services</Link>
               <Link to="/about" className="transition-colors hover:text-black">About Us</Link>
-              <Link to="/gallery" className="transition-colors hover:text-black">Gallery</Link>
+              <Link to="/blog" className="transition-colors hover:text-black">Blog</Link>
               <Link to="/contact" className="transition-colors hover:text-black">Contact</Link>
             </nav>
             <div className="hidden items-center gap-2 lg:flex">
@@ -135,7 +135,7 @@ export default function LandingPage() {
           {mobileMenuOpen && <nav className="grid gap-1 border-t border-[#eeeeee] px-4 py-3 lg:hidden" aria-label="Mobile navigation">
             <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Services</Link>
             <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">About Us</Link>
-            <Link to="/gallery" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Gallery</Link>
+            <Link to="/blog" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Blog</Link>
             <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">Contact</Link>
             <Link to="/my/account" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[#f5f5f5]">My Account</Link>
             <Button asChild className="mt-1 bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]"><Link to="/marketplace">Browse services</Link></Button>
@@ -265,8 +265,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <Suspense fallback={<section id="gallery" className="bg-white py-16"><div className="mx-auto max-w-7xl px-4 text-sm text-slate-500">Loading gallery preview…</div></section>}>
-          <HomeGalleryPreview />
+        <Suspense fallback={<section id="blog" className="bg-white py-16"><div className="mx-auto max-w-7xl px-4 text-sm text-slate-500">Loading latest articles…</div></section>}>
+          <HomeBlogPreview />
         </Suspense>
 
         <section id="contact" className="scroll-mt-24 px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
@@ -286,7 +286,7 @@ export default function LandingPage() {
         <footer className="border-t border-[var(--border)] bg-[var(--bg)]">
           <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
             <div><p className="font-extrabold tracking-tight">CONCEPT CLEANING SERVICES</p><p className="mt-1 text-sm text-[var(--muted)]">Professional cleaning and pest control in Nairobi, Kenya.</p><p className="mt-2 text-xs text-[#888888]">© {new Date().getFullYear()} Concept Cleaning Services.</p></div>
-            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/services" className="hover:text-black">Services</Link><Link to="/about" className="hover:text-black">About Us</Link><Link to="/gallery" className="hover:text-black">Gallery</Link><Link to="/contact" className="hover:text-black">Contact</Link><Link to="/blog" className="hover:text-black">Blog</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/services" className="hover:text-black">Services</Link><Link to="/about" className="hover:text-black">About Us</Link><Link to="/contact" className="hover:text-black">Contact</Link><Link to="/blog" className="hover:text-black">Blog</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
           </div>
         </footer>
 

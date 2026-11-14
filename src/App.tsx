@@ -90,7 +90,6 @@ const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 const ServicesPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServicesPage })));
 const ServiceCategoryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServiceCategoryPage })));
 const AboutPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.AboutPage })));
-const GalleryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.GalleryPage })));
 const ContactPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ContactPage })));
 const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
 const BlogPostPage = lazy(() => import("@/pages/public/BlogPostPage"));
@@ -103,7 +102,7 @@ const marketplaceRoutes = (
   <Route path="/services" element={<ServicesPage />} />
   <Route path="/services/category/:categoryId/:categorySlug" element={<ServiceCategoryPage />} />
   <Route path="/about" element={<AboutPage />} />
-  <Route path="/gallery" element={<GalleryPage />} />
+  <Route path="/gallery" element={<Navigate to="/blog" replace />} />
   <Route path="/contact" element={<ContactPage />} />
   <Route path="/blog" element={<BlogIndex />} />
   <Route path="/blog/:slug" element={<BlogPostPage />} />
