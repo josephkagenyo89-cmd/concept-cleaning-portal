@@ -39,16 +39,68 @@ export default function ClientSignature() {
   const [reviewError, setReviewError] = useState('');
 
   useEffect(() => {
-    if (!token) { setError('Invalid link'); setLoading(false); return; }
-    fetch(`${SUPABASE_URL}/functions/v1/get-booking-for-signature?token=${encodeURIComponent(token)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error === 'already_signed') setError('You have already signed this document.');
-        else if (data.error) setError(data.error);
-        else setBooking(data.booking);
-      })
-      .catch(() => setError('Failed to load booking'))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+
+    const loadBooking = async () => {
+      setLoading(true);
+      setError('');
+      setBooking(null);
+
+      if (!token) {
+        setError('This signature link is invalid or incomplete.');
+        setLoading(false);
+        return;
+      }
+
+      if (!SUPABASE_URL) {
+        setError('The signature service is temporarily unavailable. Please contact Concept Cleaning Services.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/get-booking-for-signature?token=${encodeURIComponent(token)}`,
+          { signal: controller.signal }
+        );
+
+        let data: any;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error('The signature service returned an invalid response. Please try again later.');
+        }
+
+        if (data?.error === 'already_signed') {
+          throw new Error('You have already signed this document.');
+        }
+
+        if (!response.ok || data?.error) {
+          throw new Error(data?.error || 'This signature link is invalid or may have expired.');
+        }
+
+        const result = data?.booking;
+        if (
+          !result ||
+          typeof result.id !== 'string' ||
+          typeof result.client_name !== 'string'
+        ) {
+          throw new Error('We could not retrieve the booking details for this signature link. Please contact Concept Cleaning Services.');
+        }
+
+        setBooking(result);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        setError(err?.message || 'Unable to load the signature request. Please try again later.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadBooking();
+    return () => controller.abort();
   }, [token]);
 
   useEffect(() => {
@@ -212,7 +264,21 @@ export default function ClientSignature() {
     </div>
   );
 
-  if (!booking) return null;
+  if (!booking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+            <h1 className="text-xl font-bold">Signature Details Unavailable</h1>
+            <p className="text-sm text-muted-foreground">
+              We could not load this booking. Please contact Concept Cleaning Services for assistance.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const lineItems = Array.isArray(booking.line_items) ? booking.line_items : [];
 
