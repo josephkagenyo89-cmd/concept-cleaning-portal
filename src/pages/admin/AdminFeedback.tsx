@@ -11,6 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Star, Search, AlertTriangle, Download, CalendarIcon, MessageSquareWarning } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 type Feedback = {
   id: string;
@@ -24,6 +25,10 @@ type Feedback = {
   comment: string | null;
   is_complaint: boolean;
   created_at: string;
+  source?: string;
+  public_display_consent?: boolean;
+  publication_status?: string;
+  is_featured?: boolean;
 };
 
 export default function AdminFeedback() {
@@ -74,6 +79,16 @@ export default function AdminFeedback() {
       complaints: items.filter(f => f.is_complaint).length,
     };
   }, [items]);
+
+  const moderateReview = async (id: string, updates: Record<string, unknown>) => {
+    const { error } = await supabase.from('customer_feedback' as any).update(updates).eq('id', id);
+    if (error) {
+      toast({ title: 'Could not update review', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Review updated' });
+    await load();
+  };
 
   const exportCsv = () => {
     const headers = ['Date', 'Client', 'Agent', 'Service', 'Rating', 'Complaint', 'Comment'];
@@ -178,11 +193,24 @@ export default function AdminFeedback() {
                         ))}
                       </div>
                       {f.is_complaint && <Badge variant="destructive">Complaint</Badge>}
+                      {f.source === 'signature' && <Badge variant="outline">Website review</Badge>}
+                      {f.source === 'signature' && <Badge variant={f.publication_status === 'approved' ? 'default' : 'secondary'}>{f.publication_status === 'approved' ? 'Published' : f.publication_status === 'pending' ? 'Pending approval' : f.publication_status === 'private' ? 'Private' : 'Hidden'}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {f.service_name || '—'} · Agent: {f.agent_name || '—'}
                     </p>
                     {f.comment && <p className="text-sm pt-1 italic">"{f.comment}"</p>}
+                    {f.source === 'signature' && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {f.public_display_consent ? (
+                          <>
+                            <Button size="sm" variant={f.publication_status === 'approved' ? 'secondary' : 'default'} onClick={() => moderateReview(f.id, { publication_status: 'approved', approved_at: new Date().toISOString() })} disabled={f.publication_status === 'approved'}>Approve for homepage</Button>
+                            <Button size="sm" variant="outline" onClick={() => moderateReview(f.id, { publication_status: 'hidden', is_featured: false })}>Hide</Button>
+                            <Button size="sm" variant="outline" onClick={() => moderateReview(f.id, { is_featured: !f.is_featured })}>{f.is_featured ? 'Unfeature' : 'Feature'}</Button>
+                          </>
+                        ) : <span className="text-xs text-muted-foreground">Customer did not consent to public display</span>}
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(f.created_at), 'dd MMM yyyy HH:mm')}

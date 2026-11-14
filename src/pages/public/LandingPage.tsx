@@ -1,10 +1,10 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, ChevronDown, Home, MessageCircle, Sofa,
-  Building2, CarFront, Bug, Menu, X
+  Building2, CarFront, Bug, Menu, X, Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
@@ -14,6 +14,8 @@ import { usePublicSettings } from '@/hooks/usePublicSettings';
 import BookingEngine from '@/components/public/BookingEngine';
 
 const HomeBlogPreview = lazy(() => import('./BlogIndex').then((module) => ({ default: module.HomeBlogPreview })));
+type PublicReview = { id: string; display_name: string; rating: number; comment: string; service_name: string | null };
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 const FAQS = [
   {
@@ -45,6 +47,15 @@ export default function LandingPage() {
   const waQuote = waLink(phone, 'Hello Concept Cleaning Services, I would like to enquire about your services.');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [publicReviews, setPublicReviews] = useState<PublicReview[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetch(`${SUPABASE_URL}/functions/v1/get-public-reviews`)
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Reviews unavailable')))
+      .then(data => { if (active && Array.isArray(data.reviews)) setPublicReviews(data.reviews); })
+      .catch(() => { if (active) setPublicReviews([]); });
+    return () => { active = false; };
+  }, []);
   const title = 'Professional Cleaning Services in Nairobi, Kenya | Concept Cleaning';
   const description = 'Concept Cleaning Services provides professional residential, office, commercial, carpet, sofa, mattress and post-construction cleaning, plus pest control in Nairobi and nearby areas.';
 
@@ -241,6 +252,32 @@ export default function LandingPage() {
             {FAQS.map((faq, i) => <div key={faq.q} className="py-1"><button type="button" aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 py-4 text-left font-bold"><span>{faq.q}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} /></button>{openFaq === i && <p className="max-w-3xl pb-5 pr-8 text-sm leading-6 text-[var(--muted)]">{faq.a}</p>}</div>)}
           </div>
         </section>
+
+        {publicReviews.length > 0 && (
+          <section aria-labelledby="customer-reviews-heading" className="border-t border-[var(--border)] bg-white py-14 sm:py-18">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-2xl text-center">
+                <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--primary)]">Customer experiences</p>
+                <h2 id="customer-reviews-heading" className="mt-3 text-3xl font-black tracking-tight text-[var(--text)]">Trusted by our customers</h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">A selection of feedback shared by customers after their service.</p>
+              </div>
+              <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {publicReviews.map(review => (
+                  <article key={review.id} className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-sm">
+                    <div className="flex gap-1" aria-label={`${review.rating} out of 5 stars`}>
+                      {[1, 2, 3, 4, 5].map(star => <Star key={star} className={`h-4 w-4 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />)}
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-[var(--text)]">“{review.comment}”</p>
+                    <div className="mt-4 border-t border-[var(--border)] pt-3">
+                      <p className="text-sm font-bold text-[var(--text)]">{review.display_name}</p>
+                      {review.service_name && <p className="mt-1 text-xs text-[var(--muted)]">{review.service_name}</p>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <footer className="border-t border-[var(--border)] bg-[var(--bg)]">
           <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
