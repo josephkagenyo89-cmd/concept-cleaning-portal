@@ -271,7 +271,8 @@ export default function AdminClientProfile() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold">{client.full_name}</h1>
+                <h1 className="text-xl font-bold">{client.company_name || client.full_name}</h1>
+                {client.client_type === 'company' && <Badge variant="outline">Company</Badge>}
 
                 {client.client_code && (
                   <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">
@@ -280,6 +281,9 @@ export default function AdminClientProfile() {
                 )}
               </div>
 
+              {client.client_type === 'company' && client.contact_person && <p className="text-sm text-muted-foreground">Contact: {client.contact_person}</p>}
+              {client.client_type === 'company' && client.kra_pin && <p className="text-sm text-muted-foreground">KRA PIN: {client.kra_pin}</p>}
+              {client.email && <p className="text-sm text-muted-foreground">{client.email}</p>}
               <p className="text-sm text-muted-foreground">{client.phone}</p>
 
               {client.location && (

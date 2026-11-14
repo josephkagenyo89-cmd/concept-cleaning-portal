@@ -17,6 +17,11 @@ type Client = {
   id: string;
   client_code: string | null;
   full_name: string;
+  client_type: 'individual' | 'company';
+  company_name: string | null;
+  contact_person: string | null;
+  kra_pin: string | null;
+  email: string | null;
   phone: string;
   whatsapp_number: string | null;
   location: string | null;
@@ -44,7 +49,7 @@ export default function AdminClients() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Client | null>(null);
-  const [editForm, setEditForm] = useState({ full_name: '', phone: '', location: '' });
+  const [editForm, setEditForm] = useState({ full_name: '', client_type: 'individual' as 'individual' | 'company', company_name: '', contact_person: '', kra_pin: '', email: '', phone: '', location: '' });
   const [editSaving, setEditSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -100,7 +105,9 @@ export default function AdminClients() {
 
   const filtered = clients.filter(c => {
     const matchSearch = !search ||
-      c.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.contact_person || '').toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search) ||
       (c.client_code || '').toLowerCase().includes(search.toLowerCase()) ||
       (c.location || '').toLowerCase().includes(search.toLowerCase());
@@ -117,15 +124,15 @@ export default function AdminClients() {
 
   const openEdit = (c: Client) => {
     setEditTarget(c);
-    setEditForm({ full_name: c.full_name, phone: c.phone, location: c.location || '' });
+    setEditForm({ full_name: c.full_name, client_type: c.client_type || 'individual', company_name: c.company_name || '', contact_person: c.contact_person || '', kra_pin: c.kra_pin || '', email: c.email || '', phone: c.phone, location: c.location || '' });
   };
 
   const saveEdit = async () => {
     if (!editTarget) return;
     const phone = editForm.phone.trim();
-    const name = editForm.full_name.trim();
-    if (!name || !phone) {
-      toast({ title: 'Missing fields', description: 'Name and phone are required.', variant: 'destructive' });
+    const name = editForm.client_type === 'company' ? editForm.company_name.trim() : editForm.full_name.trim();
+    if (!name || !phone || (editForm.client_type === 'company' && !editForm.contact_person.trim())) {
+      toast({ title: 'Missing fields', description: editForm.client_type === 'company' ? 'Company name, contact person and phone are required.' : 'Name and phone are required.', variant: 'destructive' });
       return;
     }
     setEditSaving(true);
@@ -146,6 +153,11 @@ export default function AdminClients() {
 
     const { error } = await supabase.from('clients').update({
       full_name: name,
+      client_type: editForm.client_type,
+      company_name: editForm.client_type === 'company' ? name : null,
+      contact_person: editForm.client_type === 'company' ? editForm.contact_person.trim() : null,
+      kra_pin: editForm.client_type === 'company' ? (editForm.kra_pin.trim() || null) : null,
+      email: editForm.email.trim() || null,
       phone,
       whatsapp_number: phone,
       location: editForm.location.trim() || null,
@@ -230,7 +242,8 @@ export default function AdminClients() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold truncate">{client.full_name}</p>
+                      <p className="font-semibold truncate">{client.company_name || client.full_name}</p>
+                      {client.client_type === 'company' && <Badge variant="outline" className="text-[10px]">Company</Badge>}
                       {client.client_code && (
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                           {client.client_code}
@@ -287,13 +300,16 @@ export default function AdminClients() {
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Client {editTarget?.client_code}</DialogTitle>
+            <DialogTitle>Edit {editTarget?.client_type === 'company' ? 'Company' : 'Client'} {editTarget?.client_code}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Full Name</Label>
-              <Input value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
-            </div>
+            <div className="grid grid-cols-2 gap-2"><Button type="button" variant={editForm.client_type === 'individual' ? 'default' : 'outline'} onClick={() => setEditForm(f => ({ ...f, client_type: 'individual' }))}>Individual</Button><Button type="button" variant={editForm.client_type === 'company' ? 'default' : 'outline'} onClick={() => setEditForm(f => ({ ...f, client_type: 'company' }))}>Company</Button></div>
+            {editForm.client_type === 'company' ? <>
+              <div className="space-y-1.5"><Label>Company Name</Label><Input value={editForm.company_name} onChange={e => setEditForm(f => ({ ...f, company_name: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Contact Person</Label><Input value={editForm.contact_person} onChange={e => setEditForm(f => ({ ...f, contact_person: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>KRA PIN</Label><Input value={editForm.kra_pin} onChange={e => setEditForm(f => ({ ...f, kra_pin: e.target.value.toUpperCase() }))} /></div>
+            </> : <div className="space-y-1.5"><Label>Full Name</Label><Input value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} /></div>}
+            <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} /></div>
             <div className="space-y-1.5">
               <Label>Phone</Label>
               <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />

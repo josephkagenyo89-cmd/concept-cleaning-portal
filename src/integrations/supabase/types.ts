@@ -1877,6 +1877,10 @@ export type Database = {
         Row: {
           booking_count: number
           client_code: string | null
+          client_type: string
+          company_name: string | null
+          contact_person: string | null
+          kra_pin: string | null
           created_at: string
           created_by: string
           created_by_role: string
@@ -1897,6 +1901,10 @@ export type Database = {
         Insert: {
           booking_count?: number
           client_code?: string | null
+          client_type?: string
+          company_name?: string | null
+          contact_person?: string | null
+          kra_pin?: string | null
           created_at?: string
           created_by: string
           created_by_role?: string
@@ -1917,6 +1925,10 @@ export type Database = {
         Update: {
           booking_count?: number
           client_code?: string | null
+          client_type?: string
+          company_name?: string | null
+          contact_person?: string | null
+          kra_pin?: string | null
           created_at?: string
           created_by?: string
           created_by_role?: string
