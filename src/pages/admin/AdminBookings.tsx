@@ -201,8 +201,8 @@ export default function AdminBookings() {
       toast({ title: 'Error', description: 'Failed to generate signature link', variant: 'destructive' });
       return;
     }
-    const baseUrl = window.location.origin;
-    const signUrl = `${baseUrl}/sign?token=${encodeURIComponent(token)}`;
+    // Always send clients to the verified public website, never a preview or builder URL.
+    const signUrl = `https://www.conceptcleaningservices.co.ke/sign?token=${encodeURIComponent(token)}`;
     let phone = (b.client_phone || '').replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
     if (!phone.startsWith('254')) phone = '254' + phone;
 
