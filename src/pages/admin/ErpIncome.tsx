@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, FileText, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Trash2, FileText, Filter, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface IncomeRecord {
@@ -47,6 +47,7 @@ export default function ErpIncome() {
   const [filterDateTo, setFilterDateTo] = useState('');
 
   // Approval dialog
+  const [viewRecord, setViewRecord] = useState<IncomeRecord | null>(null);
   const [approvalRecord, setApprovalRecord] = useState<IncomeRecord | null>(null);
   const [mpesaCode, setMpesaCode] = useState('');
   const [approving, setApproving] = useState(false);
@@ -216,7 +217,7 @@ export default function ErpIncome() {
           {loading ? <div className="flex justify-center p-8"><div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" /></div> : (
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Source</TableHead><TableHead>Method</TableHead><TableHead>Status</TableHead><TableHead>M-Pesa Code</TableHead><TableHead>Description</TableHead><TableHead></TableHead>
+                <TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Source</TableHead><TableHead>Method</TableHead><TableHead>Status</TableHead><TableHead>M-Pesa Code</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {records.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No income records yet</TableCell></TableRow> :
@@ -233,7 +234,10 @@ export default function ErpIncome() {
                       <TableCell className="font-mono text-xs">{r.mpesa_code || '—'}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{r.description || '—'}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap items-center justify-end gap-1">
+                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setViewRecord(r)}>
+                            <Eye className="mr-1 h-3 w-3" />View
+                          </Button>
                           {r.status === 'pending_approval' && (isAdmin || isSuperAdmin) && (
                             <>
                               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setApprovalRecord(r); setMpesaCode(''); }}>
@@ -258,6 +262,35 @@ export default function ErpIncome() {
           )}
         </CardContent>
       </Card>
+
+      {/* Income record details */}
+      <Dialog open={!!viewRecord} onOpenChange={(isOpen) => { if (!isOpen) setViewRecord(null); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader><DialogTitle>Income Record Details</DialogTitle></DialogHeader>
+          {viewRecord && (
+            <div className="space-y-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Recorded amount</p>
+                <p className="text-2xl font-bold tabular-nums">KES {Number(viewRecord.amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <div className="mt-2">{statusBadge(viewRecord.status)}</div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><p className="text-xs text-muted-foreground">Date</p><p className="text-sm font-medium">{viewRecord.date}</p></div>
+                <div><p className="text-xs text-muted-foreground">Source</p><p className="text-sm font-medium capitalize">{viewRecord.source.replace(/_/g, ' ')}</p></div>
+                <div><p className="text-xs text-muted-foreground">Payment method</p><p className="text-sm font-medium capitalize">{viewRecord.payment_method.replace(/_/g, ' ')}</p></div>
+                <div><p className="text-xs text-muted-foreground">M-Pesa code</p><p className="text-sm font-mono">{viewRecord.mpesa_code || '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Service</p><p className="text-sm font-medium">{viewRecord.service || '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Invoice reference</p><p className="break-all text-sm font-mono">{viewRecord.invoice_id || '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Approved at</p><p className="text-sm">{viewRecord.approved_at ? new Date(viewRecord.approved_at).toLocaleString('en-KE') : '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Approved by</p><p className="break-all text-sm">{viewRecord.approved_by || '—'}</p></div>
+                <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Description</p><p className="whitespace-pre-wrap text-sm">{viewRecord.description || '—'}</p></div>
+                <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Created at</p><p className="text-sm">{viewRecord.created_at ? new Date(viewRecord.created_at).toLocaleString('en-KE') : '—'}</p></div>
+              </div>
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={() => setViewRecord(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval Dialog */}
       <Dialog open={!!approvalRecord} onOpenChange={v => { if (!v) setApprovalRecord(null); }}>

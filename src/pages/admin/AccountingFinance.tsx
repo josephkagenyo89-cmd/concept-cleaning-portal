@@ -105,6 +105,7 @@ export default function AccountingFinance() {
   const [rejectReason, setRejectReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; blob: Blob; title: string } | null>(null);
+  const [salesRevenueView, setSalesRevenueView] = useState<'invoices' | 'income'>('invoices');
 
   useEffect(() => () => { if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url); }, [pdfPreview?.url]);
 
@@ -643,8 +644,13 @@ export default function AccountingFinance() {
   }, { debit: 0, credit: 0 });
 
   if (section === 'sales-revenue') {
-    return <div className="space-y-6"><PageTitle title={active.label} description={active.description} onRefresh={load} />
-      <div className="grid gap-6 xl:grid-cols-2"><div className="min-w-0"><ErpInvoices /></div><div className="min-w-0"><ErpIncome /></div></div>
+    return <div className="space-y-5">
+      <PageTitle title={active.label} description={active.description} onRefresh={load} />
+      <div className="inline-flex w-full rounded-lg border bg-muted p-1 sm:w-auto" role="group" aria-label="Sales and revenue view">
+        <Button type="button" size="sm" variant={salesRevenueView === 'invoices' ? 'default' : 'ghost'} className="flex-1 sm:min-w-32" aria-pressed={salesRevenueView === 'invoices'} onClick={() => setSalesRevenueView('invoices')}>Invoices</Button>
+        <Button type="button" size="sm" variant={salesRevenueView === 'income' ? 'default' : 'ghost'} className="flex-1 sm:min-w-32" aria-pressed={salesRevenueView === 'income'} onClick={() => setSalesRevenueView('income')}>Income Tracking</Button>
+      </div>
+      <div className="min-w-0">{salesRevenueView === 'invoices' ? <ErpInvoices /> : <ErpIncome />}</div>
     </div>;
   }
   if (section === 'expenses-purchases') {
