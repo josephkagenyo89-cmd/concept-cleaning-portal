@@ -3,30 +3,17 @@
  * Type what you need -> live matches from the `services` table -> pick one ->
  * add where/when -> price reveals -> Book now / Get quotation.
  *
- * Hand-off: the booking itself still happens on /service/:slug (auth, RLS, lead +
- * booking creation stay untouched). Two small companion edits in
- * src/pages/marketplace/MarketServiceDetail.tsx are needed so it reads what this sends:
- *
- *  1) Pre-fill the form from the URL (replace the initial useState value):
- *       const [form, setForm] = useState({
- *         service_date: params.get('date') || '',
- *         service_time: params.get('time') || '',
- *         location: params.get('location') || '',
- *         phone: '',
- *         notes: params.get('size') ? `Size: ${params.get('size')} sq m` : '',
- *       });
- *  2) Keep those params through login (inside requireLogin):
- *       const currentPath = `/service/${id}${window.location.search}`;
- *
- * Data: everything shown comes from Supabase. Services via fetchMarketServices(), categories via
- * fetchMarketCategories(), prices via startingPrice(), discounts via useGlobalDiscount(). Nothing is hardcoded
- * (CATEGORY_ORDER is only used to sort categories).
+ * Authenticated customers continue through the existing service-detail workflow;
+ * guests submit through the existing secure guest-request endpoint. The service
+ * catalogue and pricing remain sourced from the existing services data utilities.
+ * Categories are being migrated to the approved service_categories/category_id
+ * relationship separately; this component must not invent category mappings.
  *
  * Note: for per-sq-m services this widget estimates price from the size entered;
  * the detail page still prices at startingPrice(), so confirm the total there.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, ArrowRight, Loader2, MapPin, MessageCircle, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -128,6 +115,13 @@ function trackPixel(event: string, params?: Record<string, unknown>) {
 
 const isoDate = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
+function normalizeCustomerPhone(value: string): string {
+  const phone = value.trim().replace(/[()\s-]/g, '');
+  if (/^0[17]\d{8}$/.test(phone)) return `+254${phone.slice(1)}`;
+  if (/^254[17]\d{8}$/.test(phone)) return `+${phone}`;
+  return /^\+[1-9]\d{7,14}$/.test(phone) ? phone : '';
+}
+
 function useCountUp(target: number) {
   const [value, setValue] = useState(target);
   const prev = useRef(0);
@@ -152,6 +146,8 @@ const chip = (on: boolean) =>
 
 export default function BookingEngine({ phone }: { phone: string }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedServiceId = searchParams.get('service');
   const { user, loading: authLoading, isCustomer, customerClient } = useAuth();
   const globalDiscount = useGlobalDiscount();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -185,6 +181,39 @@ export default function BookingEngine({ phone }: { phone: string }) {
     loadServices().then(setServices).catch(() => setFailed(true)).finally(() => setLoading(false));
   };
 
+  // Deep links from service detail pages must restore the exact selected service.
+  useEffect(() => {
+    if (!requestedServiceId) return;
+    let live = true;
+    setLoading(true);
+    setFailed(false);
+    loadServices()
+      .then((rows) => {
+        if (!live) return;
+        setServices(rows);
+        const match = rows.find((service) => service.id === requestedServiceId || service.slug === requestedServiceId);
+        if (!match) {
+          setSubmitError('That service is no longer available. Please choose another service or contact our team.');
+          return;
+        }
+        setSubmitError('');
+        setSelected(match);
+        setQuery(match.name);
+        setOpen(false);
+        if (window.location.hash === '#booking') {
+          requestAnimationFrame(() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        }
+      })
+      .catch(() => {
+        if (live) {
+          setFailed(true);
+          setSubmitError('We could not load that service. Please try again or contact our team.');
+        }
+      })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, [requestedServiceId]);
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => { if (!wrapRef.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', onDown);
@@ -214,7 +243,8 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
   const pricing = applyGlobalDiscount(basePrice, globalDiscount);
   const shownTotal = useCountUp(ready ? pricing.final : 0);
-  const validCustomerPhone = /^\+[1-9]\d{7,14}$/.test(customerPhone.trim());
+  const normalizedCustomerPhone = normalizeCustomerPhone(customerPhone);
+  const validCustomerPhone = Boolean(normalizedCustomerPhone);
   const submissionReady = ready && !submitting && (
     authLoading
       ? false
@@ -283,7 +313,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           request_type: mode,
           service_id: selected.id,
           customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
+          customer_phone: normalizedCustomerPhone,
           location: location.trim(),
           preferred_date: date,
           preferred_time: time,
@@ -311,7 +341,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
         `Request reference: ${data.request_reference}`,
         `Service: ${data.service_name || selected.name}`,
         `Name: ${customerName.trim() || 'Not provided'}`,
-        `Phone: ${customerPhone.trim()}`,
+        `Phone: ${normalizedCustomerPhone}`,
         `Location: ${location.trim()}`,
         `Preferred date: ${date}`,
         `Preferred time: ${time}`,
@@ -346,7 +376,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const waNoMatch = waLink(phone, `Hello Concept Cleaning Services, I am looking for: ${query.trim()}`);
 
   return (
-    <section aria-label="Book a service" className="w-full max-w-3xl rounded-3xl bg-white p-4 text-[#0F172A] shadow-2xl sm:p-6 lg:p-8">
+    <section id="booking" aria-label="Book a service" className="w-full max-w-3xl rounded-3xl bg-white p-4 text-[#0F172A] shadow-2xl sm:p-6 lg:p-8">
       <style>{`.be-rise{animation:be-rise .35s ease both}@keyframes be-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){.be-rise{animation:none}}`}</style>
 
       {!selected ? (
@@ -527,12 +557,12 @@ export default function BookingEngine({ phone }: { phone: string }) {
                     setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ''));
                     setSubmitError('');
                   }}
-                  placeholder="+254712345678"
+                  placeholder="0712345678 or +254712345678"
                   aria-invalid={customerPhone.length > 0 && !validCustomerPhone}
                   className="mt-1.5 h-12 w-full rounded-xl border border-[#E2E8F0] px-3 text-sm font-semibold outline-none focus:border-[#0F172A]"
                 />
                 <span className="mt-1 block text-xs text-[#64748B]">
-                  Include country code, e.g. +254. Do not start with 0.
+                  Kenyan numbers starting with 0 or 254 are converted automatically.
                 </span>
               </label>
             </div>

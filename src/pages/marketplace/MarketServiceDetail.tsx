@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft,
@@ -63,6 +63,8 @@ export default function MarketServiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const routeLocation = useLocation();
+  const routeState = routeLocation.state as { bookingNotes?: string } | null;
 
   const quoteMode = params.get('mode') === 'quote';
 
@@ -88,7 +90,7 @@ export default function MarketServiceDetail() {
     service_time: params.get('time') || '',
     location: params.get('location') || '',
     phone: '',
-    notes: params.get('size') ? `Size: ${params.get('size')} sq m` : '',
+    notes: params.get('size') ? `Size: ${params.get('size')} sq m` : routeState?.bookingNotes || '',
   });
 
   /*
@@ -711,13 +713,17 @@ export default function MarketServiceDetail() {
           <Card className="h-fit border-[#E4DFD2] bg-white shadow-[0_10px_30px_rgba(51,51,51,0.05)] md:col-start-2 md:row-start-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">
-                {quoteMode
-                  ? 'Request a quotation'
-                  : 'Book this service'}
+                {!user ? 'Book this service' : quoteMode ? 'Request a quotation' : 'Book this service'}
               </CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-3">
+              {!user ? (
+                <Button asChild className="w-full bg-[#333333] text-white hover:bg-[#45413B]">
+                  <Link to={`/?service=${encodeURIComponent(service.id)}#booking`}>Book the service</Link>
+                </Button>
+              ) : (
+                <>
               {!user && (
                 <div className="space-y-1.5">
                   <Label htmlFor="customer_name">Your name</Label>
@@ -894,6 +900,8 @@ export default function MarketServiceDetail() {
                     : 'Get quotation'}
                 </Button>
               </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
