@@ -3,19 +3,7 @@
 
 BEGIN;
 
--- Existing leads policies are intended to separate public lead creation from admin
--- viewing/updating. Enabling RLS makes those policies effective.
-ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
-
--- Super admins need the same full lead-management access as admins. The existing
--- policy set includes super-admin deletion but omitted super-admin SELECT/UPDATE.
-DROP POLICY IF EXISTS "Super admins full access to leads" ON public.leads;
-CREATE POLICY "Super admins full access to leads"
-  ON public.leads
-  FOR ALL
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'super_admin'::public.app_role))
-  WITH CHECK (public.has_role(auth.uid(), 'super_admin'::public.app_role));
+-- Leads RLS and policies are intentionally left unchanged per project direction.
 
 -- public.assets is an internal mirror of Storage object metadata, not a client API.
 -- The application uses Supabase Storage for file delivery; no client-side query of
