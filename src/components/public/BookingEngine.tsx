@@ -30,8 +30,6 @@ import {
   serviceImage
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
-import ServiceLocationPicker from '@/components/location/ServiceLocationPicker';
-import { serializeServiceLocation, serviceLocationNotes, type ServiceLocationValue } from '@/lib/serviceLocation';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 import { rememberGuestWhatsAppRequest } from '@/lib/guestWhatsAppReturn';
@@ -162,7 +160,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [selected, setSelected] = useState<MarketService | null>(null);
-  const [locationSelection, setLocationSelection] = useState<ServiceLocationValue | null>(null);
+  const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
   const [showDateInput, setShowDateInput] = useState(false);
   const [time, setTime] = useState('');
@@ -241,9 +239,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
 
   const perSqm = !!selected && selected.base_price <= 0 && selected.price_per_sqm > 0;
   const sizeNum = Number(size) || 0;
-  const location = locationSelection?.address || '';
-  const hasExactPin = Boolean(locationSelection && locationSelection.latitude != null && locationSelection.longitude != null);
-  const ready = !!selected && location.trim().length > 1 && hasExactPin && !!date && !!time && (!perSqm || sizeNum > 0);
+  const ready = !!selected && location.trim().length > 1 && !!date && !!time && (!perSqm || sizeNum > 0);
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
   const pricing = applyGlobalDiscount(basePrice, globalDiscount);
   const shownTotal = useCountUp(ready ? pricing.final : 0);
@@ -294,11 +290,6 @@ export default function BookingEngine({ phone }: { phone: string }) {
         date,
         time,
         location: location.trim(),
-        lat: String(locationSelection?.latitude ?? ''),
-        lng: String(locationSelection?.longitude ?? ''),
-        property: locationSelection?.propertyName || '',
-        entrance: locationSelection?.entrance || '',
-        directions: locationSelection?.directions || '',
       });
 
       if (perSqm) params.set('size', String(sizeNum));
@@ -323,8 +314,8 @@ export default function BookingEngine({ phone }: { phone: string }) {
           service_id: selected.id,
           customer_name: customerName.trim(),
           customer_phone: normalizedCustomerPhone,
-          location: serializeServiceLocation(locationSelection),
-          customer_notes: serviceLocationNotes(locationSelection),
+          location: location.trim(),
+          customer_notes: null,
           preferred_date: date,
           preferred_time: time,
           size_sqm: perSqm ? sizeNum : null,
@@ -352,10 +343,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
         `Service: ${data.service_name || selected.name}`,
         `Name: ${customerName.trim() || 'Not provided'}`,
         `Phone: ${normalizedCustomerPhone}`,
-        `Location: ${serializeServiceLocation(locationSelection)}`,
-        ...(locationSelection?.entrance ? [`Entrance: ${locationSelection.entrance}`] : []),
-        ...(locationSelection?.directions ? [`Directions: ${locationSelection.directions}`] : []),
-        ...(locationSelection?.latitude != null && locationSelection?.longitude != null ? [`Map: https://www.google.com/maps?q=${locationSelection.latitude},${locationSelection.longitude}`] : []),
+        `Location: ${location.trim()}`, 
         `Preferred date: ${date}`,
         `Preferred time: ${time}`,
         ...(perSqm ? [`Size: ${sizeNum} sq m`] : []),
@@ -490,7 +478,11 @@ export default function BookingEngine({ phone }: { phone: string }) {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-            <ServiceLocationPicker value={locationSelection} onChange={setLocationSelection} />
+            <label className="block md:col-span-1">
+              <span className="text-sm font-bold">Service address / estate / building</span>
+              <input type="text" required autoComplete="street-address" maxLength={500} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Spirittan Apartments, Pipeline, Embakasi" className="mt-1.5 h-12 w-full rounded-xl border border-[#E2E8F0] px-3 text-sm font-semibold outline-none focus:border-[#0F172A]" />
+              <span className="mt-1 block text-xs text-[#64748B]">Include the estate, building, road or a nearby landmark. Add access details when our team contacts you.</span>
+            </label>
 
             <div>
               <span className="text-sm font-bold">When?</span>
