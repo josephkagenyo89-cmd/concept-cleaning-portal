@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { waLink } from '@/components/public/PublicShell';
-import { parseServiceLocation, serviceLocationMapUrl } from '@/lib/serviceLocation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -409,13 +408,8 @@ export default function AdminGuestRequests() {
                     <p className="text-xs text-muted-foreground">Location</p>
                     <p className="flex items-center gap-2 text-sm font-medium">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      {parseServiceLocation(item.location).address}
+                      {item.location || '—'}
                     </p>
-                    {parseServiceLocation(item.location).latitude != null && (
-                      <a href={serviceLocationMapUrl(item.location)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 underline">
-                        View exact pin in Google Maps
-                      </a>
-                    )}
                     {item.customer_notes && (
                       <p className="mt-2 whitespace-pre-line text-xs text-muted-foreground">{item.customer_notes}</p>
                     )}
