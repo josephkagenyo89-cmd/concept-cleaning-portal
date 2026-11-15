@@ -60,7 +60,7 @@ DECLARE
   editable_fields text[] := ARRAY[
     'status', 'employee_count', 'total_gross', 'total_deductions',
     'total_net', 'total_employer_cost', 'notes',
-    'approval_requested_at', 'rejection_reason', 'approved_by',
+    'approval_requested_at', 'rejection_reason', 'approved_by', 'created_by',
     'approved_at', 'updated_at'
   ];
 BEGIN
@@ -70,7 +70,7 @@ BEGIN
       NEW.payroll_code := NEW.payroll_code || '-' || substr(gen_random_uuid()::text, 1, 4);
     END IF;
     NEW.status := 'draft';
-    NEW.created_by := COALESCE(NEW.created_by, auth.uid());
+    NEW.created_by := auth.uid();
     NEW.approval_requested_at := NULL;
     NEW.rejection_reason := NULL;
     NEW.approved_by := NULL;
@@ -107,6 +107,10 @@ BEGIN
       IF NEW.status NOT IN ('draft', 'pending_approval', 'cancelled') THEN
         RAISE EXCEPTION 'Invalid payroll status transition from draft to %', NEW.status;
       END IF;
+      NEW.created_by := OLD.created_by;
+      IF OLD.created_by IS NULL AND NEW.status = 'pending_approval' THEN
+        NEW.created_by := auth.uid();
+      END IF;
       IF (to_jsonb(NEW) - editable_fields) IS DISTINCT FROM (to_jsonb(OLD) - editable_fields) THEN
         RAISE EXCEPTION 'Payroll period and identity fields cannot be changed';
       END IF;
@@ -114,6 +118,10 @@ BEGIN
     ELSIF OLD.status = 'rejected' THEN
       IF NEW.status NOT IN ('rejected', 'pending_approval', 'cancelled') THEN
         RAISE EXCEPTION 'Rejected payroll can only be revised, resubmitted or cancelled';
+      END IF;
+      NEW.created_by := OLD.created_by;
+      IF OLD.created_by IS NULL AND NEW.status = 'pending_approval' THEN
+        NEW.created_by := auth.uid();
       END IF;
       IF (to_jsonb(NEW) - editable_fields) IS DISTINCT FROM (to_jsonb(OLD) - editable_fields) THEN
         RAISE EXCEPTION 'Payroll period and identity fields cannot be changed';
