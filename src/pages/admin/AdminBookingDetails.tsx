@@ -12,7 +12,6 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import { downloadCustomerBooking } from '@/lib/customerDownloads';
-import { parseServiceLocation } from '@/lib/serviceLocation';
 import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
@@ -197,13 +196,6 @@ export default function AdminBookingDetails() {
     window.open('https://wa.me/' + wa + '?text=' + message, '_blank');
   };
 
-  const openLocation = () => {
-    const parsed = parseServiceLocation(booking?.location);
-    const query = booking?.gps_coordinates || (parsed.latitude != null && parsed.longitude != null ? `${parsed.latitude},${parsed.longitude}` : booking?.location);
-    if (!query) return toast({ title: 'No service location available', variant: 'destructive' });
-    window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query), '_blank');
-  };
-
   const openInvoice = () => navigate('/admin/erp/invoices');
   const openQuotation = () => navigate('/admin/quotations');
   const openReceipt = () => navigate('/admin/documents');
@@ -363,11 +355,9 @@ export default function AdminBookingDetails() {
 
         <SectionCard icon={MapPin} title="Service Location">
           <Field label="Site Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
-          <Field label="Address" value={parseServiceLocation(booking.location).address} />
-          <Field label="GPS" value={booking.gps_coordinates || (parseServiceLocation(booking.location).latitude != null ? `${parseServiceLocation(booking.location).latitude}, ${parseServiceLocation(booking.location).longitude}` : '—')} />
+          <Field label="Address" value={booking.location || '—'} />
           <Field label="Contact" value={booking.site_contact_name || booking.client_name || '—'} />
           <Field label="Contact Phone" value={booking.site_contact_phone || booking.client_phone || '—'} />
-          <Button size="sm" variant="outline" onClick={openLocation} className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
         </SectionCard>
 
         <SectionCard icon={CalIcon} title="Booking Information">
