@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCategoryNames, fetchServiceCategories } from "@/lib/serviceCategories";
 
 import residential from '@/assets/market/residential.jpg';
 import upholstery from '@/assets/market/upholstery.jpg';
@@ -161,15 +162,15 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
-    .order('category')
     .order('name');
 
   if (error) throw error;
 
   return ((data || []) as any[]).map((s) => ({
     ...s,
+    category: String(s.category?.name || '').trim(),
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
@@ -184,9 +185,8 @@ export async function fetchMarketServicesLimited(limit: number = 6): Promise<Mar
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
-    .order('category')
     .order('name')
     .limit(limit);
 
@@ -194,6 +194,7 @@ export async function fetchMarketServicesLimited(limit: number = 6): Promise<Mar
 
   return ((data || []) as any[]).map((s) => ({
     ...s,
+    category: String(s.category?.name || '').trim(),
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
@@ -227,38 +228,13 @@ export function groupByCategory(
 
 /** Lightweight landing-page query: fetch category names only, not full service records. */
 export async function fetchMarketCategories(): Promise<string[]> {
-  await loadCategoryImageMap();
-  const { data, error } = await supabase
-    .from('services')
-    .select('category')
-    .eq('is_active', true)
-    .not('category', 'is', null)
-    .order('category')
-    .limit(191);
-
-  if (error) throw error;
-  return Array.from(new Set((data || []).map((row: any) => String(row.category || '').trim()).filter(Boolean)));
+  return fetchCategoryNames(true);
 }
 
 
 /** Booking Engine category chips: derive categories from active services directly. */
 export async function fetchBookingEngineCategories(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('services')
-    .select('category')
-    .eq('is_active', true)
-    .not('category', 'is', null)
-    .order('category');
-
-  if (error) throw error;
-
-  return Array.from(
-    new Set(
-      (data || [])
-        .map((row: any) => String(row.category || '').trim())
-        .filter(Boolean)
-    )
-  );
+  return fetchCategoryNames(true);
 }
 
 /** Booking Engine catalogue: fetch active services directly from the services table. */
@@ -274,7 +250,7 @@ export async function fetchBookingEngineServices(): Promise<MarketService[]> {
       service_code,
       description,
       short_description,
-      category,
+      category:service_categories!inner(name, image_key),
       base_price,
       price_per_sqm,
       pricing_model,
@@ -286,14 +262,13 @@ export async function fetchBookingEngineServices(): Promise<MarketService[]> {
     `)
     .eq('is_active', true)
     .not('category', 'is', null)
-    .order('category')
     .order('name');
 
   if (error) throw error;
 
   return (data || []).map((service: any) => ({
     ...service,
-    category: String(service.category || '').trim(),
+    category: String(service.category?.name || '').trim(),
     slug: service.slug || null,
     base_price: Number(service.base_price) || 0,
     price_per_sqm: Number(service.price_per_sqm) || 0,
@@ -440,24 +415,26 @@ export async function fetchMarketServicesByCategory(
   const normalizedCategory = category.trim();
   if (!normalizedCategory) return [];
 
+  const categories = await fetchServiceCategories(true);
+  if (categories.error) throw categories.error;
+  const selectedCategory = categories.data?.find(
+    (item) => item.name === normalizedCategory,
+  );
+  if (!selectedCategory) return [];
+
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category, base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
-    .ilike('category', `${normalizedCategory}%`)
+    .eq('category_id', selectedCategory.id)
     .order('name');
 
   if (error) throw error;
 
-  const matchingServices = ((data || []) as any[]).filter(
-    (service) =>
-      typeof service.category === 'string' &&
-      service.category.trim() === normalizedCategory
-  );
-
-  return matchingServices.map((s) => ({
+  return ((data || []) as any[]).map((s) => ({
     ...s,
+    category: String(s.category?.name || '').trim(),
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
