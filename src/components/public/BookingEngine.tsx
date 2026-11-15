@@ -180,6 +180,62 @@ function serviceContextPrompt(service: MarketService): string {
   return 'Share any important details about the property, items or specific cleaning concerns.';
 }
 
+/**
+ * Suggest only complementary services with a clear relationship to the
+ * selected job. Matching uses service names/descriptions/features, not the
+ * legacy category field. These are expressions of interest, not priced items.
+ */
+function bookingAddOnRecommendations(
+  services: MarketService[],
+  selected: MarketService | null,
+): MarketService[] {
+  if (!selected) return [];
+
+  const selectedText = [
+    selected.name,
+    selected.short_description,
+    selected.description,
+    ...(Array.isArray(selected.service_features) ? selected.service_features : []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  let targets: RegExp[] = [];
+  if (/pest|fumigat|cockroach|bed.?bug|termite|rodent|mosquito/.test(selectedText)) {
+    targets = [/upholster|sofa|mattress/i, /carpet|rug/i, /deep clean|residential/i];
+  } else if (/sofa|upholster|mattress|seat cleaning/.test(selectedText)) {
+    targets = [/carpet|rug/i, /mattress|upholster|sofa/i, /deep clean|residential/i];
+  } else if (/carpet|rug/.test(selectedText)) {
+    targets = [/upholster|sofa|mattress/i, /deep clean|residential/i, /window cleaning/i];
+  } else if (/deep clean|move.?in|move.?out|residential|house cleaning/.test(selectedText)) {
+    targets = [/pest|fumigat/i, /upholster|sofa|mattress/i, /carpet|rug/i];
+  } else if (/office|commercial|warehouse|retail/.test(selectedText)) {
+    targets = [/carpet|rug/i, /window/i, /upholster|sofa/i];
+  }
+
+  if (!targets.length) return [];
+
+  const selectedTextLower = selectedText;
+  const candidates = services.filter((service) => {
+    if (service.id === selected.id) return false;
+    const candidateText = [
+      service.name,
+      service.short_description,
+      service.description,
+      ...(Array.isArray(service.service_features) ? service.service_features : []),
+    ].filter(Boolean).join(' ').toLowerCase();
+    return candidateText.length > 0 &&
+      targets.some((pattern) => pattern.test(candidateText)) &&
+      !candidateText.includes(selectedTextLower);
+  });
+
+  const seen = new Set<string>();
+  return candidates.filter((service) => {
+    if (seen.has(service.id)) return false;
+    seen.add(service.id);
+    return true;
+  }).slice(0, 3);
+}
+
+
 function Highlight({ text, q }: { text: string; q: string }) {
   const terms = words(q).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   if (!terms.length) return <>{text}</>;
@@ -263,6 +319,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
+  const [interestedAddOnIds, setInterestedAddOnIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -333,6 +390,20 @@ export default function BookingEngine({ phone }: { phone: string }) {
 
   const perSqm = !!selected && selected.base_price <= 0 && selected.price_per_sqm > 0;
   const contextPrompt = selected ? serviceContextPrompt(selected) : '';
+  const addOnRecommendations = useMemo(
+    () => bookingAddOnRecommendations(services, selected),
+    [services, selected],
+  );
+  const interestedAddOns = useMemo(
+    () => addOnRecommendations.filter((service) => interestedAddOnIds.includes(service.id)),
+    [addOnRecommendations, interestedAddOnIds],
+  );
+  const combinedCustomerNotes = [
+    customerNotes.trim(),
+    interestedAddOns.length
+      ? `Additional services of interest (not included in this estimate; price to be confirmed): ${interestedAddOns.map((service) => service.name).join(', ')}`
+      : '',
+  ].filter(Boolean).join('\\n').slice(0, 1000);
   const sizeNum = Number(size) || 0;
   const ready = !!selected && location.trim().length > 1 && !!date && !!time && (!perSqm || sizeNum > 0);
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
@@ -349,12 +420,12 @@ export default function BookingEngine({ phone }: { phone: string }) {
   );
 
   const choose = (s: MarketService) => {
-    setSelected(s); setOpen(false); setQuery(s.name);
+    setSelected(s); setInterestedAddOnIds([]); setOpen(false); setQuery(s.name);
     trackPixel('ViewContent', { content_name: s.name, content_category: s.category, value: startingPrice(s), currency: 'KES' });
   };
 
   const change = () => {
-    setSelected(null); setOpen(true);
+    setSelected(null); setInterestedAddOnIds([]); setOpen(true);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
@@ -391,7 +462,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
       if (mode === 'quotation') params.set('mode', 'quote');
 
       navigate(`/service/${encodeURIComponent(selected.id)}?${params.toString()}`, {
-        state: { bookingNotes: customerNotes.trim() },
+        state: { bookingNotes: combinedCustomerNotes },
       });
       return;
     }
@@ -412,7 +483,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           customer_name: customerName.trim(),
           customer_phone: normalizedCustomerPhone,
           location: location.trim(),
-          customer_notes: customerNotes.trim() || null,
+          customer_notes: combinedCustomerNotes || null,
           preferred_date: date,
           preferred_time: time,
           size_sqm: perSqm ? sizeNum : null,
@@ -441,7 +512,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
         `Name: ${customerName.trim() || 'Not provided'}`,
         `Phone: ${normalizedCustomerPhone}`,
         `Location: ${location.trim()}`,
-        ...(customerNotes.trim() ? [`Job details: ${customerNotes.trim()}`] : []), 
+        ...(combinedCustomerNotes ? [`Job details: ${combinedCustomerNotes}`] : []), 
         `Preferred date: ${date}`,
         `Preferred time: ${time}`,
         ...(perSqm ? [`Size: ${sizeNum} sq m`] : []),
@@ -606,7 +677,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
               <span className="text-sm font-bold">A few details about the job <span className="font-normal text-[#64748B]">(optional)</span></span>
               <textarea
                 rows={3}
-                maxLength={1000}
+                maxLength={650}
                 value={customerNotes}
                 onChange={(e) => setCustomerNotes(e.target.value)}
                 placeholder={contextPrompt}
@@ -615,6 +686,42 @@ export default function BookingEngine({ phone }: { phone: string }) {
               <span className="mt-1 block text-xs text-[#64748B]">These details help us understand the job before confirming the price and appointment.</span>
             </label>
           </div>
+
+          {addOnRecommendations.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-extrabold text-[#172033]">You may also need</p>
+                  <p className="mt-1 text-xs text-[#64748B]">Relevant services that customers often consider together.</p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-[#475569]">Optional</span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {addOnRecommendations.map((service) => {
+                  const isInterested = interestedAddOnIds.includes(service.id);
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      aria-pressed={isInterested}
+                      onClick={() => setInterestedAddOnIds((current) =>
+                        isInterested
+                          ? current.filter((id) => id !== service.id)
+                          : current.length < 3 ? [...current, service.id] : current
+                      )}
+                      className={`flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${isInterested ? 'border-[#0F766E] bg-white text-[#0F766E]' : 'border-[#E2E8F0] bg-white text-[#172033] hover:border-[#94A3B8]'}`}
+                    >
+                      <span>{service.name}</span>
+                      <span className="shrink-0 text-xs font-bold">{isInterested ? 'Added' : 'Interested +'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-[#64748B]">
+                These are saved as additional interests for our team. They are not included in the estimate or booked until separately confirmed.
+              </p>
+            </div>
+          )}
 
           {authLoading ? (
             <p className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#475569]">
