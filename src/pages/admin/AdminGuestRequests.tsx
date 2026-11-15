@@ -408,7 +408,7 @@ export default function AdminGuestRequests() {
                     <p className="text-xs text-muted-foreground">Location</p>
                     <p className="flex items-center gap-2 text-sm font-medium">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      {item.location || '—'}
+                      {parseServiceLocation(item.location).address || '—'}
                     </p>
                     {item.customer_notes && (
                       <p className="mt-2 whitespace-pre-line text-xs text-muted-foreground">{item.customer_notes}</p>
