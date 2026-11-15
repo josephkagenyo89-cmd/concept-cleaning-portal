@@ -21,9 +21,13 @@ AS $function$
 DECLARE
   run_status text;
 BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.payroll_run_id IS DISTINCT FROM OLD.payroll_run_id THEN
+    RAISE EXCEPTION 'Payroll items cannot be moved between payroll runs';
+  END IF;
+
   SELECT status INTO run_status
   FROM public.payroll_runs
-  WHERE id = COALESCE(NEW.payroll_run_id, OLD.payroll_run_id);
+  WHERE id = CASE WHEN TG_OP = 'DELETE' THEN OLD.payroll_run_id ELSE NEW.payroll_run_id END;
 
   IF run_status IS NULL THEN
     RAISE EXCEPTION 'Payroll run not found';
@@ -92,14 +96,23 @@ BEGIN
          (to_jsonb(OLD) - ARRAY['status', 'paid_at', 'payment_reference', 'updated_at']) THEN
         RAISE EXCEPTION 'Approved payroll details are locked';
       END IF;
+      IF NOT (OLD.status = 'approved' AND NEW.status = 'paid')
+         AND (NEW.paid_at IS DISTINCT FROM OLD.paid_at
+              OR NEW.payment_reference IS DISTINCT FROM OLD.payment_reference) THEN
+        RAISE EXCEPTION 'Payment details can only be set when marking approved payroll paid';
+      END IF;
 
     ELSIF OLD.status = 'pending_approval' THEN
       IF NEW.status NOT IN ('pending_approval', 'approved', 'rejected') THEN
         RAISE EXCEPTION 'Payroll awaiting review can only remain pending, be approved or be rejected';
       END IF;
-      IF (to_jsonb(NEW) - ARRAY['status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at'])
-         IS DISTINCT FROM
-         (to_jsonb(OLD) - ARRAY['status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at']) THEN
+      IF NEW.status = 'pending_approval' THEN
+        IF (to_jsonb(NEW) - 'updated_at') IS DISTINCT FROM (to_jsonb(OLD) - 'updated_at') THEN
+          RAISE EXCEPTION 'Payroll details and approval metadata are locked while awaiting approval';
+        END IF;
+      ELSIF (to_jsonb(NEW) - ARRAY['status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at'])
+            IS DISTINCT FROM
+            (to_jsonb(OLD) - ARRAY['status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at']) THEN
         RAISE EXCEPTION 'Payroll details are locked while awaiting approval';
       END IF;
 
@@ -108,6 +121,10 @@ BEGIN
         RAISE EXCEPTION 'Invalid payroll status transition from draft to %', NEW.status;
       END IF;
       NEW.created_by := OLD.created_by;
+      NEW.approval_requested_at := OLD.approval_requested_at;
+      NEW.rejection_reason := OLD.rejection_reason;
+      NEW.approved_by := OLD.approved_by;
+      NEW.approved_at := OLD.approved_at;
       IF OLD.created_by IS NULL AND NEW.status = 'pending_approval' THEN
         NEW.created_by := auth.uid();
       END IF;
