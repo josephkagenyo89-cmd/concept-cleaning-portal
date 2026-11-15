@@ -30,6 +30,7 @@ const AgentWallet = lazy(() => import("@/pages/agent/AgentWallet"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
 const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
+const ConceptAI = lazy(() => import("@/pages/admin/ConceptAI"));
 const AdminApprovalCentre = lazy(() => import("@/pages/admin/AdminApprovalCentre"));
 const AdminGuestRequests = lazy(() => import("@/pages/admin/AdminGuestRequests"));
 const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
@@ -153,6 +154,7 @@ function AdminGate() {
     <Routes>
       <Route path="/" element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
+        <Route path="ai" element={<ConceptAI />} />
         <Route path="approval-centre" element={<AdminApprovalCentre />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="bookings/:id" element={<AdminBookingDetails />} />

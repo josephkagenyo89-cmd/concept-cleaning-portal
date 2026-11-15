@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator, ChevronDown,
+  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator, ChevronDown, BrainCircuit,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -17,6 +17,7 @@ import { requestBrowserNotificationPermission } from '@/lib/customerNotification
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
+  { to: '/admin/ai', icon: BrainCircuit, label: 'Concept AI' },
   { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
   { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
   { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
