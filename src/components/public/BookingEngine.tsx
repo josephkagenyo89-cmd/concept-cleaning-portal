@@ -213,7 +213,6 @@ function bookingAddOnRecommendations(
 
   if (!targets.length) return [];
 
-  const selectedTextLower = selectedText;
   const candidates = services.filter((service) => {
     if (service.id === selected.id) return false;
     const candidateText = [
@@ -223,8 +222,7 @@ function bookingAddOnRecommendations(
       ...(Array.isArray(service.service_features) ? service.service_features : []),
     ].filter(Boolean).join(' ').toLowerCase();
     return candidateText.length > 0 &&
-      targets.some((pattern) => pattern.test(candidateText)) &&
-      !candidateText.includes(selectedTextLower);
+      targets.some((pattern) => pattern.test(candidateText));
   });
 
   const seen = new Set<string>();
@@ -403,7 +401,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
     interestedAddOns.length
       ? `Additional services of interest (not included in this estimate; price to be confirmed): ${interestedAddOns.map((service) => service.name).join(', ')}`
       : '',
-  ].filter(Boolean).join('\\n').slice(0, 1000);
+  ].filter(Boolean).join('\n').slice(0, 1000);
   const sizeNum = Number(size) || 0;
   const ready = !!selected && location.trim().length > 1 && !!date && !!time && (!perSqm || sizeNum > 0);
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
