@@ -125,6 +125,8 @@ BEGIN
     estimated_value,
     notes,
     booking_id,
+    converted_client_id,
+    converted_at,
     created_by
   )
   VALUES (
@@ -135,7 +137,7 @@ BEGIN
     v_service_name,
     v_service_id,
     'smart_booking',
-    'won',
+    'converted',
     'normal',
     GREATEST(COALESCE(v_booking.price, 0), 0),
     concat_ws(
@@ -162,6 +164,8 @@ BEGIN
       format('ERP booking: %s.', COALESCE(v_booking.booking_code, v_booking.id::text))
     ),
     v_booking.id,
+    v_client.id,
+    now(),
     auth.uid()
   )
   RETURNING id INTO v_lead_id;
