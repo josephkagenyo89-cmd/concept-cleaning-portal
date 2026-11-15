@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import { downloadCustomerBooking } from '@/lib/customerDownloads';
+import { parseServiceLocation } from '@/lib/serviceLocation';
 import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
