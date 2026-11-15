@@ -16,6 +16,7 @@ import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { formatKes } from '@/lib/marketplace';
 import CustomerLoginPrompt from '@/components/marketplace/CustomerLoginPrompt';
 import { useSettings } from '@/hooks/useSettings';
+import { toast } from '@/hooks/use-toast';
 import {
   downloadCustomerBooking,
   downloadCustomerQuotation,
@@ -27,13 +28,12 @@ export default function CustomerBookings() {
   const { settings } = useSettings();
 
   const [params, setParams] = useSearchParams();
-  const tab =
-    params.get('tab') === 'quotations'
-      ? 'quotations'
-      : 'bookings';
+  const tab = ['bookings','quotations','requests'].includes(params.get('tab') || '') ? (params.get('tab') as string) : 'bookings';
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [quotations, setQuotations] = useState<any[]>([]);
+  const [engineRequests, setEngineRequests] = useState<any[]>([]);
+  const [requestAction, setRequestAction] = useState('');
   const [loading, setLoading] = useState(true);
   const [feedbackFor, setFeedbackFor] =
     useState<any | null>(null);
@@ -45,7 +45,7 @@ export default function CustomerBookings() {
     }
 
     (async () => {
-      const [b, q] = await Promise.all([
+      const [b, q, r] = await Promise.all([
         supabase
           .from('bookings')
           .select('*, services(name)')
@@ -54,13 +54,44 @@ export default function CustomerBookings() {
           .from('quotations')
           .select('*')
           .order('created_at', { ascending: false }),
+        supabase.from('booking_engine_requests').select('id,request_number,status,requested_date,requested_time,service_location,quotation_id,converted_booking_id,created_at,quotation:quotations!booking_engine_requests_quotation_id_fkey(quotation_number,price)').order('created_at',{ascending:false}),
       ]);
 
       setBookings(b.data || []);
       setQuotations(q.data || []);
+      setEngineRequests(r.data || []);
       setLoading(false);
     })();
   }, [user, isCustomer]);
+
+  const handleEngineRequestAction = async (request: any) => {
+    setRequestAction(request.id);
+    try {
+      if (request.status === 'quote_prepared') {
+        const accepted = await supabase.rpc('accept_booking_engine_quotation', { _request_id: request.id } as any);
+        if (accepted.error) throw accepted.error;
+        setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'customer_accepted' } : row));
+        toast({ title: 'Quotation accepted', description: 'You can now confirm the booking when ready.' });
+      } else {
+        if (request.status === 'customer_accepted') {
+          const ready = await supabase.rpc('mark_booking_engine_ready_for_booking', { _request_id: request.id } as any);
+          if (ready.error) throw ready.error;
+          setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'ready_for_booking' } : row));
+        }
+        const converted = await supabase.rpc('convert_booking_engine_request', { _request_id: request.id } as any);
+        if (converted.error) throw converted.error;
+        setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'converted', converted_booking_id: converted.data?.booking_id || row.converted_booking_id } : row));
+        toast({ title: 'Booking confirmed', description: converted.data?.booking_code ? 'Booking reference: ' + converted.data.booking_code : 'Your request has been converted to a booking.' });
+        const refreshed = await supabase.from('bookings').select('*, services(name)').order('created_at',{ascending:false});
+        if (!refreshed.error) setBookings(refreshed.data || []);
+      }
+    } catch (error: any) {
+      toast({ title: 'Could not update request', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setRequestAction('');
+    }
+  };
+
 
   if (!isCustomer) {
     return <CustomerLoginPrompt title="Your bookings" />;
@@ -77,14 +108,33 @@ export default function CustomerBookings() {
         value={tab}
         onValueChange={(v) => setParams({ tab: v })}
       >
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="bookings">
             Bookings ({bookings.length})
           </TabsTrigger>
           <TabsTrigger value="quotations">
             Quotations ({quotations.length})
           </TabsTrigger>
+          <TabsTrigger value="requests">Guided requests ({engineRequests.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="requests" className="space-y-3 pt-3">
+          {!loading && engineRequests.length === 0 && <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">No guided booking requests yet.</CardContent></Card>}
+          {engineRequests.map((request) => (
+            <Card key={request.id}><CardContent className="space-y-2 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div><p className="text-sm font-semibold">{request.request_number}</p><p className="text-xs text-muted-foreground">{request.requested_date || 'Date pending'} {request.requested_time || ''}</p></div>
+                <Badge variant="secondary" className="capitalize">{String(request.status).replaceAll('_',' ')}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{request.service_location || 'Location not provided'}</p>
+              {request.quotation?.quotation_number && <div className="flex items-center justify-between rounded bg-muted/50 p-2 text-sm"><span>Quotation {request.quotation.quotation_number}</span><b>{formatKes(Number(request.quotation.price))}</b></div>}
+              {request.status === 'quote_prepared' && <Button size="sm" onClick={() => void handleEngineRequestAction(request)} disabled={!!requestAction}>{requestAction===request.id?'Processing…':'Accept quotation'}</Button>}
+              {(request.status === 'customer_accepted' || request.status === 'ready_for_booking') && <Button size="sm" onClick={() => void handleEngineRequestAction(request)} disabled={!!requestAction}>{requestAction===request.id?'Confirming…':'Confirm booking'}</Button>}
+              {request.status === 'converted' && <p className="text-xs font-medium text-emerald-700">Converted to an ERP booking.</p>}
+              {['submitted','under_review','awaiting_customer','approved','quote_required'].includes(request.status) && <p className="text-xs text-muted-foreground">Our team is reviewing this request. No appointment has been confirmed yet.</p>}
+            </CardContent></Card>
+          ))}
+        </TabsContent>
 
         <TabsContent
           value="bookings"

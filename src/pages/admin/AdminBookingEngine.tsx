@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { AlertTriangle, CirclePlus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import AdminBookingEngineRequests from '@/pages/admin/AdminBookingEngineRequests';
 
 const db = supabase as any;
 type Row = { id: string; [key: string]: any };
@@ -122,5 +123,6 @@ export default function AdminBookingEngine() {
     </>}
    </div>
   </div>
+  <AdminBookingEngineRequests />
  </div>;
 }

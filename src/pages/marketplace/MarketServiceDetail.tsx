@@ -29,6 +29,7 @@ import {
   startingPrice,
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import ConfiguredBookingForm from '@/components/booking/ConfiguredBookingForm';
 // notifyAdminsOfBooking removed: instant booking notifications disabled
 import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
@@ -80,6 +81,18 @@ export default function MarketServiceDetail() {
   const globalDiscount = useGlobalDiscount();
 
   const [service, setService] = useState<MarketService | null>(null);
+  const [bookingEngineEnabled, setBookingEngineEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    supabase.from('booking_engine_service_config').select('id').eq('service_id', id).eq('enabled', true).maybeSingle().then(({ data, error }) => {
+      if (!active) return;
+      if (error) console.warn('Could not check guided booking configuration:', error.message);
+      setBookingEngineEnabled(!error && !!data);
+    });
+    return () => { active = false; };
+  }, [id]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   // instant booking / WhatsApp confirmation removed
@@ -718,6 +731,11 @@ export default function MarketServiceDetail() {
             </CardHeader>
 
             <CardContent className="space-y-3">
+              {bookingEngineEnabled && user && isCustomer && customerClient ? (
+                <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} />
+              ) : (
+                <>
+
               {!user ? (
                 <Button asChild className="w-full bg-[#333333] text-white hover:bg-[#45413B]">
                   <Link to={`/?service=${encodeURIComponent(service.id)}#booking`}>Book the service</Link>
@@ -894,6 +912,9 @@ export default function MarketServiceDetail() {
                     : 'Get quotation'}
                 </Button>
               </div>
+                </>
+              )}
+            
                 </>
               )}
             </CardContent>
