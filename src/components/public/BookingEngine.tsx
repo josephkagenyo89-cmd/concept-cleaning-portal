@@ -47,44 +47,137 @@ const loadServices = (): Promise<MarketService[]> => {
   return inflight;
 };
 
-const SYNONYMS: Record<string, string[]> = {
-  couch: ['sofa'], sofas: ['sofa'], seat: ['sofa', 'upholster'], rug: ['carpet'], rugs: ['carpet'],
-  bug: ['pest', 'fumigat'], bugs: ['pest', 'fumigat'], bedbug: ['bed bug', 'fumigat'], bedbugs: ['bed bug', 'fumigat'],
-  cockroach: ['pest', 'fumigat'], cockroaches: ['pest', 'fumigat'], roach: ['pest'], termite: ['pest', 'fumigat'],
-  termites: ['pest', 'fumigat'], rat: ['pest'], rats: ['pest'], mosquito: ['pest', 'fumigat'], fleas: ['pest'],
-  house: ['residential'], home: ['residential'], apartment: ['residential'], flat: ['residential'],
-  shop: ['commercial'], office: ['commercial', 'office'], vehicle: ['car'],
+
+const SEARCH_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'at', 'can', 'for', 'from', 'get', 'i', 'in',
+  'is', 'it', 'me', 'my', 'of', 'on', 'or', 'please', 'the', 'to', 'we',
+  'what', 'with', 'you', 'your', 'need', 'want', 'looking', 'like', 'book',
+  'service', 'services', 'bed', 'beds', 'bedroom', 'bedrooms',
+]);
+
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  couch: ['sofa', 'upholstery'], couches: ['sofa', 'upholstery'],
+  sofas: ['sofa', 'upholstery'], seat: ['sofa', 'upholstery'], seats: ['sofa', 'upholstery'],
+  rug: ['carpet'], rugs: ['carpet'], mat: ['carpet'], mats: ['carpet'],
+  bug: ['pest', 'fumigation'], bugs: ['pest', 'fumigation'],
+  bedbug: ['bed bugs', 'bed bug', 'pest', 'fumigation'],
+  bedbugs: ['bed bugs', 'bed bug', 'pest', 'fumigation'],
+  cockroach: ['cockroaches', 'roach', 'pest', 'fumigation'],
+  cockroaches: ['cockroach', 'roach', 'pest', 'fumigation'],
+  roach: ['cockroach', 'pest', 'fumigation'], roaches: ['cockroach', 'pest', 'fumigation'],
+  termite: ['termites', 'pest', 'fumigation'], termites: ['termite', 'pest', 'fumigation'],
+  rat: ['rats', 'rodent', 'pest'], rats: ['rat', 'rodent', 'pest'],
+  mice: ['mouse', 'rodent', 'pest'], mouse: ['mice', 'rodent', 'pest'],
+  mosquito: ['mosquitoes', 'pest', 'fumigation'], mosquitoes: ['mosquito', 'pest', 'fumigation'],
+  flea: ['fleas', 'pest'], fleas: ['flea', 'pest'], ant: ['ants', 'pest'], ants: ['ant', 'pest'],
+  house: ['home', 'residential', 'apartment'], home: ['house', 'residential', 'apartment'],
+  apartment: ['flat', 'house', 'home', 'residential'],
+  flat: ['apartment', 'house', 'home', 'residential'],
+  office: ['commercial', 'workplace'], shop: ['commercial', 'business'],
+  vehicle: ['car', 'interior detailing'], car: ['vehicle', 'interior detailing'],
+  moving: ['move-in', 'move-out', 'relocation', 'deep cleaning'],
+  move: ['move-in', 'move-out', 'relocation', 'deep cleaning'],
+  renovation: ['post-construction', 'after renovation', 'deep cleaning'],
+  construction: ['post-construction', 'after renovation', 'builders cleaning'],
+  dirty: ['deep cleaning', 'intensive cleaning'],
+  stained: ['stain removal', 'upholstery', 'carpet'],
+  smell: ['odour', 'odor', 'deep cleaning', 'pest'],
+  odour: ['odor', 'smell', 'deep cleaning'],
+  odor: ['odour', 'smell', 'deep cleaning'],
 };
 
-const words = (s: string) => s.toLowerCase().split(/[\s\-–/&(),]+/).filter(Boolean);
+const searchWords = (value: string) =>
+  value.toLocaleLowerCase('en')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[\s\-–/&(),.]+/)
+    .filter((word) => word && !SEARCH_STOP_WORDS.has(word) && !/^\d+$/.test(word) && !/^\d+br$/.test(word));
 
-function rank(services: MarketService[], q: string): MarketService[] {
-  const terms = words(q);
+function serviceSearchFields(service: MarketService) {
+  return {
+    name: service.name.toLocaleLowerCase('en'),
+    code: (service.service_code || '').toLocaleLowerCase('en'),
+    details: [
+      service.short_description,
+      service.description,
+      ...(Array.isArray(service.service_features) ? service.service_features : []),
+    ].filter(Boolean).join(' ').toLocaleLowerCase('en'),
+  };
+}
+
+/** Search descriptive service data without relying on the legacy category column. */
+function rankBookingServices(services: MarketService[], query: string): MarketService[] {
+  const terms = searchWords(query);
   if (!terms.length) return [];
-  const scored: [MarketService, number][] = [];
-  for (const s of services) {
-    const name = s.name.toLowerCase();
-    const cat = s.category.toLowerCase();
-    const code = (s.service_code || '').toLowerCase();
-    const nameWords = words(name);
-    let total = 0;
-    for (const t of terms) {
+
+  const phrase = query.trim().toLocaleLowerCase('en');
+  const ranked = services.map((service) => {
+    const fields = serviceSearchFields(service);
+    const haystack = fields.name + ' ' + fields.code + ' ' + fields.details;
+    let matchedTerms = 0;
+    let score = 0;
+
+    for (const term of terms) {
+      const alternatives = [term, ...(SEARCH_SYNONYMS[term] || [])];
       let best = 0;
-      [t, ...(SYNONYMS[t] || [])].forEach((a, i) => {
-        const w = i === 0 ? 1 : 0.6;
-        const v = name.startsWith(a) ? 10
-          : nameWords.some((x) => x.startsWith(a)) ? 8
-          : name.includes(a) ? 5
-          : code && code.includes(a) ? 4
-          : cat.includes(a) ? 3 : 0;
-        best = Math.max(best, v * w);
-      });
-      if (!best) { total = 0; break; }
-      total += best;
+
+      for (const alternative of alternatives) {
+        const value = alternative.toLocaleLowerCase('en');
+        if (fields.name.includes(value)) best = Math.max(best, value.length > 4 ? 12 : 10);
+        if (fields.code.includes(value)) best = Math.max(best, 7);
+        if (fields.details.includes(value)) best = Math.max(best, 4);
+        if (haystack.split(/[^a-z0-9]+/).some((part) => part.startsWith(value))) {
+          best = Math.max(best, 3);
+        }
+      }
+
+      if (best > 0) {
+        matchedTerms += 1;
+        score += best;
+      }
     }
-    if (total > 0) scored.push([s, total]);
+
+    if (phrase.length >= 4 && fields.name.includes(phrase)) score += 18;
+    const coverage = matchedTerms / terms.length;
+    const minimumMatches = terms.length <= 2 ? 1 : Math.max(1, Math.ceil(terms.length * 0.35));
+    return { service, score, matchedTerms, coverage, minimumMatches };
+  });
+
+  return ranked
+    .filter((item) => item.matchedTerms >= item.minimumMatches && item.score > 0)
+    .sort((a, b) => b.coverage - a.coverage || b.score - a.score || a.service.name.localeCompare(b.service.name))
+    .slice(0, 8)
+    .map((item) => item.service);
+}
+
+/** A contextual prompt helps customers provide useful job details. */
+function serviceContextPrompt(service: MarketService): string {
+  const text = [
+    service.name,
+    service.short_description,
+    service.description,
+    ...(Array.isArray(service.service_features) ? service.service_features : []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (/pest|fumigat|cockroach|bed.?bug|termite|rodent|mosquito/.test(text)) {
+    return 'Which pests have you noticed, where have you seen them, and how widespread is the problem?';
   }
-  return scored.sort((a, b) => b[1] - a[1] || a[0].name.localeCompare(b[0].name)).slice(0, 8).map((x) => x[0]);
+  if (/sofa|upholster|seat|mattress/.test(text)) {
+    return 'How many seats or items need cleaning? Mention the material and any stains if known.';
+  }
+  if (/carpet|rug/.test(text)) {
+    return 'How many carpets or rugs need cleaning? Include approximate sizes and any stains or odours.';
+  }
+  if (/car interior|vehicle|detailing/.test(text)) {
+    return 'What is the vehicle type, and which interior areas need attention?';
+  }
+  if (/office|commercial|warehouse|retail/.test(text)) {
+    return 'What type of premises is it, approximately how large is it, and what areas need attention?';
+  }
+  if (/deep clean|move.?in|move.?out|residential|house|home|apartment/.test(text)) {
+    return 'How many bedrooms and bathrooms are there? Is the property furnished, empty or recently renovated?';
+  }
+  return 'Share any important details about the property, items or specific cleaning concerns.';
 }
 
 function Highlight({ text, q }: { text: string; q: string }) {
@@ -169,6 +262,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [category, setCategory] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -233,11 +327,12 @@ export default function BookingEngine({ phone }: { phone: string }) {
   }, []);
 
   const pool = useMemo(() => (category ? services.filter((s) => s.category === category) : services), [services, category]);
-  const results = useMemo(() => rank(pool, query), [pool, query]);
+  const results = useMemo(() => rankBookingServices(pool, query), [pool, query]);
   const featured = useMemo(() => groupByCategory(services).map(([, items]) => items[0]), [services]);
   const list = query.trim() ? results : category ? pool.slice(0, 8) : featured;
 
   const perSqm = !!selected && selected.base_price <= 0 && selected.price_per_sqm > 0;
+  const contextPrompt = selected ? serviceContextPrompt(selected) : '';
   const sizeNum = Number(size) || 0;
   const ready = !!selected && location.trim().length > 1 && !!date && !!time && (!perSqm || sizeNum > 0);
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
@@ -295,7 +390,9 @@ export default function BookingEngine({ phone }: { phone: string }) {
       if (perSqm) params.set('size', String(sizeNum));
       if (mode === 'quotation') params.set('mode', 'quote');
 
-      navigate(`/service/${encodeURIComponent(selected.id)}?${params.toString()}`);
+      navigate(`/service/${encodeURIComponent(selected.id)}?${params.toString()}`, {
+        state: { bookingNotes: customerNotes.trim() },
+      });
       return;
     }
 
@@ -315,7 +412,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           customer_name: customerName.trim(),
           customer_phone: normalizedCustomerPhone,
           location: location.trim(),
-          customer_notes: null,
+          customer_notes: customerNotes.trim() || null,
           preferred_date: date,
           preferred_time: time,
           size_sqm: perSqm ? sizeNum : null,
@@ -343,7 +440,8 @@ export default function BookingEngine({ phone }: { phone: string }) {
         `Service: ${data.service_name || selected.name}`,
         `Name: ${customerName.trim() || 'Not provided'}`,
         `Phone: ${normalizedCustomerPhone}`,
-        `Location: ${location.trim()}`, 
+        `Location: ${location.trim()}`,
+        ...(customerNotes.trim() ? [`Job details: ${customerNotes.trim()}`] : []), 
         `Preferred date: ${date}`,
         `Preferred time: ${time}`,
         ...(perSqm ? [`Size: ${sizeNum} sq m`] : []),
@@ -504,6 +602,18 @@ export default function BookingEngine({ phone }: { phone: string }) {
                 <input inputMode="decimal" value={size} onChange={(e) => setSize(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="e.g. 20" className="mt-1.5 h-12 w-full rounded-xl border border-[#E2E8F0] px-3 text-sm font-semibold outline-none focus:border-[#0F172A]" />
               </label>
             )}
+            <label className="block md:col-span-2">
+              <span className="text-sm font-bold">A few details about the job <span className="font-normal text-[#64748B]">(optional)</span></span>
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={customerNotes}
+                onChange={(e) => setCustomerNotes(e.target.value)}
+                placeholder={contextPrompt}
+                className="mt-1.5 w-full resize-y rounded-xl border border-[#E2E8F0] px-3 py-3 text-sm font-medium outline-none focus:border-[#0F172A]"
+              />
+              <span className="mt-1 block text-xs text-[#64748B]">These details help us understand the job before confirming the price and appointment.</span>
+            </label>
           </div>
 
           {authLoading ? (
