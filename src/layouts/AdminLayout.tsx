@@ -20,6 +20,7 @@ const navItems = [
   { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
   { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
   { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
+  { to: '/admin/booking-engine', icon: Settings2, label: 'Smart Booking Engine' },
   { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
   { to: '/admin/contracts', icon: Building2, label: 'Commercial Contracts' },
   { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
