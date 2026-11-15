@@ -99,7 +99,7 @@ export default function HrPayroll() {
   };
 
   const last = runs.find((r) => r.status === 'paid' || r.status === 'approved');
-  const pending = runs.filter((r) => r.status === 'draft').length;
+  const pending = runs.filter((r) => ['draft', 'pending_approval', 'rejected'].includes(r.status)).length;
   const Stat = ({ icon: I, label, value }: any) => (
     <Card><CardContent className="p-4 flex items-center gap-3">
       <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><I className="h-5 w-5" /></div>
@@ -114,7 +114,7 @@ export default function HrPayroll() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Stat icon={Wallet} label="Last approved net pay" value={last ? kes(last.total_net) : '—'} />
         <Stat icon={Users} label="Employees with salary set" value={configured} />
-        <Stat icon={Clock} label="Draft runs" value={pending} />
+        <Stat icon={Clock} label="Open payroll runs" value={pending} />
         <Stat icon={CheckCircle2} label="Paid runs" value={runs.filter((r) => r.status === 'paid').length} />
       </div>
       <Card><CardContent className="p-0 overflow-x-auto">

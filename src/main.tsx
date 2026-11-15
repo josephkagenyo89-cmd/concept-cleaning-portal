@@ -5,16 +5,8 @@ import App from "./App.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import "./index.css";
 
-// The ERP is installable via its own manifest (see src/lib/erpPwa.ts).
-// No app-shell service worker is used, so clear any stale registrations.
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .getRegistrations()
-    .then((registrations) => {
-      registrations.forEach((registration) => registration.unregister());
-    })
-    .catch(() => {});
-}
+// The Vite PWA plugin registers the shared Workbox service worker.
+// Customer and ERP installation identities remain separated by their manifests.
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>

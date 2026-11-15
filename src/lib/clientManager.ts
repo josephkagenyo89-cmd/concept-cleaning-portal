@@ -19,7 +19,7 @@ export async function upsertClientForBooking(params: {
   // Check if client exists
   const { data: existing } = await supabase
     .from('clients')
-    .select('id, booking_count, total_spend')
+    .select('id, booking_count, total_spend, client_type, company_name')
     .eq('phone', phone)
     .maybeSingle();
 
@@ -33,7 +33,7 @@ export async function upsertClientForBooking(params: {
     if (newSpend >= vipThreshold) status = 'vip';
 
     await supabase.from('clients').update({
-      full_name: clientName,
+      ...(existing.client_type === 'company' ? {} : { full_name: clientName }),
       location,
       booking_count: newCount,
       total_spend: newSpend,

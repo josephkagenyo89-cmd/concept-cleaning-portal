@@ -11,6 +11,9 @@ export type SelectedClient = {
   id: string;
   client_code: string | null;
   full_name: string;
+  client_type?: 'individual' | 'company';
+  company_name?: string | null;
+  contact_person?: string | null;
   phone: string;
   location: string | null;
 };
@@ -38,8 +41,8 @@ export default function ClientSearchSelector({ value, onChange }: Props) {
       const q = query.trim();
       const { data } = await supabase
         .from('clients')
-        .select('id, client_code, full_name, phone, location')
-        .or(`client_code.ilike.%${q}%,phone.ilike.%${q}%,full_name.ilike.%${q}%`)
+        .select('id, client_code, full_name, phone, location, client_type, company_name, contact_person')
+         .or(`client_code.ilike.%${q}%,phone.ilike.%${q}%,full_name.ilike.%${q}%,company_name.ilike.%${q}%`)
         .limit(8);
       setResults((data as any[]) || []);
       setSearching(false);
@@ -56,7 +59,8 @@ export default function ClientSearchSelector({ value, onChange }: Props) {
             <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-sm truncate">{value.full_name}</p>
+                <p className="font-semibold text-sm truncate">{value.company_name || value.full_name}</p>
+                {value.client_type === 'company' && <span className="text-[10px] rounded bg-muted px-1.5 py-0.5">Company</span>}
                 {value.client_code && (
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                     {value.client_code}
@@ -101,7 +105,8 @@ export default function ClientSearchSelector({ value, onChange }: Props) {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{c.full_name}</p>
+                  <p className="font-medium text-sm truncate">{c.company_name || c.full_name}</p>
+                  {c.client_type === 'company' && <span className="text-[10px] text-muted-foreground">Company</span>}
                   <p className="text-xs text-muted-foreground">{c.phone}</p>
                 </div>
                 {c.client_code && (

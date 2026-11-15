@@ -47,6 +47,8 @@ const ErpIncome = lazy(() => import("@/pages/admin/ErpIncome"));
 const ErpExpenses = lazy(() => import("@/pages/admin/ErpExpenses"));
 const ErpInvoices = lazy(() => import("@/pages/admin/ErpInvoices"));
 const ErpReports = lazy(() => import("@/pages/admin/ErpReports"));
+const AccountingFinance = lazy(() => import("@/pages/admin/AccountingFinance"));
+const CommercialContracts = lazy(() => import("@/pages/admin/CommercialContracts"));
 const AdminBookService = lazy(() => import("@/pages/admin/AdminBookService"));
 const AdminQuotations = lazy(() => import("@/pages/admin/AdminQuotations"));
 const AdminDocuments = lazy(() => import("@/pages/admin/AdminDocuments"));
@@ -87,6 +89,10 @@ const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNot
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
+const ServicesPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServicesPage })));
+const ServiceCategoryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServiceCategoryPage })));
+const AboutPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.AboutPage })));
+const ContactPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ContactPage })));
 const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
 const BlogPostPage = lazy(() => import("@/pages/public/BlogPostPage"));
 const AdminBlog = lazy(() => import("@/pages/admin/AdminBlog"));
@@ -95,6 +101,11 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const marketplaceRoutes = (
   <>
   <Route path="/" element={<LandingPage />} />
+  <Route path="/services" element={<ServicesPage />} />
+  <Route path="/services/category/:categoryId/:categorySlug" element={<ServiceCategoryPage />} />
+  <Route path="/about" element={<AboutPage />} />
+  <Route path="/gallery" element={<Navigate to="/blog" replace />} />
+  <Route path="/contact" element={<ContactPage />} />
   <Route path="/blog" element={<BlogIndex />} />
   <Route path="/blog/:slug" element={<BlogPostPage />} />
   <Route element={<MarketplaceLayout />}>
@@ -183,6 +194,9 @@ function AdminGate() {
         <Route path="erp/expenses" element={<ErpExpenses />} />
         <Route path="erp/invoices" element={<ErpInvoices />} />
         <Route path="erp/reports" element={<ErpReports />} />
+        <Route path="accounting" element={<Navigate to="/admin/accounting/overview" replace />} />
+        <Route path="accounting/:section" element={<AccountingFinance />} />
+        <Route path="contracts" element={<CommercialContracts />} />
       </Route>
     </Routes>
     </Suspense>
@@ -289,7 +303,7 @@ function RouteTheme() {
     // Apply the new brand tokens everywhere except the ERP module.
     const root = document.getElementById("root");
     if (!root) return;
-    const isErpRoute = location.pathname === "/admin/erp" || location.pathname.startsWith("/admin/erp/");
+    const isErpRoute = location.pathname === "/admin/erp" || location.pathname.startsWith("/admin/erp/") || location.pathname.startsWith("/admin/accounting");
     root.classList.toggle("ccs-modern-theme", !isErpRoute);
     return () => root.classList.remove("ccs-modern-theme");
   }, [location.pathname]);

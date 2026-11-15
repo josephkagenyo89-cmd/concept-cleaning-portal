@@ -201,21 +201,23 @@ export default function AdminBookings() {
       toast({ title: 'Error', description: 'Failed to generate signature link', variant: 'destructive' });
       return;
     }
-    const baseUrl = window.location.origin;
-    const signUrl = `${baseUrl}/sign?token=${encodeURIComponent(token)}`;
+    // Always send clients to the verified public website, never a preview or builder URL.
+    const signUrl = `https://www.conceptcleaningservices.co.ke/sign?token=${encodeURIComponent(token)}`;
     let phone = (b.client_phone || '').replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
     if (!phone.startsWith('254')) phone = '254' + phone;
 
     const message = encodeURIComponent(
       `Hello ${b.client_name},\n\n` +
       `Thank you for choosing Concept Cleaning Services.\n\n` +
-      `Your cleaning service has been completed. Kindly confirm and sign using the link below:\n\n` +
+      `We’re pleased to confirm that your cleaning service has been completed.\n\n` +
+      `Kindly review the service details and sign using the secure link below to acknowledge completion:\n\n` +
       `${signUrl}\n\n` +
-      `This will only take a few seconds.\n\n` +
-      `Thank you.`
+      `Please note: This link is valid for 12 hours only.\n\n` +
+      `If you are signing on behalf of a company, please use the name of the authorized representative.\n\n` +
+      `Thank you for choosing Concept Cleaning Services.`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-    toast({ title: 'WhatsApp opened', description: 'Signature link sent to client.' });
+    toast({ title: 'WhatsApp opened', description: 'Review and send the pre-filled signature request to the client.' });
   };
 
   return (

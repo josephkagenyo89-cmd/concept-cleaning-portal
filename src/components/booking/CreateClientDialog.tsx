@@ -23,7 +23,8 @@ type Props = {
 export default function CreateClientDialog({ open, onOpenChange, prefillPhone, onCreated, navigateToProfileOnCreate }: Props) {
   const { user, profile, isAdmin, isAgent } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ full_name: '', phone: prefillPhone || '', location: '' });
+  const [clientType, setClientType] = useState<'individual' | 'company'>('individual');
+  const [form, setForm] = useState({ full_name: '', company_name: '', contact_person: '', kra_pin: '', email: '', phone: prefillPhone || '', location: '' });
   const [saving, setSaving] = useState(false);
 
   // Sync prefill phone when dialog opens
@@ -34,9 +35,9 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
   const handleSave = async () => {
     if (!user) return;
     const phone = form.phone.trim();
-    const name = form.full_name.trim();
-    if (!name || !phone) {
-      toast({ title: 'Missing fields', description: 'Name and phone are required.', variant: 'destructive' });
+    const name = clientType === 'company' ? form.company_name.trim() : form.full_name.trim();
+    if (!name || !phone || (clientType === 'company' && !form.contact_person.trim())) {
+      toast({ title: 'Missing fields', description: clientType === 'company' ? 'Company name, contact person and phone are required.' : 'Name and phone are required.', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -44,7 +45,7 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
     // Check duplicate
     const { data: existing } = await supabase
       .from('clients')
-      .select('id, client_code, full_name, phone, location')
+      .select('id, client_code, full_name, phone, location, client_type, company_name')
       .eq('phone', phone)
       .maybeSingle();
     if (existing) {
@@ -62,6 +63,11 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
       .from('clients')
       .insert({
         full_name: name,
+        client_type: clientType,
+        company_name: clientType === 'company' ? name : null,
+        contact_person: clientType === 'company' ? form.contact_person.trim() : null,
+        kra_pin: clientType === 'company' ? (form.kra_pin.trim() || null) : null,
+        email: form.email.trim() || null,
         phone,
         whatsapp_number: phone,
         location: form.location.trim() || null,
@@ -69,7 +75,7 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
         created_by: user.id,
         created_by_role: role,
       } as any)
-      .select('id, client_code, full_name, phone, location')
+      .select('id, client_code, full_name, phone, location, client_type, company_name, contact_person, kra_pin, email')
       .single();
     setSaving(false);
 
@@ -85,7 +91,8 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
     toast({ title: 'Client created', description: `${created.full_name} (${created.client_code})` });
     onCreated(created);
     onOpenChange(false);
-    setForm({ full_name: '', phone: '', location: '' });
+    setClientType('individual');
+    setForm({ full_name: '', company_name: '', contact_person: '', kra_pin: '', email: '', phone: '', location: '' });
 
     if (navigateToProfileOnCreate && isAdmin) {
       navigate(`/admin/clients/${created.id}`);
@@ -115,14 +122,17 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><UserPlus className="h-4 w-4" /> Create New Client</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><UserPlus className="h-4 w-4" /> Create New CRM Record</DialogTitle>
           <DialogDescription>Add this client to the CRM. A unique Client ID will be generated automatically.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Full Name *</Label>
-            <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Jane Wanjiku" />
-          </div>
+          <div className="grid grid-cols-2 gap-2"><Button type="button" variant={clientType === 'individual' ? 'default' : 'outline'} onClick={() => setClientType('individual')}>Individual</Button><Button type="button" variant={clientType === 'company' ? 'default' : 'outline'} onClick={() => setClientType('company')}>Company</Button></div>
+          {clientType === 'company' ? <>
+            <div className="space-y-1.5"><Label>Company Name *</Label><Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="ABC Limited" /></div>
+            <div className="space-y-1.5"><Label>Contact Person *</Label><Input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} placeholder="Jane Wanjiku" /></div>
+            <div className="space-y-1.5"><Label>KRA PIN (optional)</Label><Input value={form.kra_pin} onChange={e => setForm(f => ({ ...f, kra_pin: e.target.value.toUpperCase() }))} placeholder="P000000000A" /></div>
+          </> : <div className="space-y-1.5"><Label>Full Name *</Label><Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Jane Wanjiku" /></div>}
+          <div className="space-y-1.5"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="accounts@company.co.ke" /></div>
           <div className="space-y-1.5">
             <Label>Phone Number *</Label>
             <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0712345678" />
@@ -135,7 +145,7 @@ export default function CreateClientDialog({ open, onOpenChange, prefillPhone, o
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>{saving ? 'Creating...' : 'Create Client'}</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? 'Creating...' : 'Create CRM Record'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

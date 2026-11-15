@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Loader2, RotateCcw, Star } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface BookingData {
@@ -30,18 +30,77 @@ export default function ClientSignature() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewPublicConsent, setReviewPublicConsent] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewSkipped, setReviewSkipped] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   useEffect(() => {
-    if (!token) { setError('Invalid link'); setLoading(false); return; }
-    fetch(`${SUPABASE_URL}/functions/v1/get-booking-for-signature?token=${encodeURIComponent(token)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error === 'already_signed') setError('You have already signed this document.');
-        else if (data.error) setError(data.error);
-        else setBooking(data.booking);
-      })
-      .catch(() => setError('Failed to load booking'))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+
+    const loadBooking = async () => {
+      setLoading(true);
+      setError('');
+      setBooking(null);
+
+      if (!token) {
+        setError('This signature link is invalid or incomplete.');
+        setLoading(false);
+        return;
+      }
+
+      if (!SUPABASE_URL) {
+        setError('The signature service is temporarily unavailable. Please contact Concept Cleaning Services.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/get-booking-for-signature?token=${encodeURIComponent(token)}`,
+          { signal: controller.signal }
+        );
+
+        let data: any;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error('The signature service returned an invalid response. Please try again later.');
+        }
+
+        if (data?.error === 'already_signed') {
+          throw new Error('You have already signed this document.');
+        }
+
+        if (!response.ok || data?.error) {
+          throw new Error(data?.error || 'This signature link is invalid or may have expired.');
+        }
+
+        const result = data?.booking;
+        if (
+          !result ||
+          typeof result.id !== 'string' ||
+          typeof result.client_name !== 'string'
+        ) {
+          throw new Error('We could not retrieve the booking details for this signature link. Please contact Concept Cleaning Services.');
+        }
+
+        setBooking(result);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        setError(err?.message || 'Unable to load the signature request. Please try again later.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadBooking();
+    return () => controller.abort();
   }, [token]);
 
   useEffect(() => {
@@ -126,13 +185,68 @@ export default function ClientSignature() {
     </div>
   );
 
+  const submitReview = async () => {
+    if (!reviewRating || !token || reviewSubmitting) return;
+    setReviewSubmitting(true);
+    setReviewError('');
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-client-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, rating: reviewRating, comment: reviewComment.trim(), publicDisplayConsent: reviewPublicConsent }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.error) throw new Error(result.error || 'Unable to submit feedback');
+      setReviewSubmitted(true);
+    } catch (err: any) {
+      setReviewError(err.message || 'Unable to submit feedback. Please try again.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   if (success) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <Card className="max-w-md w-full">
-        <CardContent className="p-8 text-center space-y-4">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-          <h1 className="text-xl font-bold">Signature Submitted</h1>
-          <p className="text-muted-foreground">Thank you for confirming the service completion. You may close this page.</p>
+        <CardContent className="p-6 sm:p-8 space-y-5">
+          <div className="text-center space-y-2">
+            <CheckCircle className="h-14 w-14 text-green-500 mx-auto" />
+            <h1 className="text-xl font-bold">Signature Submitted</h1>
+            <p className="text-sm text-muted-foreground">Thank you for confirming the service completion.</p>
+          </div>
+          {reviewSubmitted ? (
+            <div className="rounded-xl bg-green-50 p-4 text-center">
+              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <p className="font-semibold text-green-900">Thank you for your feedback!</p>
+              <p className="mt-1 text-sm text-green-800">Your review has been received by Concept Cleaning Services.</p>
+            </div>
+          ) : reviewSkipped ? (
+            <p className="rounded-xl bg-slate-100 p-4 text-center text-sm text-slate-600">Thank you for choosing Concept Cleaning Services. You can close this page.</p>
+          ) : (
+            <div className="space-y-4 border-t pt-4">
+              <div className="text-center">
+                <h2 className="font-bold text-lg">How was your experience?</h2>
+                <p className="text-sm text-muted-foreground">We value your feedback and use it to improve our service.</p>
+              </div>
+              <div className="flex justify-center gap-2" role="group" aria-label="Rate your experience">
+                {[1, 2, 3, 4, 5].map(value => (
+                  <button key={value} type="button" onClick={() => setReviewRating(value)} aria-label={`${value} star${value === 1 ? '' : 's'}`} aria-pressed={reviewRating === value} className="rounded p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                    <Star className={`h-8 w-8 ${value <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+                  </button>
+                ))}
+              </div>
+              <textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} maxLength={1200} rows={4} placeholder="Tell us what went well or what we could improve (optional)" className="w-full rounded-lg border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                <input type="checkbox" checked={reviewPublicConsent} onChange={e => setReviewPublicConsent(e.target.checked)} className="mt-1" />
+                I agree that Concept Cleaning Services may display my review on its website. My contact details and booking information will not be published.
+              </label>
+              {reviewError && <p role="alert" className="text-sm text-destructive">{reviewError}</p>}
+              <Button className="w-full" onClick={submitReview} disabled={!reviewRating || reviewSubmitting}>
+                {reviewSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</> : 'Submit Feedback'}
+              </Button>
+              <Button className="w-full" variant="ghost" onClick={() => setReviewSkipped(true)} disabled={reviewSubmitting}>Skip for now</Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -150,7 +264,21 @@ export default function ClientSignature() {
     </div>
   );
 
-  if (!booking) return null;
+  if (!booking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+            <h1 className="text-xl font-bold">Signature Details Unavailable</h1>
+            <p className="text-sm text-muted-foreground">
+              We could not load this booking. Please contact Concept Cleaning Services for assistance.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const lineItems = Array.isArray(booking.line_items) ? booking.line_items : [];
 

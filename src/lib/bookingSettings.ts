@@ -111,7 +111,7 @@ export const DEFAULT_BOOKING_SETTINGS: BookingModuleSettings = {
     defaultQuantity: 1,
     defaultUnit: 'Service',
     enableVat: false,
-    defaultVatRate: 16,
+    defaultVatRate: 0,
     enableDiscounts: true,
     defaultDiscountType: 'percent',
   },
@@ -184,6 +184,7 @@ export function loadBookingSettings(): BookingModuleSettings {
     for (const k of Object.keys(DEFAULT_BOOKING_SETTINGS) as Array<keyof BookingModuleSettings>) {
       merged[k] = { ...(DEFAULT_BOOKING_SETTINGS as any)[k], ...((parsed || {})[k] || {}) };
     }
+    merged.service = { ...merged.service, enableVat: false, defaultVatRate: 0 };
     return merged as BookingModuleSettings;
   } catch {
     return DEFAULT_BOOKING_SETTINGS;
@@ -191,7 +192,8 @@ export function loadBookingSettings(): BookingModuleSettings {
 }
 
 export function saveBookingSettings(s: BookingModuleSettings) {
-  localStorage.setItem(KEY, JSON.stringify(s));
+  const safeSettings = { ...s, service: { ...s.service, enableVat: false, defaultVatRate: 0 } };
+  localStorage.setItem(KEY, JSON.stringify(safeSettings));
 }
 
 export function resetBookingSettings() {

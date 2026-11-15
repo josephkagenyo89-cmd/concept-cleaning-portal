@@ -1,2 +1,8 @@
 [functions.booking-agent]
 verify_jwt = false
+
+[functions.get-public-reviews]
+verify_jwt = false
+
+[functions.submit-client-review]
+verify_jwt = false

@@ -165,8 +165,7 @@ export default function BookingSettingsDialog({ open, onOpenChange, onSaved }: P
               <Row label="Enable Multiple Services"><Switch checked={s.service.enableMultiple} onCheckedChange={(v) => upd('service', { enableMultiple: v })} /></Row>
               <Row label="Default Quantity"><Input type="number" className="w-24" value={s.service.defaultQuantity} onChange={(e) => upd('service', { defaultQuantity: Number(e.target.value) })} /></Row>
               <Row label="Default Unit"><Input className="w-40" value={s.service.defaultUnit} onChange={(e) => upd('service', { defaultUnit: e.target.value })} /></Row>
-              <Row label="Enable VAT"><Switch checked={s.service.enableVat} onCheckedChange={(v) => upd('service', { enableVat: v })} /></Row>
-              <Row label="Default VAT Rate (%)"><Input type="number" className="w-24" value={s.service.defaultVatRate} onChange={(e) => upd('service', { defaultVatRate: Number(e.target.value) })} /></Row>
+              <Row label="VAT charging"><span className="text-xs text-muted-foreground">Disabled — VAT is not charged on bookings.</span></Row>
               <Row label="Enable Discounts"><Switch checked={s.service.enableDiscounts} onCheckedChange={(v) => upd('service', { enableDiscounts: v })} /></Row>
               <Row label="Default Discount Type">
                 <Select value={s.service.defaultDiscountType} onValueChange={(v: any) => upd('service', { defaultDiscountType: v })}>
