@@ -88,7 +88,7 @@ export default function AdminBookingEngineRequests(){
    if(result.error)throw result.error;
    toast({title:'Quotation prepared',description:result.data?.quotation_number||'The quotation is linked to the Booking Engine request.'});
    await refresh();
-  }catch(e:any){toast({title:'Could not prepare quotation',description:e?.message||'Please check the quoted amounts.',variant:'destructive');}
+  }catch(e:any){toast({title:'Could not prepare quotation',description:e?.message||'Please check the quoted amounts.',variant:'destructive'});}
   finally{setSaving(false);}
  };
 
@@ -99,7 +99,7 @@ export default function AdminBookingEngineRequests(){
    if(result.error)throw result.error;
    toast({title:'Approved for booking',description:'The customer can now confirm conversion from My Bookings.'});
    await refresh();
-  }catch(e:any){toast({title:'Could not approve for booking',description:e?.message||'Please retry.',variant:'destructive');}
+  }catch(e:any){toast({title:'Could not approve for booking',description:e?.message||'Please retry.',variant:'destructive'});}
   finally{setSaving(false);}
  };
 
