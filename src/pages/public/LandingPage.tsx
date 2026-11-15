@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
+import commercialHero from '@/assets/market/commercial.jpg';
 import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import BookingEngine from '@/components/public/BookingEngine';
