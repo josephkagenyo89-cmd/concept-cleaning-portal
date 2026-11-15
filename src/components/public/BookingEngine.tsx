@@ -30,6 +30,8 @@ import {
   serviceImage
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import ServiceLocationPicker from '@/components/location/ServiceLocationPicker';
+import { serializeServiceLocation, serviceLocationNotes, type ServiceLocationValue } from '@/lib/serviceLocation';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 import { rememberGuestWhatsAppRequest } from '@/lib/guestWhatsAppReturn';
@@ -160,7 +162,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [selected, setSelected] = useState<MarketService | null>(null);
-  const [location, setLocation] = useState('');
+  const [locationSelection, setLocationSelection] = useState<ServiceLocationValue | null>(null);
   const [date, setDate] = useState('');
   const [showDateInput, setShowDateInput] = useState(false);
   const [time, setTime] = useState('');
@@ -239,7 +241,9 @@ export default function BookingEngine({ phone }: { phone: string }) {
 
   const perSqm = !!selected && selected.base_price <= 0 && selected.price_per_sqm > 0;
   const sizeNum = Number(size) || 0;
-  const ready = !!selected && location.trim().length > 1 && !!date && !!time && (!perSqm || sizeNum > 0);
+  const location = locationSelection?.address || '';
+  const hasExactPin = Boolean(locationSelection && locationSelection.latitude != null && locationSelection.longitude != null);
+  const ready = !!selected && location.trim().length > 1 && hasExactPin && !!date && !!time && (!perSqm || sizeNum > 0);
   const basePrice = selected ? (perSqm ? selected.price_per_sqm * sizeNum : startingPrice(selected)) : 0;
   const pricing = applyGlobalDiscount(basePrice, globalDiscount);
   const shownTotal = useCountUp(ready ? pricing.final : 0);
@@ -290,6 +294,11 @@ export default function BookingEngine({ phone }: { phone: string }) {
         date,
         time,
         location: location.trim(),
+        lat: String(locationSelection?.latitude ?? ''),
+        lng: String(locationSelection?.longitude ?? ''),
+        property: locationSelection?.propertyName || '',
+        entrance: locationSelection?.entrance || '',
+        directions: locationSelection?.directions || '',
       });
 
       if (perSqm) params.set('size', String(sizeNum));
@@ -314,7 +323,8 @@ export default function BookingEngine({ phone }: { phone: string }) {
           service_id: selected.id,
           customer_name: customerName.trim(),
           customer_phone: normalizedCustomerPhone,
-          location: location.trim(),
+          location: serializeServiceLocation(locationSelection),
+          customer_notes: serviceLocationNotes(locationSelection),
           preferred_date: date,
           preferred_time: time,
           size_sqm: perSqm ? sizeNum : null,
@@ -342,7 +352,10 @@ export default function BookingEngine({ phone }: { phone: string }) {
         `Service: ${data.service_name || selected.name}`,
         `Name: ${customerName.trim() || 'Not provided'}`,
         `Phone: ${normalizedCustomerPhone}`,
-        `Location: ${location.trim()}`,
+        `Location: ${serializeServiceLocation(locationSelection)}`,
+        ...(locationSelection?.entrance ? [`Entrance: ${locationSelection.entrance}`] : []),
+        ...(locationSelection?.directions ? [`Directions: ${locationSelection.directions}`] : []),
+        ...(locationSelection?.latitude != null && locationSelection?.longitude != null ? [`Map: https://www.google.com/maps?q=${locationSelection.latitude},${locationSelection.longitude}`] : []),
         `Preferred date: ${date}`,
         `Preferred time: ${time}`,
         ...(perSqm ? [`Size: ${sizeNum} sq m`] : []),
@@ -477,13 +490,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-            <label className="block">
-              <span className="text-sm font-bold">Where?</span>
-              <span className="mt-1.5 flex items-center gap-2 rounded-xl border border-[#E2E8F0] px-3 focus-within:border-[#0F172A]">
-                <MapPin className="h-4 w-4 shrink-0 text-[#0F766E]" aria-hidden="true" />
-                <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Estate or area" className="h-12 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:font-medium placeholder:text-[#64748B]" />
-              </span>
-            </label>
+            <ServiceLocationPicker value={locationSelection} onChange={setLocationSelection} />
 
             <div>
               <span className="text-sm font-bold">When?</span>

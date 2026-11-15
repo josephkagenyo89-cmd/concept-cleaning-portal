@@ -29,6 +29,8 @@ import {
   startingPrice,
 } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import ServiceLocationPicker from '@/components/location/ServiceLocationPicker';
+import { serializeServiceLocation, serviceLocationNotes, serviceLocationFromSearchParams, type ServiceLocationValue } from '@/lib/serviceLocation';
 // notifyAdminsOfBooking removed: instant booking notifications disabled
 import { listAdminUserIds, pushNotificationToUsers, triggerBrowserNotification } from '@/lib/customerNotifications';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
@@ -63,6 +65,7 @@ export default function MarketServiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const [locationSelection, setLocationSelection] = useState<ServiceLocationValue | null>(() => serviceLocationFromSearchParams(params));
   const routeLocation = useLocation();
   const routeState = routeLocation.state as { bookingNotes?: string } | null;
 
@@ -208,8 +211,8 @@ export default function MarketServiceDetail() {
         return;
       }
 
-      if (!form.location.trim()) {
-        toast({ title: 'Enter your location', variant: 'destructive' });
+      if (!form.location.trim() || !locationSelection || locationSelection.latitude == null || locationSelection.longitude == null) {
+        toast({ title: 'Search for your property and confirm its exact map pin', variant: 'destructive' });
         return;
       }
 
@@ -249,8 +252,8 @@ export default function MarketServiceDetail() {
               service_id: service.id,
               customer_name: form.customer_name.trim(),
               customer_phone: guestPhone,
-              customer_notes: form.notes.trim() || null,
-              location: form.location.trim(),
+              customer_notes: serviceLocationNotes(locationSelection, form.notes),
+              location: serializeServiceLocation(locationSelection),
               preferred_date: form.service_date,
               preferred_time: form.service_time.trim(),
               size_sqm:
@@ -330,7 +333,7 @@ export default function MarketServiceDetail() {
       return;
     }
 
-    if (!form.location.trim() || !form.phone.trim()) {
+    if (!form.location.trim() || !locationSelection || locationSelection.latitude == null || locationSelection.longitude == null || !form.phone.trim()) {
       toast({
         title: 'Location and phone are required',
         variant: 'destructive',
@@ -352,7 +355,7 @@ export default function MarketServiceDetail() {
 
 
     const requestNotes = [
-      form.notes.trim(),
+      serviceLocationNotes(locationSelection, form.notes) || '',
       form.service_time.trim()
         ? `Preferred time: ${form.service_time.trim()}`
         : '',
@@ -395,7 +398,7 @@ export default function MarketServiceDetail() {
         full_name: customerClient.full_name,
         phone: form.phone.trim(),
         email: customerClient.email || null,
-        location: form.location.trim(),
+        location: serializeServiceLocation(locationSelection),
         service_interest: service.name,
         source: 'website',
         status: 'new',
@@ -426,7 +429,7 @@ export default function MarketServiceDetail() {
             client_phone: form.phone.trim(),
             service_id: service.id,
             service_date: form.service_date,
-            location: form.location.trim(),
+            location: serializeServiceLocation(locationSelection),
             size_sqm:
               Number.isFinite(requestedSize) && requestedSize > 0
                 ? requestedSize
@@ -783,24 +786,13 @@ export default function MarketServiceDetail() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="location">
-                  <MapPin className="mr-1 inline h-3.5 w-3.5" />
-                  Service location
-                </Label>
-
-                <Input
-                  id="location"
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      location: e.target.value,
-                    }))
-                  }
-                  placeholder="Estate, town"
-                />
-              </div>
+              <ServiceLocationPicker
+                value={locationSelection}
+                onChange={(value) => {
+                  setLocationSelection(value);
+                  setForm((current) => ({ ...current, location: value.address }));
+                }}
+              />
 
               <div className="space-y-1.5">
                 <Label htmlFor="phone">

@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
     const customerName = cleanText(body.customer_name, 120);
     const customerPhone = cleanText(body.customer_phone, 20);
     const customerNotes = cleanText(body.customer_notes, 1000);
-    const location = cleanText(body.location, 180);
+    const location = cleanText(body.location, 500);
     const preferredDate = cleanText(body.preferred_date, 10);
     const preferredTime = cleanText(body.preferred_time, 5);
 

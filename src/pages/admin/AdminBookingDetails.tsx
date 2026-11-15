@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import { downloadCustomerBooking } from '@/lib/customerDownloads';
+import { parseServiceLocation } from '@/lib/serviceLocation';
 import {
   ArrowLeft, Plus, Save, FileText, CheckCircle2, MoreHorizontal, Bell,
   User as UserIcon, MapPin, Calendar as CalIcon, ShieldCheck,
@@ -197,7 +198,8 @@ export default function AdminBookingDetails() {
   };
 
   const openLocation = () => {
-    const query = booking?.gps_coordinates || booking?.location;
+    const parsed = parseServiceLocation(booking?.location);
+    const query = booking?.gps_coordinates || (parsed.latitude != null && parsed.longitude != null ? `${parsed.latitude},${parsed.longitude}` : booking?.location);
     if (!query) return toast({ title: 'No service location available', variant: 'destructive' });
     window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query), '_blank');
   };
@@ -333,7 +335,7 @@ export default function AdminBookingDetails() {
           <Field label="Client Name" value={<span className="font-semibold uppercase">{booking.client_name}</span>} />
           <Field label="Phone" value={booking.client_phone} />
           <Field label="Email" value={booking.client_email || '—'} />
-          <Field label="Address" value={booking.location} />
+          <Field label="Address" value={parseServiceLocation(booking.location).address} />
           <Field label="Category" value={<Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">{booking.client_category || 'Regular'}</Badge>} />
           <div className="grid grid-cols-2 gap-1.5 pt-2">
             {booking.client_id && (
@@ -361,8 +363,8 @@ export default function AdminBookingDetails() {
 
         <SectionCard icon={MapPin} title="Service Location">
           <Field label="Site Name" value={<span className="font-semibold uppercase">{(booking.location || '').split(',')[0]}</span>} />
-          <Field label="Address" value={booking.location} />
-          <Field label="GPS" value={booking.gps_coordinates || '—'} />
+          <Field label="Address" value={parseServiceLocation(booking.location).address} />
+          <Field label="GPS" value={booking.gps_coordinates || (parseServiceLocation(booking.location).latitude != null ? `${parseServiceLocation(booking.location).latitude}, ${parseServiceLocation(booking.location).longitude}` : '—')} />
           <Field label="Contact" value={booking.site_contact_name || booking.client_name || '—'} />
           <Field label="Contact Phone" value={booking.site_contact_phone || booking.client_phone || '—'} />
           <Button size="sm" variant="outline" onClick={openLocation} className="w-full mt-2 border-blue-200 text-blue-700 hover:bg-blue-50">View Location</Button>
