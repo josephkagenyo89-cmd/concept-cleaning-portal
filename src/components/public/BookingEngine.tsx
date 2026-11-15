@@ -39,8 +39,10 @@ import {
   fetchBookingEngineServices,
   formatKes,
   groupByCategory,
-  startingPrice
+  startingPrice,
+  serviceImage
 } from '@/lib/marketplace';
+import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { useGlobalDiscount } from '@/hooks/useGlobalDiscount';
 import { applyGlobalDiscount } from '@/lib/globalDiscount';
 import { rememberGuestWhatsAppRequest } from '@/lib/guestWhatsAppReturn';
@@ -391,7 +393,12 @@ export default function BookingEngine({ phone }: { phone: string }) {
                     <li key={s.id} id={`be-opt-${i}`} role="option" aria-selected={i === active}
                       onMouseEnter={() => setActive(i)} onMouseDown={(e) => { e.preventDefault(); choose(s); }}
                       className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${i === active ? 'bg-[#F1F5F9]' : ''}`}>
-                      <span className="min-w-0">
+                      <ServiceVisual
+                        image={serviceImage(s)}
+                        alt={s.name}
+                        className="h-14 w-16 shrink-0 rounded-lg object-cover"
+                      />
+                      <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold"><Highlight text={s.name} q={query} /></span>
                         <span className="block truncate text-xs text-[#475569]">{s.category}</span>
                       </span>
@@ -423,9 +430,20 @@ export default function BookingEngine({ phone }: { phone: string }) {
       ) : (
         <div className="be-rise">
           <button type="button" onClick={change} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#475569] hover:text-[#0F172A]"><ArrowLeft className="h-4 w-4" />Change service</button>
-          <div className="mt-3 rounded-2xl bg-[#F1F5F9] p-4">
-            <p className="text-xs font-bold text-[#475569]">{selected.category}{selected.estimated_duration ? ` · ${selected.estimated_duration}` : ''}</p>
-            <h2 className="mt-0.5 text-lg font-black leading-snug">{selected.name}</h2>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
+            <ServiceVisual
+              image={serviceImage(selected)}
+              alt={selected.name}
+              loading="eager"
+              className="h-40 w-full object-cover sm:h-48"
+            />
+            <div className="bg-[#F1F5F9] p-4">
+              <p className="text-xs font-bold text-[#475569]">{selected.category}{selected.estimated_duration ? ` · ${selected.estimated_duration}` : ''}</p>
+              <h2 className="mt-0.5 text-lg font-black leading-snug">{selected.name}</h2>
+              {selected.short_description && (
+                <p className="mt-1 text-sm leading-6 text-[#475569]">{selected.short_description}</p>
+              )}
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
