@@ -12,6 +12,7 @@ import { waLink } from '@/components/public/PublicShell';
 import { categoryImage } from '@/lib/marketplace';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
 import { supabase } from '@/integrations/supabase/client';
+import SocialLinks from '@/components/public/SocialLinks';
 
 const SITE_URL = 'https://www.conceptcleaningservices.co.ke';
 
@@ -135,6 +136,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
             <Link to="/" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white hover:text-teal-200">
               Return to homepage <ArrowRight className="h-4 w-4" />
             </Link>
+            <SocialLinks />
           </div>
           <div>
             <p className="font-bold">Explore</p>

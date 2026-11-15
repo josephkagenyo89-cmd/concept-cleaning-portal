@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { cn } from '@/lib/utils';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
+import SocialLinks from '@/components/public/SocialLinks';
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -95,6 +96,7 @@ export default function PublicShell({ children, headerExtra, hideHeader = false,
           <div className="md:col-span-2">
             <p className="text-lg font-bold">{company}</p>
             <p className="mt-2 max-w-md text-sm opacity-75">Professional residential, commercial, carpet, upholstery and fumigation services across Nairobi and surrounding areas.</p>
+            <SocialLinks />
           </div>
           <div>
             <p className="font-semibold">Explore</p>

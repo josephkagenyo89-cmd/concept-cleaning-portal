@@ -12,6 +12,7 @@ import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import BookingEngine from '@/components/public/BookingEngine';
 import { ServicesCatalogueContent } from './MarketingPages';
+import SocialLinks from '@/components/public/SocialLinks';
 
 export default function LandingPage() {
   const { general } = usePublicSettings();
@@ -104,7 +105,7 @@ export default function LandingPage() {
 
         <footer className="border-t border-[var(--border)] bg-[var(--bg)]">
           <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-            <div><p className="font-extrabold tracking-tight">CONCEPT CLEANING SERVICES</p><p className="mt-1 text-sm text-[var(--muted)]">Professional cleaning and pest control in Nairobi, Kenya.</p><p className="mt-2 text-xs text-[#888888]">© {new Date().getFullYear()} Concept Cleaning Services.</p></div>
+            <div><p className="font-extrabold tracking-tight">CONCEPT CLEANING SERVICES</p><p className="mt-1 text-sm text-[var(--muted)]">Professional cleaning and pest control in Nairobi, Kenya.</p><SocialLinks /><p className="mt-2 text-xs text-[#888888]">© {new Date().getFullYear()} Concept Cleaning Services.</p></div>
             <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-[var(--muted)]"><Link to="/services" className="hover:text-black">Services</Link><Link to="/about" className="hover:text-black">About Us</Link><Link to="/contact" className="hover:text-black">Contact</Link><Link to="/blog" className="hover:text-black">Blog</Link><Link to="/customer-auth?next=/my" className="hover:text-black">Customer account</Link><Link to="/privacy-policy" className="hover:text-black">Privacy</Link><Link to="/terms-and-conditions" className="hover:text-black">Terms</Link><a href={`tel:${phone}`} className="hover:text-black">Call us</a></div>
           </div>
         </footer>
