@@ -33,7 +33,7 @@ export default function HrPayrollRun() {
   };
   useEffect(() => { load(); }, [id]);
   if (!run) return <div className="flex justify-center p-12"><div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" /></div>;
-  const draft = run.status === 'draft';
+  const editable = run.status === 'draft' || run.status === 'rejected';
 
   const regenerate = async () => {
     try { const n = await generatePayrollItems(run.id); toast.success(`Recalculated ${n} employees`); load(); }
@@ -68,12 +68,13 @@ export default function HrPayrollRun() {
   };
 
   const transition = async () => {
+    const wasRejected = run.status === 'rejected';
     const patch: any = confirm === 'approve' ? { status: 'pending_approval' }
       : confirm === 'paid' ? { status: 'paid', payment_reference: payRef || null } : { status: 'cancelled' };
     const { error } = await supabase.from('payroll_runs').update(patch).eq('id', run.id);
     setConfirm(null);
     if (error) return toast.error(error.message);
-    toast.success(confirm === 'approve' ? 'Payroll submitted for independent accounting approval' : `Payroll ${patch.status}`); load();
+    toast.success(confirm === 'approve' ? (wasRejected ? 'Payroll resubmitted for independent accounting approval' : 'Payroll submitted for independent accounting approval') : `Payroll ${patch.status}`); load();
   };
 
   const exportCsv = () => downloadCsv(`${run.payroll_code}.csv`, [
@@ -99,14 +100,16 @@ export default function HrPayrollRun() {
             {run.payment_reference && ` · Ref ${run.payment_reference}`}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {draft && <Button variant="outline" size="sm" onClick={regenerate}><RefreshCw className="h-4 w-4 mr-1" />Recalculate</Button>}
+          {editable && <Button variant="outline" size="sm" onClick={regenerate}><RefreshCw className="h-4 w-4 mr-1" />Recalculate</Button>}
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Payroll CSV</Button>
           <Button variant="outline" size="sm" onClick={exportBank}><Download className="h-4 w-4 mr-1" />Payment list</Button>
-          {draft && <Button variant="outline" size="sm" onClick={() => setConfirm('cancel')}><XCircle className="h-4 w-4 mr-1" />Cancel</Button>}
-          {draft && <Button size="sm" onClick={() => setConfirm('approve')} disabled={!items.length}><CheckCircle2 className="h-4 w-4 mr-1" />Submit for Approval</Button>}
+          {editable && <Button variant="outline" size="sm" onClick={() => setConfirm('cancel')}><XCircle className="h-4 w-4 mr-1" />Cancel</Button>}
+          {editable && <Button size="sm" onClick={() => setConfirm('approve')} disabled={!items.length}><CheckCircle2 className="h-4 w-4 mr-1" />{run.status === 'rejected' ? 'Resubmit for Approval' : 'Submit for Approval'}</Button>}
           {run.status === 'approved' && <Button size="sm" onClick={() => setConfirm('paid')}><Banknote className="h-4 w-4 mr-1" />Mark as paid</Button>}
         </div>
       </CardContent></Card>
+
+      {run.status === 'rejected' && run.rejection_reason && <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="text-sm font-semibold">Returned for revision</p><p className="text-sm text-muted-foreground mt-1">{run.rejection_reason}</p><p className="text-xs text-muted-foreground mt-2">Revise the payroll figures below, then resubmit it for independent approval. The previous rejection remains in the approval history.</p></div>}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         {[['Gross pay', run.total_gross], ['PAYE', sum('net_paye')], ['NSSF + SHIF + Levy', sum('nssf_tier1') + sum('nssf_tier2') + sum('shif_amount') + sum('housing_levy_amount')], ['Net pay', run.total_net], ['Employer cost', run.total_employer_cost]].map(([l, v]) => (
@@ -131,7 +134,7 @@ export default function HrPayrollRun() {
                 <td className="p-3 text-right">{kes(i.other_deductions)}</td>
                 <td className="p-3 text-right font-semibold">{kes(i.net_salary)}</td>
                 <td className="p-3 text-right">
-                  {draft && <Button variant="ghost" size="icon" onClick={() => openEdit(i)} aria-label="Adjust"><Pencil className="h-4 w-4" /></Button>}
+                  {editable && <Button variant="ghost" size="icon" onClick={() => openEdit(i)} aria-label="Adjust"><Pencil className="h-4 w-4" /></Button>}
                   <Button variant="ghost" size="icon" onClick={() => payslipPdf(run, i)} aria-label="Payslip"><FileText className="h-4 w-4" /></Button>
                 </td>
               </tr>
@@ -157,9 +160,9 @@ export default function HrPayrollRun() {
       <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{confirm === 'approve' ? 'Submit payroll for approval?' : confirm === 'paid' ? 'Mark payroll as paid?' : 'Cancel payroll?'}</AlertDialogTitle>
+            <AlertDialogTitle>{confirm === 'approve' ? (run.status === 'rejected' ? 'Resubmit payroll for approval?' : 'Submit payroll for approval?') : confirm === 'paid' ? 'Mark payroll as paid?' : 'Cancel payroll?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm === 'approve' ? `Net pay of ${kes(run.total_net)} for ${run.employee_count} employees will be submitted to Accounting & Finance for review by a different authorised administrator.`
+              {confirm === 'approve' ? `${run.status === 'rejected' ? 'The revised payroll' : 'Payroll'} with net pay of ${kes(run.total_net)} for ${run.employee_count} employees will be submitted to Accounting & Finance for review by a different authorised administrator.`
                 : confirm === 'paid' ? 'Every employee will be marked paid and a timeline entry recorded.' : 'This run will be voided so you can start again for this month.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
