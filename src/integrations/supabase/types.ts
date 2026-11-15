@@ -1404,6 +1404,7 @@ export type Database = {
           dialogue_transcript: Json | null
           extracted_facts: Json | null
           id: string
+          lead_id: string | null
           original_customer_request: string | null
           quotation_id: string | null
           request_number: string
@@ -1427,6 +1428,7 @@ export type Database = {
           dialogue_transcript?: Json | null
           extracted_facts?: Json | null
           id?: string
+          lead_id?: string | null
           original_customer_request?: string | null
           quotation_id?: string | null
           request_number?: string
@@ -1468,6 +1470,13 @@ export type Database = {
             columns: ["converted_booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_engine_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
