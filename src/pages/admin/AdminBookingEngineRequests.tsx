@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, ClipboardList, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 type Row={id:string;[key:string]:any};
 const db=supabase as any;
@@ -75,7 +74,7 @@ export default function AdminBookingEngineRequests(){
    if(result.error)throw result.error;
    const next=result.data?.status==='quotation_required'?'quote_required':'approved';
    await transition(next,next==='quote_required'?'Pricing requires a formal staff quotation.':'Booking Engine pricing calculated and request approved for booking review.');
-  }catch(e:any){toast({title:'Could not assess request pricing',description:e?.message||'Review the service configuration and answers.',variant:'destructive');setSaving(false);}
+  }catch(e:any){toast({title:'Could not assess request pricing',description:e?.message||'Review the service configuration and answers.',variant:'destructive'});setSaving(false);}
  };
 
  const prepareQuote=async()=>{
