@@ -261,7 +261,6 @@ export async function fetchBookingEngineServices(): Promise<MarketService[]> {
       service_features
     `)
     .eq('is_active', true)
-    .not('category', 'is', null)
     .order('name');
 
   if (error) throw error;
