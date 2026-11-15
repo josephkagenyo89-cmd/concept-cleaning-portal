@@ -25,6 +25,7 @@ export default function ConceptAI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [latestSources, setLatestSources] = useState<string[]>([]);
 
   const latestAnswer = useMemo(
     () => [...messages].reverse().find((item) => item.role === "assistant"),
@@ -43,6 +44,7 @@ export default function ConceptAI() {
     try {
       const result = await askConceptAI(prompt, prior);
       setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
+      setLatestSources(result.sources ?? []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Concept AI could not complete the request.");
       setMessages((current) => current.filter((item, index) => !(index === current.length - 1 && item.role === "user" && item.content === prompt)));
@@ -60,7 +62,7 @@ export default function ConceptAI() {
     if (!latestAnswer || exporting) return;
     setExporting(true);
     try {
-      await downloadConceptAIReport("Concept AI Report", latestAnswer.content, []);
+      await downloadConceptAIReport("Concept AI Report", latestAnswer.content, latestSources);
     } catch {
       setError("The PDF could not be generated. Please try again.");
     } finally {
@@ -71,6 +73,7 @@ export default function ConceptAI() {
   const clearSession = () => {
     if (loading) return;
     setMessages([]);
+    setLatestSources([]);
     setInput("");
     setError("");
   };

@@ -136,7 +136,12 @@ Deno.serve(async (req) => {
   if (!authorization?.startsWith("Bearer ")) return json({ error: "Sign in is required." }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  const publishableKeys = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
+  let namedPublishableKey = "";
+  if (publishableKeys) {
+    try { namedPublishableKey = JSON.parse(publishableKeys).default || ""; } catch { /* use legacy fallback */ }
+  }
+  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || namedPublishableKey;
   const groqKey = Deno.env.get("GROQ_API_KEY");
   if (!supabaseUrl || !supabaseKey) return json({ error: "The secure ERP connection is not configured." }, 503);
   if (!groqKey) return json({ error: "Groq is not configured yet. Add GROQ_API_KEY as an Edge Function secret before enabling Concept AI." }, 503);
@@ -159,7 +164,8 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const accessToken = authorization.slice("Bearer ".length);
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
     if (userError || !userData.user) return json({ error: "Your session is invalid or has expired. Sign in again." }, 401);
 
     const { data: roleRows, error: roleError } = await supabase
@@ -172,7 +178,8 @@ Deno.serve(async (req) => {
       return json({ error: "Concept AI is available to authorised ERP administrators only." }, 403);
     }
 
-    const businessContext = await collectBusinessContext(supabase, message);
+    const contextPrompt = history.filter((item) => item.role === "user").map((item) => item.content).concat(message).join(" ");
+    const businessContext = await collectBusinessContext(supabase, contextPrompt);
     const systemPrompt = [
       "You are Concept AI, the reporting and operations assistant for Concept Cleaning Services in Nairobi, Kenya.",
       "Use only the supplied ERP snapshot for factual claims about the business. Never invent figures, records, dates, approvals, or system capabilities.",
