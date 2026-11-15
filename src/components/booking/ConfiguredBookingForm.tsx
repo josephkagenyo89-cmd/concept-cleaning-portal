@@ -82,13 +82,15 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     excluded:scope.filter(x=>x.scope_type==='excluded'),
     extra:scope.filter(x=>x.scope_type==='extra')
   }),[scope]);
+  const quantityConfig = config?.measurement_config?.quantity;
+  const quantityEnabled = quantityConfig?.enabled === true;
   const setAnswer = (key:string,value:any) => { setAnswers(x=>({...x,[key]:value})); setPrice(null); };
   const validate = () => {
     if(!user || !customerClient) return 'Sign in with your customer account to use guided booking.';
     if(!date || date<today()) return 'Choose a valid preferred date.';
     if(!time) return 'Choose a preferred time.';
     if(!location.trim()) return 'Enter the service address, estate or nearby landmark.';
-    if(!Number.isFinite(Number(quantity)) || Number(quantity)<=0) return 'Enter a valid quantity.';
+    if(quantityEnabled && (!Number.isFinite(Number(quantity)) || Number(quantity)<=0 || (quantityConfig.min!=null && Number(quantity)<Number(quantityConfig.min)) || (quantityConfig.max!=null && Number(quantity)>Number(quantityConfig.max)))) return 'Enter a valid quantity within the configured limits.';
     if(config?.photo_mode==='required') return 'This service requires photos, but photo upload is not available in this booking form. Contact our team before proceeding.';
     for(const q of questions) {
       const state=visibility[q.id], v=answers[q.question_key];
@@ -119,7 +121,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       if(found.error) throw found.error;
       const measurements:Record<string,number>={};
       questions.filter(q=>q.input_type==='measurement').forEach(q=>{const n=Number(answers[q.question_key]);if(Number.isFinite(n)&&n>0)measurements[q.question_key]=n;});
-      const args={_quantity:Number(quantity),_measurements:measurements,_answers:answers,_selected_extras:extras};
+      const args={_quantity:quantityEnabled?Number(quantity):1,_measurements:measurements,_answers:answers,_selected_extras:extras};
       let itemId=found.data?.id;
       if(itemId) {
         const updated=await supabase.rpc('update_booking_engine_request_item',{_item_id:itemId,...args} as any);
@@ -171,7 +173,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <div className="space-y-1"><Label>Preferred date</Label><Input type="date" min={today()} value={date} onChange={e=>{setDate(e.target.value);setPrice(null);}}/></div>
       <div className="space-y-1"><Label>Preferred time</Label><Input type="time" value={time} onChange={e=>{setTime(e.target.value);setPrice(null);}}/></div>
       <div className="space-y-1 sm:col-span-2"><Label>Service address / estate / landmark</Label><Input value={location} onChange={e=>{setLocation(e.target.value);setPrice(null);}} placeholder="Estate, building, road or nearby landmark"/></div>
-      <div className="space-y-1"><Label>Quantity / units</Label><Input type="number" min="0.01" step="0.01" value={quantity} onChange={e=>{setQuantity(e.target.value);setPrice(null);}}/><p className="text-[11px] text-muted-foreground">Keep at 1 for a fixed service package.</p></div>
+      {quantityEnabled&&<div className="space-y-1"><Label>{quantityConfig.label||'Quantity / units'}</Label><Input type="number" min={quantityConfig.min??'0.01'} max={quantityConfig.max??undefined} step="0.01" value={quantity} onChange={e=>{setQuantity(e.target.value);setPrice(null);}}/></div>}
     </div>
     {questions.length>0&&<div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service details</h3>{questions.map(q=>{
       const st=visibility[q.id]; if(!st?.visible)return null;

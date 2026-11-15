@@ -61,6 +61,18 @@ export default function AdminBookingEngine() {
  const save=async()=>{
   if(!config)return;let m:any,a:any;try{m=parseObj(measurements);a=parseObj(availability);}catch(e){toast({title:'Invalid JSON',description:e instanceof Error?e.message:'Check JSON values.',variant:'destructive'});return;}
   const min=Number(photoMin),max=Number(photoMax);if(!Number.isInteger(min)||!Number.isInteger(max)||min<0||max<min||(photoMode==='none'&&(min!==0||max!==0))||(photoMode!=='none'&&max<1)){toast({title:'Invalid photo limits'});return;}
+  const activationIssue=(measurementConfig:any)=>{
+   if(photoMode==='required')return 'Required photo upload is not available yet. Keep photo mode optional or none.';
+   if(questions.some(q=>q.required)||conditions.some(c=>c.action==='required'))return 'Required-question rules are not yet enforced by the database submit function. Keep questions optional until server-side validation is added.';
+   const activeRules=pricing.filter(x=>x.active);
+   if(activeRules.some(x=>['per_unit','tiered'].includes(x.pricing_type))&&measurementConfig?.quantity?.enabled!==true)return 'Per-unit and tiered pricing require measurement_config.quantity.enabled=true and a customer-facing quantity label.';
+   for(const rule of activeRules.filter(x=>x.pricing_type==='per_measurement')){
+    if(!questions.some(q=>q.input_type==='measurement'&&q.question_key===rule.unit_key))return 'Add a measurement question whose key exactly matches pricing unit key: '+rule.unit_key;
+   }
+   if(activeRules.some(x=>x.pricing_type==='per_unit'&&(x.minimum_quantity!==null||x.maximum_quantity!==null)))return 'Per-unit min/max quantity limits are not enforced by the current pricing RPC. Use tiered pricing for bounded quantities.';
+   return '';
+  };
+  if(config.enabled){const issue=activationIssue(m);if(issue){toast({title:'Configuration cannot be saved while enabled',description:issue,variant:'destructive'});return;}}
   setSaving(true);const r=await db.from('booking_engine_service_config').update({customer_instructions:instructions.trim()||null,photo_mode:photoMode,photo_min:min,photo_max:max,measurement_config:m,availability_config:a,config_version:config.config_version+1,updated_by:(await supabase.auth.getUser()).data.user?.id??null,updated_at:new Date().toISOString()}).eq('id',config.id).select('*').single();
   if(r.error)toast({title:'Setup not saved',description:r.error.message,variant:'destructive'});else{setConfig(r.data);setConfigs(x=>x.map(y=>y.id===r.data.id?r.data:y));toast({title:'Setup saved'});}setSaving(false);
  };
@@ -73,6 +85,7 @@ export default function AdminBookingEngine() {
  const activate=async(enabled:boolean)=>{
   if(!config)return;
   if(enabled&&(!pricing.some(x=>x.active)||!scope.some(x=>x.active&&x.scope_type==='included'))){toast({title:'Configuration incomplete',description:'Add an active pricing rule and one active included-scope item first.',variant:'destructive'});return;}
+  if(enabled){let measurementConfig:any;try{measurementConfig=parseObj(measurements);}catch(e){toast({title:'Invalid measurement configuration',description:e instanceof Error?e.message:'Check JSON values.',variant:'destructive'});return;}const issue=activationIssue(measurementConfig);if(issue){toast({title:'Configuration is not ready to enable',description:issue,variant:'destructive'});return;}}
   if(!window.confirm(enabled?'Enable this service for Smart Booking? Confirm its questions, scope, pricing and instructions have been reviewed.':'Disable this service for new Smart Booking requests? Existing requests remain unchanged.'))return;
   const r=await db.from('booking_engine_service_config').update({enabled,config_version:config.config_version+1,updated_by:(await supabase.auth.getUser()).data.user?.id??null,updated_at:new Date().toISOString()}).eq('id',config.id).select('*').single();
   if(r.error)toast({title:'Activation update failed',description:r.error.message,variant:'destructive'});else{setConfig(r.data);setConfigs(x=>x.map(y=>y.id===r.data.id?r.data:y));toast({title:enabled?'Service enabled':'Service disabled'});}
@@ -108,7 +121,7 @@ export default function AdminBookingEngine() {
       <TabsContent value="setup"><Card><CardHeader><CardTitle className="text-base">Instructions & requirements</CardTitle></CardHeader><CardContent className="space-y-4">
        <div className="space-y-1"><Label>Customer instructions</Label><Textarea rows={3} value={instructions} onChange={e=>setInstructions(e.target.value)}/></div>
        <div className="grid gap-3 sm:grid-cols-3"><div className="space-y-1"><Label>Photo mode</Label><Select value={photoMode} onValueChange={setPhotoMode}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem><SelectItem value="optional">Optional</SelectItem><SelectItem value="required">Required</SelectItem></SelectContent></Select></div><div className="space-y-1"><Label>Minimum photos</Label><Input type="number" min="0" value={photoMin} disabled={photoMode==='none'} onChange={e=>setPhotoMin(e.target.value)}/></div><div className="space-y-1"><Label>Maximum photos</Label><Input type="number" min="0" value={photoMax} disabled={photoMode==='none'} onChange={e=>setPhotoMax(e.target.value)}/></div></div>
-       <div className="space-y-1"><Label>Measurement configuration (JSON object)</Label><Textarea rows={4} className="font-mono text-xs" value={measurements} onChange={e=>setMeasurements(e.target.value)}/></div>
+       <div className="space-y-1"><Label>Measurement configuration (JSON object)</Label><p className="text-xs text-muted-foreground">For per-unit or tiered pricing, include a quantity setting, e.g. {"quantity":{"enabled":true,"label":"Number of rooms","min":1,"max":10}}. For per-measurement pricing, add a measurement question whose key exactly matches the pricing rule unit key.</p><Textarea rows={4} className="font-mono text-xs" value={measurements} onChange={e=>setMeasurements(e.target.value)}/></div>
        <div className="space-y-1"><Label>Availability configuration (JSON object)</Label><Textarea rows={4} className="font-mono text-xs" value={availability} onChange={e=>setAvailability(e.target.value)}/></div>
        <div className="flex justify-end"><Button onClick={()=>void save()} disabled={saving}><Save className="mr-2 h-4 w-4"/>Save setup</Button></div>
       </CardContent></Card></TabsContent>
