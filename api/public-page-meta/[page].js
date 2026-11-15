@@ -15,10 +15,10 @@ const PAGE_META = {
     type: 'CollectionPage',
   },
   about: {
-    title: 'About Concept Cleaning Services | Nairobi, Kenya',
-    description: 'Learn about Concept Cleaning Services, our professional cleaning approach, service standards and residential and commercial cleaning solutions in Nairobi.',
-    heading: 'Professional care for the spaces where life and business happen',
-    intro: 'Concept Cleaning Services provides cleaning and pest-control services for residential and commercial properties in Nairobi and surrounding areas.',
+    title: 'About Concept Cleaning Services | Cleaning Company in Nairobi',
+    description: 'Established in 2023, Concept Cleaning Services provides professional residential and commercial cleaning, deep cleaning, upholstery care, fumigation and pest control in Nairobi, Kiambu, Kajiado and Machakos.',
+    heading: 'Professional cleaning and pest-control solutions, built around your space',
+    intro: 'Founded in 2023, Concept Cleaning Services helps homes, workplaces and businesses maintain cleaner, healthier and more comfortable environments through professional cleaning and pest-control services in Nairobi and surrounding areas.',
     type: 'AboutPage',
   },
   gallery: {
@@ -120,6 +120,8 @@ function pageShell(page, body, settings) {
       url: SITE_URL + '/',
       telephone: phone,
       email,
+      foundingDate: page === 'about' ? '2023' : undefined,
+      knowsAbout: page === 'about' ? ['Residential cleaning', 'Commercial cleaning', 'Deep cleaning', 'Upholstery cleaning', 'Carpet cleaning', 'Car interior cleaning', 'Fumigation', 'Pest control'] : undefined,
       address: { '@type': 'PostalAddress', addressLocality: settings.address || 'Nairobi', addressCountry: 'KE' },
       areaServed: AREAS.map((name) => ({ '@type': 'AdministrativeArea', name })),
     },
@@ -211,15 +213,26 @@ async function renderGallery(supabase) {
 }
 
 function renderAbout() {
-  return '<section class="hero"><div class="wrap"><p class="eyebrow">About Concept Cleaning Services</p><h1>' + escapeHtml(PAGE_META.about.heading) + '</h1><p>' + escapeHtml(PAGE_META.about.intro) + '</p></div></section>' +
-    '<section class="content"><p class="tag">Who we are</p><h2>A considered approach to cleaning and property care</h2>' +
-    '<p>Concept Cleaning Services brings together residential cleaning, commercial cleaning, specialist upholstery and carpet care, car interior detailing, fumigation and pest-control services.</p>' +
-    '<p>Our approach is to understand the space and the service required, explain the available service information and help customers choose an appropriate booking or quotation option.</p>' +
-    '<p>We serve customers in Nairobi and confirmed surrounding service areas in Kiambu, Kajiado and Machakos counties.</p>' +
-    '<div class="grid"><article class="card"><h3>Understand the requirement</h3><p class="muted">Identify the property, space and type of cleaning or pest-control service needed.</p></article>' +
-    '<article class="card"><h3>Review the service details</h3><p class="muted">Use the service catalogue to check descriptions, listed features and available booking information.</p></article>' +
-    '<article class="card"><h3>Arrange the next step</h3><p class="muted">Submit a booking request or contact the team if you need help selecting a service.</p></article></div>' +
-    '<div class="cta"><h2>Where we serve</h2><p>Nairobi and selected areas in Kiambu, Kajiado and Machakos. Availability depends on the service and exact property location.</p><a href="/contact">Contact our team</a></div></section>';
+  const values = [
+    ['Excellence in service', 'We pursue outstanding results through careful work, attention to detail and professional service delivery.'],
+    ['Professionalism and integrity', 'We act with honesty, accountability and respect, building client relationships through clear and responsible communication.'],
+    ['Customer commitment', 'We listen to each client’s requirements and work to provide solutions suited to their property and expectations.'],
+    ['Quality and reliability', 'We value consistent workmanship, dependable scheduling and clear information about the services we provide.'],
+    ['Health, safety and responsibility', 'We promote responsible cleaning and pest-control practices, with consideration for clients, staff and the spaces we serve.'],
+    ['Innovation and improvement', 'We continually look for better techniques, equipment and ways to improve service quality and customer experience.'],
+    ['Environmental responsibility', 'We aim to use resources thoughtfully and adopt responsible practices that reduce unnecessary environmental impact.'],
+  ];
+  const valueHtml = values.map(([heading, description], index) =>
+    '<article class="card"><p class="tag">Value ' + (index + 1) + '</p><h3>' + escapeHtml(heading) + '</h3><p class="muted">' + escapeHtml(description) + '</p></article>'
+  ).join('');
+  return '<section class="hero"><div class="wrap"><p class="eyebrow">About Concept Cleaning Services · Established 2023</p><h1>' + escapeHtml(PAGE_META.about.heading) + '</h1><p>' + escapeHtml(PAGE_META.about.intro) + '</p></div></section>' +
+    '<section class="content"><p class="tag">Who we are</p><h2>A professional cleaning company serving homes and businesses since 2023</h2>' +
+    '<p>Founded in 2023, Concept Cleaning Services provides residential and commercial cleaning, deep cleaning, upholstery and carpet care, car interior cleaning, fumigation and pest-control solutions. We serve customers in Nairobi and selected areas of Kiambu, Kajiado and Machakos counties.</p>' +
+    '<p>Every property and cleaning requirement is different. We focus on understanding the space, identifying the service required and helping clients choose a suitable solution. Our aim is to make arranging professional cleaning and pest control straightforward, with clear communication from enquiry to service delivery.</p>' +
+    '<div class="grid"><article class="card"><p class="tag">Our mission</p><h3>What guides our work</h3><p>To provide exceptional residential and commercial cleaning, deep cleaning, fumigation and pest-control services through professional expertise, modern equipment and customer-focused solutions. We are committed to creating cleaner, healthier and more comfortable environments for homes, workplaces and businesses across Nairobi and its surrounding regions.</p></article>' +
+    '<article class="card"><p class="tag">Our vision</p><h3>Where we aim to go</h3><p>To become one of Kenya’s most trusted and recognised providers of professional cleaning and pest-control solutions, setting high standards in service quality, reliability, innovation and customer satisfaction while contributing to healthier living and working environments.</p></article></div>' +
+    '<section class="group" style="margin-top:44px"><p class="tag">How we work</p><h2>Our core values</h2><div class="grid">' + valueHtml + '</div></section>' +
+    '<div class="cta"><h2>Where we serve</h2><p>We provide cleaning and pest-control services in Nairobi and selected areas of Kiambu, Kajiado and Machakos. Availability depends on the service and exact property location.</p><a href="/services">Explore our services</a> <a href="/contact">Contact our team</a></div></section>';
 }
 
 function renderContact(settings) {

@@ -706,65 +706,116 @@ export function AboutPage() {
     '@context': 'https://schema.org',
     '@type': 'AboutPage',
     name: 'About Concept Cleaning Services',
-    description: 'Learn about Concept Cleaning Services and its cleaning and pest-control services in Nairobi, Kenya.',
+    description: 'Discover Concept Cleaning Services, established in 2023, providing professional residential and commercial cleaning, deep cleaning, upholstery and carpet care, fumigation and pest-control services in Nairobi and surrounding counties.',
     url: SITE_URL + '/about',
-    about: { '@type': 'Organization', name: 'Concept Cleaning Services', url: SITE_URL + '/' },
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'Concept Cleaning Services',
+      url: SITE_URL + '/',
+      foundingDate: '2023',
+      description: 'Professional residential and commercial cleaning, deep cleaning, specialist surface care, fumigation and pest-control services.',
+      areaServed: ['Nairobi', 'Kiambu', 'Kajiado', 'Machakos'].map((name) => ({ '@type': 'AdministrativeArea', name })),
+      knowsAbout: ['Residential cleaning', 'Commercial cleaning', 'Deep cleaning', 'Upholstery cleaning', 'Carpet cleaning', 'Car interior cleaning', 'Fumigation', 'Pest control'],
+    },
   };
+
+  const values = [
+    ['Excellence in service', 'We pursue outstanding results through careful work, attention to detail and professional service delivery.'],
+    ['Professionalism and integrity', 'We act with honesty, accountability and respect, building client relationships through clear and responsible communication.'],
+    ['Customer commitment', 'We listen to each client’s requirements and work to provide solutions suited to their property and expectations.'],
+    ['Quality and reliability', 'We value consistent workmanship, dependable scheduling and clear information about the services we provide.'],
+    ['Health, safety and responsibility', 'We promote responsible cleaning and pest-control practices, with consideration for clients, staff and the spaces we serve.'],
+    ['Innovation and improvement', 'We continually look for better techniques, equipment and ways to improve service quality and customer experience.'],
+    ['Environmental responsibility', 'We aim to use resources thoughtfully and adopt responsible practices that reduce unnecessary environmental impact.'],
+  ];
 
   return (
     <MarketingLayout>
       <PageSeo
-        title="About Concept Cleaning Services | Nairobi, Kenya"
-        description="Learn about Concept Cleaning Services, our professional cleaning approach, service standards and residential and commercial cleaning solutions in Nairobi."
+        title="About Concept Cleaning Services | Cleaning Company in Nairobi"
+        description="Established in 2023, Concept Cleaning Services provides professional residential and commercial cleaning, deep cleaning, upholstery care, fumigation and pest control in Nairobi, Kiambu, Kajiado and Machakos."
         path="/about"
         schema={schema}
       />
       <PageHero
-        eyebrow="About Concept Cleaning Services"
-        title="Professional care for the spaces where life and business happen"
-        description="Concept Cleaning Services provides cleaning and pest-control services for residential and commercial properties in Nairobi and surrounding areas."
+        eyebrow="About Concept Cleaning Services · Established 2023"
+        title="Professional cleaning and pest-control solutions, built around your space"
+        description="We help homes, workplaces and businesses maintain cleaner, healthier and more comfortable environments through professional cleaning and pest-control services in Nairobi and surrounding areas."
       />
+
       <section className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Who we are</p>
-          <h2 className="mt-3 text-2xl font-black text-slate-900 sm:text-3xl">A considered approach to cleaning and property care</h2>
+          <h2 className="mt-3 text-2xl font-black text-slate-900 sm:text-3xl">A professional cleaning company serving homes and businesses since 2023</h2>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            Concept Cleaning Services brings together residential cleaning, commercial cleaning, specialist upholstery and carpet care, car interior detailing, fumigation and pest-control services.
+            Founded in 2023, Concept Cleaning Services provides residential and commercial cleaning, deep cleaning, upholstery and carpet care, car interior cleaning, fumigation and pest-control solutions. We serve customers in Nairobi and selected areas of Kiambu, Kajiado and Machakos counties.
           </p>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            Our approach is to understand the space and the service required, explain the available service information and help customers choose an appropriate booking or quotation option.
-          </p>
-          <p className="mt-4 text-sm leading-7 text-slate-600">
-            We serve customers in Nairobi and confirmed surrounding service areas in Kiambu, Kajiado and Machakos counties.
+            Every property and cleaning requirement is different. We focus on understanding the space, identifying the service required and helping clients choose a suitable solution. Our aim is to make arranging professional cleaning and pest control straightforward, with clear communication from enquiry to service delivery.
           </p>
           <Button asChild className="mt-7 bg-teal-700 text-white hover:bg-teal-800"><Link to="/services">Explore our services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
         <div className="rounded-3xl bg-[#E7F2F1] p-7 sm:p-9">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-800">Our service approach</p>
-          <div className="mt-6 space-y-6">
-            {[
-              ['Understand the requirement', 'Identify the property, space and type of cleaning or pest-control service needed.'],
-              ['Review the service details', 'Use the service catalogue to check descriptions, listed features and available booking information.'],
-              ['Arrange the next step', 'Submit a booking request or contact the team if you need help selecting a service.'],
-            ].map(([heading, text], index) => (
-              <div key={heading} className="flex gap-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-700 text-sm font-black text-white">{index + 1}</span>
-                <div><h3 className="font-extrabold text-slate-900">{heading}</h3><p className="mt-1 text-sm leading-6 text-slate-600">{text}</p></div>
-              </div>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-800">Our commitment</p>
+          <h2 className="mt-3 text-2xl font-black text-slate-900">Careful work. Professional standards. Customer focus.</h2>
+          <p className="mt-4 text-sm leading-7 text-slate-700">
+            From routine home cleaning to specialist upholstery care and pest-control requirements, we approach each request with attention to the property, the service scope and the client’s needs.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {['Residential cleaning', 'Commercial cleaning', 'Deep cleaning', 'Fumigation and pest control'].map((item) => (
+              <div key={item} className="flex items-center gap-2 rounded-xl bg-white/80 p-3 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 shrink-0 text-teal-700" />{item}</div>
             ))}
           </div>
         </div>
       </section>
-      <section className="bg-white py-12">
+
+      <section className="bg-white py-14">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+          <article className="rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-9">
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Our mission</p>
+            <h2 className="mt-3 text-2xl font-black text-slate-900">What guides our work</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-700">
+              To provide exceptional residential and commercial cleaning, deep cleaning, fumigation and pest-control services through professional expertise, modern equipment and customer-focused solutions. We are committed to creating cleaner, healthier and more comfortable environments for homes, workplaces and businesses across Nairobi and its surrounding regions.
+            </p>
+          </article>
+          <article className="rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-9">
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Our vision</p>
+            <h2 className="mt-3 text-2xl font-black text-slate-900">Where we aim to go</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-700">
+              To become one of Kenya’s most trusted and recognised providers of professional cleaning and pest-control solutions, setting high standards in service quality, reliability, innovation and customer satisfaction while contributing to healthier living and working environments.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="max-w-3xl">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">How we work</p>
+          <h2 className="mt-3 text-3xl font-black text-slate-900">The values behind every service</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">Our values shape how we communicate with customers, approach each property and deliver cleaning and pest-control services.</p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {values.map(([heading, description], index) => (
+            <article key={heading} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><CheckCircle2 className="h-5 w-5" /></div>
+              <h3 className="mt-4 text-lg font-extrabold text-slate-900">{index + 1}. {heading}</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-black text-slate-900">Where we serve</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Our service coverage includes Nairobi and selected areas in neighbouring counties. Availability can depend on the service and the property location, so contact us to confirm coverage for a specific request.</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Where we serve</p>
+          <h2 className="mt-3 text-2xl font-black text-slate-900">Cleaning services in Nairobi and surrounding counties</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Our service coverage includes Nairobi and selected areas in Kiambu, Kajiado and Machakos. Availability can depend on the service and exact property location, so contact us to confirm coverage for your request.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {['Nairobi', 'Kiambu', 'Kajiado', 'Machakos'].map((area) => <div key={area} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4"><MapPin className="h-5 w-5 text-teal-700" /><span className="font-bold text-slate-800">{area}</span></div>)}
           </div>
         </div>
       </section>
-      <PageCta title="Find the right service for your property" description="I would like to learn more about Concept Cleaning Services and available services." />
+      <PageCta title="Let’s take care of your space" description="I would like to enquire about professional cleaning or pest-control services for my property." />
     </MarketingLayout>
   );
 }
