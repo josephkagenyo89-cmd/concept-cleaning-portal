@@ -235,7 +235,7 @@ function bookingAddOnRecommendations(
 
 
 function Highlight({ text, q }: { text: string; q: string }) {
-  const terms = words(q).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const terms = searchWords(q).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\const terms = words(q).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));'));
   if (!terms.length) return <>{text}</>;
   const parts = text.split(new RegExp(`(${terms.join('|')})`, 'ig'));
   return <>{parts.map((p, i) => (i % 2 ? <mark key={i} className="bg-transparent font-extrabold text-[#0F766E]">{p}</mark> : p))}</>;
