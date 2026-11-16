@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -123,7 +124,7 @@ export default function AdminBookingEngine() {
     {!selected?<Card><CardContent className="p-8 text-center text-muted-foreground">Select a service.</CardContent></Card>:!config?<Card><CardHeader><CardTitle>{selected.name}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Create a disabled configuration without changing its ERP price or public booking behaviour.</p><Button onClick={()=>void create()} disabled={saving}><CirclePlus className="mr-2 h-4 w-4"/>Create configuration</Button></CardContent></Card>:
     <>
      <Card><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4"><div><b>{selected.name}</b><p className="text-xs text-muted-foreground">Version {config.config_version} · {selected.service_category?.name||'Category not assigned'}</p></div><div className="flex items-center gap-2"><Badge variant={config.enabled?'default':'secondary'}>{config.enabled?'Enabled':'Disabled'}</Badge><Button size="sm" variant={config.enabled?'destructive':'default'} onClick={()=>void activate(!config.enabled)}>{config.enabled?'Disable':'Review & enable'}</Button></div></CardContent></Card>
-     <Tabs defaultValue="setup" className="space-y-4"><TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-5"><TabsTrigger value="setup">Setup</TabsTrigger><TabsTrigger value="questions">Questions</TabsTrigger><TabsTrigger value="conditions">Conditions</TabsTrigger><TabsTrigger value="scope">Scope</TabsTrigger><TabsTrigger value="pricing">Pricing</TabsTrigger></TabsList>
+     <Tabs defaultValue="setup" className="space-y-4"><TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-6"><TabsTrigger value="setup">Setup</TabsTrigger><TabsTrigger value="questions">Questions</TabsTrigger><TabsTrigger value="conditions">Conditions</TabsTrigger><TabsTrigger value="scope">Scope</TabsTrigger><TabsTrigger value="pricing">Pricing</TabsTrigger><TabsTrigger value="library">Question library & offers</TabsTrigger></TabsList>
       <TabsContent value="setup"><Card><CardHeader><CardTitle className="text-base">Instructions & requirements</CardTitle></CardHeader><CardContent className="space-y-4">
        <div className="space-y-1"><Label>Customer instructions</Label><Textarea rows={3} value={instructions} onChange={e=>setInstructions(e.target.value)}/></div>
        <div className="grid gap-3 sm:grid-cols-3"><div className="space-y-1"><Label>Photo mode</Label><Select value={photoMode} onValueChange={setPhotoMode}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem><SelectItem value="optional">Optional</SelectItem><SelectItem value="required">Required</SelectItem></SelectContent></Select></div><div className="space-y-1"><Label>Minimum photos</Label><Input type="number" min="0" value={photoMin} disabled={photoMode==='none'} onChange={e=>setPhotoMin(e.target.value)}/></div><div className="space-y-1"><Label>Maximum photos</Label><Input type="number" min="0" value={photoMax} disabled={photoMode==='none'} onChange={e=>setPhotoMax(e.target.value)}/></div></div>
@@ -137,11 +138,217 @@ export default function AdminBookingEngine() {
       <TabsContent value="scope"><Card><CardHeader><CardTitle className="text-base">Included, excluded & extra scope</CardTitle></CardHeader><CardContent className="space-y-3">{(['included','excluded','extra'] as const).map(kind=><div key={kind} className="space-y-2"><b className="text-sm capitalize">{kind}</b>{scope.filter(x=>x.scope_type===kind).map(item=><div key={item.id} className="flex items-center justify-between gap-2 rounded border p-3"><div><b className="text-sm">{item.title}</b>{!item.active&&<Badge className="ml-2" variant="secondary">Inactive</Badge>}{item.description&&<p className="text-sm text-muted-foreground">{item.description}</p>}</div><div className="flex items-center gap-2"><Switch checked={item.active} onCheckedChange={async()=>{const r=await db.from('booking_engine_service_scope').update({active:!item.active,updated_at:new Date().toISOString()}).eq('id',item.id).select('*').single();if(r.error)toast({title:'Scope update failed',description:r.error.message,variant:'destructive'});else{setScope(x=>x.map(y=>y.id===item.id?r.data:y));await bumpVersion();}}}/><Button size="icon" variant="ghost" onClick={()=>void remove('booking_engine_service_scope',item.id,setScope)}><Trash2 className="h-4 w-4"/></Button></div></div>)}</div>)}<div className="grid gap-3 border-t pt-4 sm:grid-cols-2"><div className="space-y-1"><Label>Scope type</Label><Select value={scopeType} onValueChange={setScopeType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="included">Included</SelectItem><SelectItem value="excluded">Excluded</SelectItem><SelectItem value="extra">Extra</SelectItem></SelectContent></Select></div><div className="space-y-1"><Label>Title</Label><Input value={scopeTitle} onChange={e=>setScopeTitle(e.target.value)}/></div><div className="space-y-1 sm:col-span-2"><Label>Description</Label><Textarea rows={2} value={scopeDesc} onChange={e=>setScopeDesc(e.target.value)}/></div><div className="sm:col-span-2"><Button onClick={()=>void addScope()} disabled={!scopeTitle.trim()}><CirclePlus className="mr-2 h-4 w-4"/>Add scope item</Button></div></div></CardContent></Card></TabsContent>
       <TabsContent value="pricing"><div className="space-y-4"><Card><CardHeader><CardTitle className="text-base">Pricing versions</CardTitle><p className="text-sm text-muted-foreground">Booking Engine pricing only. Existing ERP service prices are untouched.</p></CardHeader><CardContent className="space-y-2">{pricing.map(rule=><div key={rule.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3"><div><b className="text-sm">{rule.pricing_type.replace('_',' ')}{rule.rate!==null?' · KES '+Number(rule.rate).toLocaleString():' · Staff quotation'}</b><p className="text-xs text-muted-foreground">Version {rule.version}{rule.unit_key?' · per '+rule.unit_key:''}{rule.minimum_quantity!==null?' · min '+rule.minimum_quantity:''}{rule.maximum_quantity!==null?' · max '+rule.maximum_quantity:''}</p></div><div className="flex items-center gap-2"><Badge variant={rule.active?'default':'secondary'}>{rule.active?'Active':'Inactive'}</Badge><Button size="sm" variant="outline" onClick={async()=>{const r=await db.from('booking_engine_pricing_rules').update({active:!rule.active,updated_by:(await supabase.auth.getUser()).data.user?.id??null,updated_at:new Date().toISOString()}).eq('id',rule.id).select('*').single();if(r.error)toast({title:'Pricing update failed',description:r.error.message,variant:'destructive'});else{setPricing(x=>x.map(y=>y.id===rule.id?r.data:y));await bumpVersion();}}}>{rule.active?'Deactivate':'Reactivate'}</Button></div></div>)}{!pricing.length&&<p className="text-sm text-muted-foreground">No pricing rules configured.</p>}</CardContent></Card>
        <Card><CardHeader><CardTitle className="text-base">Add pricing rule</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Pricing model</Label><Select value={priceType} onValueChange={setPriceType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['fixed','per_unit','per_measurement','tiered','quotation'].map(x=><SelectItem key={x} value={x}>{x.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><Label>Rate (KES)</Label><Input type="number" min="0" step="0.01" disabled={priceType==='quotation'} value={priceRate} onChange={e=>setPriceRate(e.target.value)}/></div><div className="space-y-1"><Label>Unit / measurement key</Label><Input value={priceUnit} onChange={e=>setPriceUnit(e.target.value)} placeholder="e.g. room, seat, sqm"/></div><div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Min quantity</Label><Input type="number" min="0" value={priceMin} onChange={e=>setPriceMin(e.target.value)}/></div><div className="space-y-1"><Label>Max quantity</Label><Input type="number" min="0" value={priceMax} onChange={e=>setPriceMax(e.target.value)}/></div></div><div className="sm:col-span-2"><Button onClick={()=>void addPricing()}><CirclePlus className="mr-2 h-4 w-4"/>Add versioned pricing</Button></div></CardContent></Card></div></TabsContent>
+      <TabsContent value="library"><BookingEngineLibrary services={services} configs={configs} /></TabsContent>
      </Tabs>
      <Card><CardContent className="grid gap-2 p-4 text-sm sm:grid-cols-3"><div>{questions.length} questions</div><div>{activeIncluded} active included scope items</div><div>{activePricing} active pricing rules</div></CardContent></Card>
     </>}
    </div>
   </div>
   <AdminBookingEngineRequests />
+ </div>;
+}
+
+
+type LibraryTemplate = {
+ id: string; question_key: string; label: string; description: string | null; input_type: string;
+ required_default: boolean; options: any[]; validation_rules: Record<string, any>;
+ prompt_group: string | null; display_order: number; active: boolean;
+};
+type LibraryOffer = {
+ id: string; offer_key: string; offer_type: string; title: string; description: string | null;
+ terms: string | null; price_mode: string; price_value: number | null; currency: string;
+ active: boolean; featured: boolean; starts_at: string | null; ends_at: string | null; display_order: number;
+};
+type OfferLink = { service_id: string; relationship: 'trigger' | 'included' | 'recommended'; quantity: number };
+
+const emptyTemplateDraft = () => ({
+ question_key: '', label: '', description: '', input_type: 'text', required_default: false,
+ options: '[]', validation_rules: '{}', prompt_group: '', display_order: '0', active: true,
+});
+const emptyOfferDraft = () => ({
+ offer_key: '', offer_type: 'add_on', title: '', description: '', terms: '',
+ price_mode: 'quotation', price_value: '', active: false, featured: false,
+ starts_at: '', ends_at: '', display_order: '0',
+});
+const makeKey = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+
+function BookingEngineLibrary({ services, configs }: { services: Service[]; configs: Config[] }) {
+ const [templates,setTemplates]=useState<LibraryTemplate[]>([]);
+ const [offers,setOffers]=useState<LibraryOffer[]>([]);
+ const [offerLinks,setOfferLinks]=useState<Record<string,OfferLink[]>>({});
+ const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
+ const [editingTemplate,setEditingTemplate]=useState<string|null>(null);
+ const [templateDraft,setTemplateDraft]=useState(emptyTemplateDraft);
+ const [selectedTemplateId,setSelectedTemplateId]=useState('');
+ const [selectedConfigIds,setSelectedConfigIds]=useState<string[]>([]);
+ const [editingOffer,setEditingOffer]=useState<string|null>(null);
+ const [offerDraft,setOfferDraft]=useState(emptyOfferDraft);
+ const [offerServiceLinks,setOfferServiceLinks]=useState<{trigger:string[];included:string[];recommended:string[]}>({trigger:[],included:[],recommended:[]});
+ const [serviceSearch,setServiceSearch]=useState('');
+
+ const reload=useCallback(async()=>{
+  setLoading(true);
+  const [t,o]=await Promise.all([
+   db.from('booking_engine_question_templates').select('*').order('display_order').order('label'),
+   db.from('booking_engine_value_offers').select('*').order('display_order').order('title'),
+  ]);
+  if(t.error||o.error){toast({title:'Could not load question library and offers',description:t.error?.message||o.error?.message,variant:'destructive'});setLoading(false);return;}
+  const offerRows=(o.data||[]) as LibraryOffer[];
+  const links=offerRows.length?await db.from('booking_engine_value_offer_services').select('offer_id,service_id,relationship,quantity').in('offer_id',offerRows.map(x=>x.id)):{data:[],error:null};
+  if(links.error){toast({title:'Could not load offer service links',description:links.error.message,variant:'destructive'});setLoading(false);return;}
+  const grouped:Record<string,OfferLink[]>={};
+  for(const row of links.data||[]){(grouped[row.offer_id]??=[]).push({service_id:row.service_id,relationship:row.relationship,quantity:Number(row.quantity)||1});}
+  setTemplates((t.data||[]) as LibraryTemplate[]);setOffers(offerRows);setOfferLinks(grouped);setLoading(false);
+ },[]);
+ useEffect(()=>{void reload();},[reload]);
+
+ const serviceName=(id:string)=>services.find(x=>x.id===id)?.name||'Unavailable service';
+ const configuredServices=configs.map(c=>({config:c,service:services.find(s=>s.id===c.service_id)})).filter(x=>x.service?.is_active);
+ const filteredServices=services.filter(s=>s.is_active&&(!serviceSearch.trim()||s.name.toLowerCase().includes(serviceSearch.toLowerCase())||(s.service_code||'').toLowerCase().includes(serviceSearch.toLowerCase())));
+ const setT=(key:string,value:any)=>setTemplateDraft(old=>({...old,[key]:value}));
+ const setO=(key:string,value:any)=>setOfferDraft(old=>({...old,[key]:value}));
+
+ const editTemplate=(t:LibraryTemplate)=>{
+  setEditingTemplate(t.id);setSelectedTemplateId(t.id);
+  setTemplateDraft({question_key:t.question_key,label:t.label,description:t.description||'',input_type:t.input_type,required_default:t.required_default,options:JSON.stringify(t.options||[],null,2),validation_rules:JSON.stringify(t.validation_rules||{},null,2),prompt_group:t.prompt_group||'',display_order:String(t.display_order),active:t.active});
+ };
+ const saveTemplate=async()=>{
+  if(!templateDraft.label.trim()||!templateDraft.question_key.trim()){toast({title:'Enter a question label and unique key'});return;}
+  let options:any,validation:any;
+  try{options=JSON.parse(templateDraft.options);validation=JSON.parse(templateDraft.validation_rules);if(!Array.isArray(options)||!validation||typeof validation!=='object'||Array.isArray(validation))throw new Error('Options must be an array and validation rules must be an object.');}
+  catch(e){toast({title:'Check question JSON',description:e instanceof Error?e.message:'Invalid JSON.',variant:'destructive'});return;}
+  const order=Number(templateDraft.display_order);if(!Number.isInteger(order)){toast({title:'Display order must be a whole number'});return;}
+  const user=(await supabase.auth.getUser()).data.user?.id??null;
+  const payload={question_key:makeKey(templateDraft.question_key),label:templateDraft.label.trim(),description:templateDraft.description.trim()||null,input_type:templateDraft.input_type,required_default:templateDraft.required_default,options,validation_rules:validation,prompt_group:templateDraft.prompt_group.trim()||null,display_order:order,active:templateDraft.active,updated_by:user,updated_at:new Date().toISOString()};
+  setSaving(true);
+  const result=editingTemplate
+   ?await db.from('booking_engine_question_templates').update(payload).eq('id',editingTemplate).select('*').single()
+   :await db.from('booking_engine_question_templates').insert({...payload,created_by:user}).select('*').single();
+  if(result.error){toast({title:'Question template was not saved',description:result.error.message,variant:'destructive'});setSaving(false);return;}
+  if(editingTemplate){
+   const sync=await db.from('booking_engine_questions').update({question_key:payload.question_key,label:payload.label,description:payload.description,input_type:payload.input_type,required:payload.required_default,options:payload.options,active:payload.active,updated_at:new Date().toISOString()}).eq('question_template_id',editingTemplate);
+   if(sync.error){toast({title:'Template saved; applied questions need a refresh',description:sync.error.message,variant:'destructive'});}
+  }
+  setSelectedTemplateId(result.data.id);setEditingTemplate(result.data.id);await reload();toast({title:'Question template saved'});setSaving(false);
+ };
+ const applyTemplate=async()=>{
+  const template=templates.find(x=>x.id===selectedTemplateId);
+  if(!template||!template.active){toast({title:'Select an active question template'});return;}
+  if(!selectedConfigIds.length){toast({title:'Select at least one configured service'});return;}
+  const rows=selectedConfigIds.map(id=>({service_config_id:id,question_template_id:template.id,question_key:template.question_key,label:template.label,description:template.description,input_type:template.input_type,required:template.required_default,display_order:template.display_order,options:template.options||[],active:true}));
+  setSaving(true);
+  const r=await db.from('booking_engine_questions').upsert(rows,{onConflict:'service_config_id,question_template_id'}).select('id');
+  if(r.error)toast({title:'Could not apply question template',description:r.error.message,variant:'destructive'});
+  else{toast({title:'Question applied',description:'Applied or updated on '+selectedConfigIds.length+' selected service configuration(s).'});setSelectedConfigIds([]);}
+  setSaving(false);
+ };
+ const removeTemplate=async(t:LibraryTemplate)=>{
+  if(!window.confirm('Delete this library template? Questions already applied to services will remain as independent questions.'))return;
+  const r=await db.from('booking_engine_question_templates').delete().eq('id',t.id);
+  if(r.error)toast({title:'Template not deleted',description:r.error.message,variant:'destructive'});
+  else{if(selectedTemplateId===t.id){setSelectedTemplateId('');setEditingTemplate(null);setTemplateDraft(emptyTemplateDraft());}await reload();}
+ };
+ const resetTemplate=()=>{setEditingTemplate(null);setTemplateDraft(emptyTemplateDraft());};
+
+ const editOffer=async(o:LibraryOffer)=>{
+  const links=offerLinks[o.id]||[];
+  setEditingOffer(o.id);setOfferDraft({offer_key:o.offer_key,offer_type:o.offer_type,title:o.title,description:o.description||'',terms:o.terms||'',price_mode:o.price_mode,price_value:o.price_value==null?'':String(o.price_value),active:o.active,featured:o.featured,starts_at:o.starts_at?new Date(o.starts_at).toISOString().slice(0,16):'',ends_at:o.ends_at?new Date(o.ends_at).toISOString().slice(0,16):'',display_order:String(o.display_order)});
+  setOfferServiceLinks({trigger:links.filter(x=>x.relationship==='trigger').map(x=>x.service_id),included:links.filter(x=>x.relationship==='included').map(x=>x.service_id),recommended:links.filter(x=>x.relationship==='recommended').map(x=>x.service_id)});
+ };
+ const toggleOfferService=(relationship:'trigger'|'included'|'recommended',id:string,checked:boolean)=>{
+  setOfferServiceLinks(old=>({...old,[relationship]:checked?[...old[relationship],id]:old[relationship].filter(x=>x!==id)}));
+ };
+ const saveOffer=async()=>{
+  const key=makeKey(offerDraft.offer_key||offerDraft.title);
+  if(!key||!offerDraft.title.trim()||!offerServiceLinks.trigger.length){toast({title:'Add a title and at least one triggering service'});return;}
+  if(offerDraft.offer_type==='package'&&!offerServiceLinks.included.length){toast({title:'A package needs at least one included service'});return;}
+  const order=Number(offerDraft.display_order),amount=offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value);
+  if(!Number.isInteger(order)|| (amount!==null&&(!Number.isFinite(amount)||amount<0)) || (amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Check the offer display order and price'});return;}
+  const user=(await supabase.auth.getUser()).data.user?.id??null;
+  const payload={offer_key:key,offer_type:offerDraft.offer_type,title:offerDraft.title.trim(),description:offerDraft.description.trim()||null,terms:offerDraft.terms.trim()||null,price_mode:offerDraft.price_mode,price_value:amount,currency:'KES',active:offerDraft.active,featured:offerDraft.featured,starts_at:offerDraft.starts_at?new Date(offerDraft.starts_at).toISOString():null,ends_at:offerDraft.ends_at?new Date(offerDraft.ends_at).toISOString():null,display_order:order,updated_by:user,updated_at:new Date().toISOString()};
+  setSaving(true);
+  const result=editingOffer
+   ?await db.from('booking_engine_value_offers').update(payload).eq('id',editingOffer).select('*').single()
+   :await db.from('booking_engine_value_offers').insert({...payload,created_by:user}).select('*').single();
+  if(result.error){toast({title:'Offer was not saved',description:result.error.message,variant:'destructive'});setSaving(false);return;}
+  const id=result.data.id;
+  const removed=await db.from('booking_engine_value_offer_services').delete().eq('offer_id',id);
+  if(removed.error){toast({title:'Offer saved but service links were not refreshed',description:removed.error.message,variant:'destructive'});setSaving(false);await reload();return;}
+  const links:OfferLink[]=[
+   ...offerServiceLinks.trigger.map(service_id=>({service_id,relationship:'trigger' as const,quantity:1})),
+   ...offerServiceLinks.included.map(service_id=>({service_id,relationship:'included' as const,quantity:1})),
+   ...offerServiceLinks.recommended.map(service_id=>({service_id,relationship:'recommended' as const,quantity:1})),
+  ];
+  const inserted=links.length?await db.from('booking_engine_value_offer_services').insert(links.map(x=>({offer_id:id,...x}))):{error:null};
+  if(inserted.error){toast({title:'Offer saved but service links need attention',description:inserted.error.message,variant:'destructive'});}
+  else{toast({title:'Value offer saved'});setEditingOffer(id);}
+  await reload();setSaving(false);
+ };
+ const toggleOffer=async(o:LibraryOffer)=>{
+  const links=offerLinks[o.id]||[];
+  if(!o.active&&(!links.some(x=>x.relationship==='trigger')||(o.offer_type==='package'&&!links.some(x=>x.relationship==='included')))){toast({title:'Complete the offer service links before activating it'});return;}
+  const r=await db.from('booking_engine_value_offers').update({active:!o.active,updated_at:new Date().toISOString(),updated_by:(await supabase.auth.getUser()).data.user?.id??null}).eq('id',o.id);
+  if(r.error)toast({title:'Offer status not updated',description:r.error.message,variant:'destructive'});else await reload();
+ };
+ const deleteOffer=async(o:LibraryOffer)=>{
+  if(!window.confirm('Delete this offer? Its service links will also be deleted. Existing booking snapshots are not changed.'))return;
+  const r=await db.from('booking_engine_value_offers').delete().eq('id',o.id);
+  if(r.error)toast({title:'Offer not deleted',description:r.error.message,variant:'destructive'});
+  else{if(editingOffer===o.id){setEditingOffer(null);setOfferDraft(emptyOfferDraft());setOfferServiceLinks({trigger:[],included:[],recommended:[]});}await reload();}
+ };
+ const servicePicker=(relationship:'trigger'|'included'|'recommended',title:string)=><div className="space-y-2 rounded-lg border p-3"><div className="text-sm font-semibold">{title} ({offerServiceLinks[relationship].length})</div><div className="max-h-40 space-y-2 overflow-auto">{filteredServices.map(s=><label key={s.id} className="flex items-center gap-2 text-sm"><Checkbox checked={offerServiceLinks[relationship].includes(s.id)} onCheckedChange={v=>toggleOfferService(relationship,s.id,v===true)}/><span>{s.name}</span></label>)}</div></div>;
+
+ return <div className="space-y-4">
+  <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold">Reusable booking configuration</h3><p className="text-sm text-muted-foreground">Build questions and offers once, then explicitly apply them to services by ID.</p></div><Button variant="outline" size="sm" onClick={()=>void reload()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4"/>Refresh library</Button></div>
+  {loading?<p className="text-sm text-muted-foreground">Loading library…</p>:<Tabs defaultValue="templates" className="space-y-4">
+   <TabsList><TabsTrigger value="templates">Question templates ({templates.length})</TabsTrigger><TabsTrigger value="offers">Packages & offers ({offers.length})</TabsTrigger></TabsList>
+   <TabsContent value="templates" className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+     <Card><CardHeader><CardTitle className="text-base">Question library</CardTitle></CardHeader><CardContent className="space-y-2">{templates.map(t=><div key={t.id} className={'rounded-lg border p-3 '+(selectedTemplateId===t.id?'border-primary bg-primary/5':'')}><div className="flex items-start justify-between gap-2"><button className="min-w-0 text-left" onClick={()=>editTemplate(t)}><b className="text-sm">{t.label}</b><p className="text-xs text-muted-foreground">{t.question_key} · {t.input_type} · {t.prompt_group||'General'}</p></button><div className="flex items-center gap-2"><Badge variant={t.active?'default':'secondary'}>{t.active?'Active':'Inactive'}</Badge><Button size="icon" variant="ghost" onClick={()=>editTemplate(t)}><Save className="h-4 w-4"/></Button><Button size="icon" variant="ghost" onClick={()=>void removeTemplate(t)}><Trash2 className="h-4 w-4"/></Button></div></div>{t.description&&<p className="mt-1 text-xs text-muted-foreground">{t.description}</p>}</div>)}{!templates.length&&<p className="text-sm text-muted-foreground">No question templates yet.</p>}</CardContent></Card>
+     <Card><CardHeader><CardTitle className="text-base">{editingTemplate?'Edit question template':'Create question template'}</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-1"><Label>Question label</Label><Input value={templateDraft.label} onChange={e=>{setT('label',e.target.value);if(!editingTemplate)setT('question_key',makeKey(e.target.value));}}/></div>
+      <div className="space-y-1"><Label>Unique question key</Label><Input value={templateDraft.question_key} onChange={e=>setT('question_key',e.target.value)}/></div>
+      <div className="space-y-1"><Label>Answer type</Label><Select value={templateDraft.input_type} onValueChange={v=>setT('input_type',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['text','textarea','number','boolean','select','multi_select','measurement','date'].map(v=><SelectItem key={v} value={v}>{v.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-1"><Label>Question group (free text)</Label><Input value={templateDraft.prompt_group} onChange={e=>setT('prompt_group',e.target.value)}/></div>
+      <div className="space-y-1 sm:col-span-2"><Label>Help text</Label><Input value={templateDraft.description} onChange={e=>setT('description',e.target.value)}/></div>
+      <div className="space-y-1"><Label>Display order</Label><Input type="number" value={templateDraft.display_order} onChange={e=>setT('display_order',e.target.value)}/></div>
+      <div className="flex items-center gap-2 pt-6"><Switch checked={templateDraft.required_default} onCheckedChange={v=>setT('required_default',v)}/><Label>Required by default</Label></div>
+      <div className="flex items-center gap-2 sm:col-span-2"><Switch checked={templateDraft.active} onCheckedChange={v=>setT('active',v)}/><Label>Available in library</Label></div>
+      <div className="space-y-1 sm:col-span-2"><Label>Options (JSON array for select questions)</Label><Textarea rows={4} className="font-mono text-xs" value={templateDraft.options} onChange={e=>setT('options',e.target.value)}/></div>
+      <div className="space-y-1 sm:col-span-2"><Label>Validation rules (JSON object)</Label><Textarea rows={3} className="font-mono text-xs" value={templateDraft.validation_rules} onChange={e=>setT('validation_rules',e.target.value)}/></div>
+      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button onClick={()=>void saveTemplate()} disabled={saving}>{saving?'Saving…':'Save template'}</Button><Button variant="outline" onClick={resetTemplate}>New template</Button></div>
+     </CardContent></Card>
+    </div>
+    <Card><CardHeader><CardTitle className="text-base">Apply a question to service configurations</CardTitle><p className="text-sm text-muted-foreground">Choose one template and the exact configured services. No service/category mapping is inferred.</p></CardHeader><CardContent className="space-y-3">
+     <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}><SelectTrigger><SelectValue placeholder="Choose a question template"/></SelectTrigger><SelectContent>{templates.filter(t=>t.active).map(t=><SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select>
+     <div className="grid gap-2 sm:grid-cols-2">{configuredServices.map(({config:c,service})=><label key={c.id} className="flex items-center gap-2 rounded border p-2 text-sm"><Checkbox checked={selectedConfigIds.includes(c.id)} onCheckedChange={v=>setSelectedConfigIds(old=>v?[...old,c.id]:old.filter(id=>id!==c.id))}/><span className="min-w-0 flex-1 truncate">{service?.name}</span><Badge variant={c.enabled?'default':'secondary'}>{c.enabled?'Enabled':'Disabled'}</Badge></label>)}</div>
+     {!configuredServices.length&&<p className="text-sm text-muted-foreground">Create a service configuration first to apply templates.</p>}
+     <Button onClick={()=>void applyTemplate()} disabled={saving||!selectedTemplateId||!selectedConfigIds.length}><CirclePlus className="mr-2 h-4 w-4"/>Apply / update selected question</Button>
+    </CardContent></Card>
+   </TabsContent>
+   <TabsContent value="offers" className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+     <Card><CardHeader><CardTitle className="text-base">Packages and value offers</CardTitle></CardHeader><CardContent className="space-y-2">{offers.map(o=><div key={o.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><b className="text-sm">{o.title}</b><p className="text-xs text-muted-foreground">{o.offer_key} · {o.offer_type.replace('_',' ')} · {o.price_mode.replace('_',' ')}</p><p className="text-xs text-muted-foreground">{(offerLinks[o.id]||[]).filter(x=>x.relationship==='trigger').length} trigger · {(offerLinks[o.id]||[]).filter(x=>x.relationship==='included').length} included · {(offerLinks[o.id]||[]).filter(x=>x.relationship==='recommended').length} recommended</p></div><div className="flex items-center gap-1"><Switch checked={o.active} onCheckedChange={()=>void toggleOffer(o)}/><Button size="icon" variant="ghost" onClick={()=>void editOffer(o)}><Save className="h-4 w-4"/></Button><Button size="icon" variant="ghost" onClick={()=>void deleteOffer(o)}><Trash2 className="h-4 w-4"/></Button></div></div>{o.description&&<p className="mt-1 text-xs text-muted-foreground">{o.description}</p>}</div>)}{!offers.length&&<p className="text-sm text-muted-foreground">No offers or packages created yet. Nothing is advertised automatically.</p>}</CardContent></Card>
+     <Card><CardHeader><CardTitle className="text-base">{editingOffer?'Edit package / offer':'Create package / offer'}</CardTitle></CardHeader><CardContent className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Offer title</Label><Input value={offerDraft.title} onChange={e=>{setO('title',e.target.value);if(!editingOffer)setO('offer_key',makeKey(e.target.value));}}/></div><div className="space-y-1"><Label>Unique key</Label><Input value={offerDraft.offer_key} onChange={e=>setO('offer_key',e.target.value)}/></div>
+       <div className="space-y-1"><Label>Type</Label><Select value={offerDraft.offer_type} onValueChange={v=>setO('offer_type',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['add_on','package','upgrade','recurring'].map(v=><SelectItem key={v} value={v}>{v.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div>
+       <div className="space-y-1"><Label>Price / offer model</Label><Select value={offerDraft.price_mode} onValueChange={v=>setO('price_mode',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['quotation','fixed','percentage_discount','fixed_discount'].map(v=><SelectItem key={v} value={v}>{v.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div>
+       <div className="space-y-1"><Label>Configured value (KES or %)</Label><Input type="number" min="0" step="0.01" disabled={offerDraft.price_mode==='quotation'} value={offerDraft.price_value} onChange={e=>setO('price_value',e.target.value)}/></div>
+       <div className="space-y-1"><Label>Display order</Label><Input type="number" value={offerDraft.display_order} onChange={e=>setO('display_order',e.target.value)}/></div>
+       <div className="space-y-1 sm:col-span-2"><Label>Description</Label><Textarea rows={2} value={offerDraft.description} onChange={e=>setO('description',e.target.value)}/></div>
+       <div className="space-y-1 sm:col-span-2"><Label>Terms and eligibility notes</Label><Textarea rows={2} value={offerDraft.terms} onChange={e=>setO('terms',e.target.value)}/></div>
+       <div className="space-y-1"><Label>Starts (optional)</Label><Input type="datetime-local" value={offerDraft.starts_at} onChange={e=>setO('starts_at',e.target.value)}/></div>
+       <div className="space-y-1"><Label>Ends (optional)</Label><Input type="datetime-local" value={offerDraft.ends_at} onChange={e=>setO('ends_at',e.target.value)}/></div>
+       <div className="flex items-center gap-2"><Switch checked={offerDraft.featured} onCheckedChange={v=>setO('featured',v)}/><Label>Featured</Label></div>
+       <div className="flex items-center gap-2"><Switch checked={offerDraft.active} onCheckedChange={v=>setO('active',v)}/><Label>Active / publish</Label></div>
+      </div>
+      <div className="space-y-1"><Label>Filter services</Label><Input value={serviceSearch} onChange={e=>setServiceSearch(e.target.value)} placeholder="Search current services…"/></div>
+      <div className="grid gap-2 md:grid-cols-3">{servicePicker('trigger','Show this offer when selected')}{servicePicker('included','Services included in this package')}{servicePicker('recommended','Complementary recommendations')}</div>
+      <p className="text-xs text-muted-foreground">Service links use the live service IDs. Prices and discounts are only published as configured here; selecting an offer will not silently change the core service estimate.</p>
+      <div className="flex flex-wrap gap-2"><Button onClick={()=>void saveOffer()} disabled={saving}>{saving?'Saving…':'Save package / offer'}</Button><Button variant="outline" onClick={()=>{setEditingOffer(null);setOfferDraft(emptyOfferDraft());setOfferServiceLinks({trigger:[],included:[],recommended:[]});}}>New offer</Button></div>
+     </CardContent></Card>
+    </div>
+   </TabsContent>
+  </Tabs>}
  </div>;
 }
