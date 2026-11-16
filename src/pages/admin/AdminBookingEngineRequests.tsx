@@ -12,7 +12,6 @@ import { RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 type Row={id:string;[key:string]:any};
 const db=supabase as any;
 const statusLabel=(s:string)=>String(s||'').replaceAll('_',' ');
-const eventFor:Record<string,string>={under_review:'under_review',approved:'approved',quote_required:'quote_required',rejected:'rejected'};
 
 export default function AdminBookingEngineRequests(){
  const {user}=useAuth();
@@ -54,13 +53,10 @@ export default function AdminBookingEngineRequests(){
   if(!selected||!user)return;
   setSaving(true);
   try{
-   const updated=await db.from('booking_engine_requests').update({status:next}).eq('id',selected.id).select('*').single();
-   if(updated.error)throw updated.error;
-   const ev=await db.from('booking_engine_request_events').insert({
-    request_id:selected.id,event_type:eventFor[next]||next,from_status:selected.status,to_status:next,
-    message,actor_user_id:user.id,actor_role:'admin',metadata:{source:'admin_booking_engine'}
+   const result=await db.rpc('transition_booking_engine_request_admin',{
+    _request_id:selected.id,_to_status:next,_message:message
    });
-   if(ev.error)toast({title:'Status changed; timeline event could not be recorded',description:ev.error.message,variant:'destructive'});
+   if(result.error)throw result.error;
    toast({title:'Request status updated',description:selected.request_number+' · '+statusLabel(next)});
    await refresh();
   }catch(e:any){toast({title:'Status update failed',description:e?.message||'Please retry.',variant:'destructive'});}

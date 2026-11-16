@@ -48,7 +48,7 @@ export default function CustomerBookings() {
       const [b, q, r] = await Promise.all([
         supabase
           .from('bookings')
-          .select('*, services(name)')
+          .select('*, service_time, services(name)')
           .order('created_at', { ascending: false }),
         supabase
           .from('quotations')
@@ -92,7 +92,7 @@ export default function CustomerBookings() {
         if (converted.error) throw converted.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'converted', converted_booking_id: converted.data?.booking_id || row.converted_booking_id } : row));
         toast({ title: 'Booking confirmed', description: converted.data?.booking_code ? 'Booking reference: ' + converted.data.booking_code : 'Your request has been converted to a booking.' });
-        const refreshed = await supabase.from('bookings').select('*, services(name)').order('created_at',{ascending:false});
+        const refreshed = await supabase.from('bookings').select('*, service_time, services(name)').order('created_at',{ascending:false});
         if (!refreshed.error) setBookings(refreshed.data || []);
     } catch (error: any) {
       toast({ title: 'Could not update request', description: error?.message || 'Please try again.', variant: 'destructive' });
@@ -201,7 +201,7 @@ export default function CustomerBookings() {
                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    {b.service_date}
+                    {b.service_date}{b.service_time ? ' · ' + String(b.service_time).slice(0,5) : ''}
                   </span>
 
                   <span className="flex items-center gap-1">
