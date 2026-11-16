@@ -94,7 +94,6 @@ export default function CustomerBookings() {
         toast({ title: 'Booking confirmed', description: converted.data?.booking_code ? 'Booking reference: ' + converted.data.booking_code : 'Your request has been converted to a booking.' });
         const refreshed = await supabase.from('bookings').select('*, services(name)').order('created_at',{ascending:false});
         if (!refreshed.error) setBookings(refreshed.data || []);
-      }
     } catch (error: any) {
       toast({ title: 'Could not update request', description: error?.message || 'Please try again.', variant: 'destructive' });
     } finally {
