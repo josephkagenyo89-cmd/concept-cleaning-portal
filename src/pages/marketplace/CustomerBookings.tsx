@@ -64,21 +64,31 @@ export default function CustomerBookings() {
     })();
   }, [user, isCustomer]);
 
-  const handleEngineRequestAction = async (request: any) => {
+  const handleEngineRequestAction = async (request: any, action: 'accept' | 'reject' | 'confirm' = 'confirm') => {
     setRequestAction(request.id);
     try {
-      if (request.status === 'quote_prepared') {
+      if (action === 'reject') {
+        const rejected = await supabase.rpc('reject_booking_engine_quotation', {
+          _request_id: request.id, _reason: 'Customer declined the quotation from My Bookings.',
+        } as any);
+        if (rejected.error) throw rejected.error;
+        setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'rejected' } : row));
+        toast({ title: 'Quotation declined', description: 'The request has been marked as rejected.' });
+        return;
+      }
+      if (action === 'accept') {
         const accepted = await supabase.rpc('accept_booking_engine_quotation', { _request_id: request.id } as any);
         if (accepted.error) throw accepted.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'customer_accepted' } : row));
         toast({ title: 'Quotation accepted', description: 'You can now confirm the booking when ready.' });
-      } else {
-        if (request.status === 'customer_accepted') {
-          const ready = await supabase.rpc('mark_booking_engine_ready_for_booking', { _request_id: request.id } as any);
-          if (ready.error) throw ready.error;
-          setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'ready_for_booking' } : row));
-        }
-        const converted = await supabase.rpc('convert_booking_engine_request', { _request_id: request.id } as any);
+        return;
+      }
+      if (request.status === 'customer_accepted' || request.status === 'ready_for_booking') {
+        const ready = await supabase.rpc('mark_booking_engine_ready_for_booking', { _request_id: request.id } as any);
+        if (ready.error) throw ready.error;
+        setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'ready_for_booking' } : row));
+      }
+      const converted = await supabase.rpc('convert_booking_engine_request', { _request_id: request.id } as any);
         if (converted.error) throw converted.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'converted', converted_booking_id: converted.data?.booking_id || row.converted_booking_id } : row));
         toast({ title: 'Booking confirmed', description: converted.data?.booking_code ? 'Booking reference: ' + converted.data.booking_code : 'Your request has been converted to a booking.' });
@@ -128,8 +138,14 @@ export default function CustomerBookings() {
               </div>
               <p className="text-xs text-muted-foreground">{request.service_location || 'Location not provided'}</p>
               {request.quotation?.quotation_number && <div className="flex items-center justify-between rounded bg-muted/50 p-2 text-sm"><span>Quotation {request.quotation.quotation_number}</span><b>{formatKes(Number(request.quotation.price))}</b></div>}
-              {request.status === 'quote_prepared' && <Button size="sm" onClick={() => void handleEngineRequestAction(request)} disabled={!!requestAction}>{requestAction===request.id?'Processing…':'Accept quotation'}</Button>}
-              {(request.status === 'customer_accepted' || request.status === 'ready_for_booking') && <Button size="sm" onClick={() => void handleEngineRequestAction(request)} disabled={!!requestAction}>{requestAction===request.id?'Confirming…':'Confirm booking'}</Button>}
+              {request.status === 'quote_prepared' && <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => void handleEngineRequestAction(request, 'accept')} disabled={!!requestAction}>Accept quotation</Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  if (window.confirm('Decline this quotation? The request will be marked as rejected.')) void handleEngineRequestAction(request, 'reject');
+                }} disabled={!!requestAction}>Decline quotation</Button>
+              </div>}
+              {(request.status === 'customer_accepted' || request.status === 'ready_for_booking') && <Button size="sm" onClick={() => void handleEngineRequestAction(request, 'confirm')} disabled={!!requestAction}>{requestAction===request.id?'Confirming…':'Confirm booking'}</Button>}
+              {request.status === 'rejected' && <p className="text-xs text-muted-foreground">This quotation was declined and the request is closed.</p>}
               {request.status === 'converted' && <p className="text-xs font-medium text-emerald-700">Converted to an ERP booking.</p>}
               {['submitted','under_review','awaiting_customer','approved','quote_required'].includes(request.status) && <p className="text-xs text-muted-foreground">Our team is reviewing this request. No appointment has been confirmed yet.</p>}
             </CardContent></Card>
