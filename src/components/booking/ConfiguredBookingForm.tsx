@@ -36,10 +36,12 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
+  const [loadedDraftKey,setLoadedDraftKey] = useState('');
   const draftKey = 'ccs-booking-engine-draft:' + (user?.id || 'guest') + ':' + serviceId;
 
   useEffect(() => {
     let live = true;
+    setLoadedDraftKey('');
     (async () => {
       setLoading(true);
       const c = await supabase.from('booking_engine_service_config').select('id,service_id,enabled,customer_instructions,photo_mode,photo_min,photo_max,measurement_config,availability_config,config_version').eq('service_id',serviceId).eq('enabled',true).maybeSingle();
@@ -55,10 +57,63 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         if(q.error||cond.error||s.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||'Could not load service setup.');}
         else if(live){setConfig(c.data);setQuestions(q.data||[]);setConditions(cond.data||[]);setScope(s.data||[]);}
       }
-      if(live) { const saved=window.sessionStorage.getItem(draftKey); if(saved)setDraftId(saved); setLoading(false); }
+
+      const saved = window.sessionStorage.getItem(draftKey);
+      if (live && saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            setDraftId(parsed.id || '');
+            setAnswers(parsed.answers || {});
+            setExtras(Array.isArray(parsed.extras) ? parsed.extras : []);
+            setQuantity(String(parsed.quantity ?? '1'));
+            setDate(parsed.date || '');
+            setTime(parsed.time || '');
+            setLocation(parsed.location || '');
+            setNotes(parsed.notes ?? initialNotes);
+          } else {
+            setDraftId(saved);
+            const request = await supabase.from('booking_engine_requests')
+              .select('id,status,requested_date,requested_time,service_location,customer_notes')
+              .eq('id', saved).maybeSingle();
+            if (request.data?.status === 'draft') {
+              setDate(request.data.requested_date || '');
+              setTime(request.data.requested_time || '');
+              setLocation(request.data.service_location || '');
+              setNotes(request.data.customer_notes || initialNotes);
+              const item = await supabase.from('booking_engine_request_items')
+                .select('quantity,answers,selected_extras')
+                .eq('request_id', saved).eq('service_id', serviceId).maybeSingle();
+              if (item.data) {
+                setQuantity(String(item.data.quantity ?? '1'));
+                setAnswers(item.data.answers || {});
+                setExtras(Array.isArray(item.data.selected_extras) ? item.data.selected_extras : []);
+              }
+            } else {
+              setDraftId('');
+              window.sessionStorage.removeItem(draftKey);
+            }
+          }
+        } catch {
+          setDraftId(saved);
+        }
+      }
+      if (live) {
+        setPrice(null);
+        setAck(false);
+        setLoadedDraftKey(draftKey);
+        setLoading(false);
+      }
     })();
     return () => { live=false; };
   },[serviceId,draftKey]);
+
+  useEffect(() => {
+    if (loadedDraftKey !== draftKey) return;
+    window.sessionStorage.setItem(draftKey, JSON.stringify({
+      id: draftId, answers, extras, quantity, date, time, location, notes,
+    }));
+  }, [loadedDraftKey, draftKey, draftId, answers, extras, quantity, date, time, location, notes]);
 
   const visibility = useMemo(() => {
     const out: Record<string,{visible:boolean;required:boolean}> = {};
@@ -157,7 +212,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       if(updated.error) throw updated.error;
       const result=await supabase.rpc('submit_booking_engine_request',{_request_id:draftId} as any);
       if(result.error) throw result.error;
-      window.sessionStorage.removeItem(draftKey); setDraftId('');
+      window.sessionStorage.removeItem(draftKey); setDraftId(''); setLoadedDraftKey('');
       toast({title:'Request submitted',description:'Our team will review it and confirm the next steps. This is not yet a confirmed appointment.'});
       navigate('/my/bookings?tab=requests');
     } catch(e:any) { toast({title:'Request not submitted',description:e?.message||'Please retry.',variant:'destructive'}); }
