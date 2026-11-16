@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { waLink } from '@/components/public/PublicShell';
 import {
-  CATEGORY_ORDER,
   MarketService,
   fetchBookingEngineCategories,
   fetchBookingEngineServices,
@@ -55,37 +54,6 @@ const SEARCH_STOP_WORDS = new Set([
   'service', 'services', 'bed', 'beds', 'bedroom', 'bedrooms',
 ]);
 
-const SEARCH_SYNONYMS: Record<string, string[]> = {
-  couch: ['sofa', 'upholstery'], couches: ['sofa', 'upholstery'],
-  sofas: ['sofa', 'upholstery'], seat: ['sofa', 'upholstery'], seats: ['sofa', 'upholstery'],
-  rug: ['carpet'], rugs: ['carpet'], mat: ['carpet'], mats: ['carpet'],
-  bug: ['pest', 'fumigation'], bugs: ['pest', 'fumigation'],
-  bedbug: ['bed bugs', 'bed bug', 'pest', 'fumigation'],
-  bedbugs: ['bed bugs', 'bed bug', 'pest', 'fumigation'],
-  cockroach: ['cockroaches', 'roach', 'pest', 'fumigation'],
-  cockroaches: ['cockroach', 'roach', 'pest', 'fumigation'],
-  roach: ['cockroach', 'pest', 'fumigation'], roaches: ['cockroach', 'pest', 'fumigation'],
-  termite: ['termites', 'pest', 'fumigation'], termites: ['termite', 'pest', 'fumigation'],
-  rat: ['rats', 'rodent', 'pest'], rats: ['rat', 'rodent', 'pest'],
-  mice: ['mouse', 'rodent', 'pest'], mouse: ['mice', 'rodent', 'pest'],
-  mosquito: ['mosquitoes', 'pest', 'fumigation'], mosquitoes: ['mosquito', 'pest', 'fumigation'],
-  flea: ['fleas', 'pest'], fleas: ['flea', 'pest'], ant: ['ants', 'pest'], ants: ['ant', 'pest'],
-  house: ['home', 'residential', 'apartment'], home: ['house', 'residential', 'apartment'],
-  apartment: ['flat', 'house', 'home', 'residential'],
-  flat: ['apartment', 'house', 'home', 'residential'],
-  office: ['commercial', 'workplace'], shop: ['commercial', 'business'],
-  vehicle: ['car', 'interior detailing'], car: ['vehicle', 'interior detailing'],
-  moving: ['move-in', 'move-out', 'relocation', 'deep cleaning'],
-  move: ['move-in', 'move-out', 'relocation', 'deep cleaning'],
-  renovation: ['post-construction', 'after renovation', 'deep cleaning'],
-  construction: ['post-construction', 'after renovation', 'builders cleaning'],
-  dirty: ['deep cleaning', 'intensive cleaning'],
-  stained: ['stain removal', 'upholstery', 'carpet'],
-  smell: ['odour', 'odor', 'deep cleaning', 'pest'],
-  odour: ['odor', 'smell', 'deep cleaning'],
-  odor: ['odour', 'smell', 'deep cleaning'],
-};
-
 const searchWords = (value: string) =>
   value.toLocaleLowerCase('en')
     .normalize('NFD')
@@ -118,7 +86,7 @@ function rankBookingServices(services: MarketService[], query: string): MarketSe
     let score = 0;
 
     for (const term of terms) {
-      const alternatives = [term, ...(SEARCH_SYNONYMS[term] || [])];
+      const alternatives = [term];
       let best = 0;
 
       for (const alternative of alternatives) {
@@ -150,89 +118,13 @@ function rankBookingServices(services: MarketService[], query: string): MarketSe
     .map((item) => item.service);
 }
 
-/** A contextual prompt helps customers provide useful job details. */
-function serviceContextPrompt(service: MarketService): string {
-  const text = [
-    service.name,
-    service.short_description,
-    service.description,
-    ...(Array.isArray(service.service_features) ? service.service_features : []),
-  ].filter(Boolean).join(' ').toLowerCase();
+const serviceContextPrompt = () => 'Describe the items or areas that need attention, their current condition and any special concerns. A brief description is enough.';
 
-  if (/pest|fumigat|cockroach|bed.?bug|termite|rodent|mosquito/.test(text)) {
-    return 'Which pests have you noticed, where have you seen them, and how widespread is the problem?';
-  }
-  if (/sofa|upholster|seat|mattress/.test(text)) {
-    return 'How many seats or items need cleaning? Mention the material and any stains if known.';
-  }
-  if (/carpet|rug/.test(text)) {
-    return 'How many carpets or rugs need cleaning? Include approximate sizes and any stains or odours.';
-  }
-  if (/car interior|vehicle|detailing/.test(text)) {
-    return 'What is the vehicle type, and which interior areas need attention?';
-  }
-  if (/office|commercial|warehouse|retail/.test(text)) {
-    return 'What type of premises is it, approximately how large is it, and what areas need attention?';
-  }
-  if (/deep clean|move.?in|move.?out|residential|house|home|apartment/.test(text)) {
-    return 'How many bedrooms and bathrooms are there? Is the property furnished, empty or recently renovated?';
-  }
-  return 'Share any important details about the property, items or specific cleaning concerns.';
-}
-
-/**
- * Suggest only complementary services with a clear relationship to the
- * selected job. Matching uses service names/descriptions/features, not the
- * legacy category field. These are expressions of interest, not priced items.
- */
-function bookingAddOnRecommendations(
-  services: MarketService[],
-  selected: MarketService | null,
-): MarketService[] {
-  if (!selected) return [];
-
-  const selectedText = [
-    selected.name,
-    selected.short_description,
-    selected.description,
-    ...(Array.isArray(selected.service_features) ? selected.service_features : []),
-  ].filter(Boolean).join(' ').toLowerCase();
-
-  let targets: RegExp[] = [];
-  if (/pest|fumigat|cockroach|bed.?bug|termite|rodent|mosquito/.test(selectedText)) {
-    targets = [/upholster|sofa|mattress/i, /carpet|rug/i, /deep clean|residential/i];
-  } else if (/sofa|upholster|mattress|seat cleaning/.test(selectedText)) {
-    targets = [/carpet|rug/i, /mattress|upholster|sofa/i, /deep clean|residential/i];
-  } else if (/carpet|rug/.test(selectedText)) {
-    targets = [/upholster|sofa|mattress/i, /deep clean|residential/i, /window cleaning/i];
-  } else if (/deep clean|move.?in|move.?out|residential|house cleaning/.test(selectedText)) {
-    targets = [/pest|fumigat/i, /upholster|sofa|mattress/i, /carpet|rug/i];
-  } else if (/office|commercial|warehouse|retail/.test(selectedText)) {
-    targets = [/carpet|rug/i, /window/i, /upholster|sofa/i];
-  }
-
-  if (!targets.length) return [];
-
-  const candidates = services.filter((service) => {
-    if (service.id === selected.id) return false;
-    const candidateText = [
-      service.name,
-      service.short_description,
-      service.description,
-      ...(Array.isArray(service.service_features) ? service.service_features : []),
-    ].filter(Boolean).join(' ').toLowerCase();
-    return candidateText.length > 0 &&
-      targets.some((pattern) => pattern.test(candidateText));
-  });
-
-  const seen = new Set<string>();
-  return candidates.filter((service) => {
-    if (seen.has(service.id)) return false;
-    seen.add(service.id);
-    return true;
-  }).slice(0, 3);
-}
-
+type BookingValueOffer = {
+  id: string; title: string; description: string | null; terms: string | null;
+  offer_type: string; price_mode: string; price_value: number | null; currency: string;
+  featured: boolean; relatedServices: { service_id: string; relationship: string; serviceName: string }[];
+};
 
 function Highlight({ text, q }: { text: string; q: string }) {
   const terms = searchWords(q).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -317,7 +209,8 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
-  const [interestedAddOnIds, setInterestedAddOnIds] = useState<string[]>([]);
+  const [interestedOfferIds, setInterestedOfferIds] = useState<string[]>([]);
+  const [valueOffers, setValueOffers] = useState<BookingValueOffer[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -374,12 +267,70 @@ export default function BookingEngine({ phone }: { phone: string }) {
     fetchBookingEngineCategories()
       .then((rows) => {
         if (!live) return;
-        const order = (c: string) => { const i = CATEGORY_ORDER.indexOf(c); return i < 0 ? 99 : i; };
-        setCategories([...rows].sort((a, b) => order(a) - order(b) || a.localeCompare(b)));
+        setCategories([...rows].sort((a, b) => a.localeCompare(b)));
       })
       .catch(() => { /* chips are optional; search still works */ });
     return () => { live = false; };
   }, []);
+
+  useEffect(() => {
+    const selectedId = selected?.id;
+    if (!selectedId) { setValueOffers([]); return; }
+    let live = true;
+    (async () => {
+      try {
+        const triggerLinks = await supabase
+          .from('booking_engine_value_offer_services')
+          .select('offer_id')
+          .eq('service_id', selectedId)
+          .eq('relationship', 'trigger');
+        if (triggerLinks.error) throw triggerLinks.error;
+        const offerIds = [...new Set((triggerLinks.data || []).map((row: any) => row.offer_id))];
+        if (!offerIds.length) { if (live) setValueOffers([]); return; }
+
+        const offerResult = await supabase
+          .from('booking_engine_value_offers')
+          .select('id,title,description,terms,offer_type,price_mode,price_value,currency,featured,starts_at,ends_at,display_order')
+          .in('id', offerIds)
+          .eq('active', true)
+          .order('display_order');
+        if (offerResult.error) throw offerResult.error;
+        const now = Date.now();
+        const activeOffers = (offerResult.data || []).filter((offer: any) =>
+          (!offer.starts_at || new Date(offer.starts_at).getTime() <= now) &&
+          (!offer.ends_at || new Date(offer.ends_at).getTime() > now)
+        );
+        if (!activeOffers.length) { if (live) setValueOffers([]); return; }
+
+        const linksResult = await supabase
+          .from('booking_engine_value_offer_services')
+          .select('offer_id,service_id,relationship')
+          .in('offer_id', activeOffers.map((offer: any) => offer.id))
+          .neq('relationship', 'trigger');
+        if (linksResult.error) throw linksResult.error;
+        const relatedIds = [...new Set((linksResult.data || []).map((row: any) => row.service_id))];
+        const serviceResult = relatedIds.length
+          ? await supabase.from('services').select('id,name').in('id', relatedIds)
+          : { data: [], error: null };
+        if (serviceResult.error) throw serviceResult.error;
+        const names = new Map((serviceResult.data || []).map((service: any) => [service.id, service.name]));
+        const mapped = activeOffers.map((offer: any) => ({
+          ...offer,
+          relatedServices: (linksResult.data || [])
+            .filter((link: any) => link.offer_id === offer.id)
+            .map((link: any) => ({
+              service_id: link.service_id,
+              relationship: link.relationship,
+              serviceName: names.get(link.service_id) || 'Additional service',
+            })),
+        }));
+        if (live) setValueOffers(mapped);
+      } catch {
+        if (live) setValueOffers([]);
+      }
+    })();
+    return () => { live = false; };
+  }, [selected?.id]);
 
   const pool = useMemo(() => (category ? services.filter((s) => s.category === category) : services), [services, category]);
   const results = useMemo(() => rankBookingServices(pool, query), [pool, query]);
@@ -387,19 +338,15 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const list = query.trim() ? results : category ? pool.slice(0, 8) : featured;
 
   const perSqm = !!selected && selected.base_price <= 0 && selected.price_per_sqm > 0;
-  const contextPrompt = selected ? serviceContextPrompt(selected) : '';
-  const addOnRecommendations = useMemo(
-    () => bookingAddOnRecommendations(services, selected),
-    [services, selected],
-  );
-  const interestedAddOns = useMemo(
-    () => addOnRecommendations.filter((service) => interestedAddOnIds.includes(service.id)),
-    [addOnRecommendations, interestedAddOnIds],
+  const contextPrompt = serviceContextPrompt();
+  const selectedValueOffers = useMemo(
+    () => valueOffers.filter((offer) => interestedOfferIds.includes(offer.id)),
+    [valueOffers, interestedOfferIds],
   );
   const combinedCustomerNotes = [
     customerNotes.trim(),
-    interestedAddOns.length
-      ? `Additional services of interest (not included in this estimate; price to be confirmed): ${interestedAddOns.map((service) => service.name).join(', ')}`
+    selectedValueOffers.length
+      ? 'Value offers/packages of interest (not included in this estimate; eligibility and final price to be confirmed): ' + selectedValueOffers.map((offer) => offer.title + ' [' + offer.id + ']').join(', ')
       : '',
   ].filter(Boolean).join('\n').slice(0, 1000);
   const sizeNum = Number(size) || 0;
@@ -418,12 +365,12 @@ export default function BookingEngine({ phone }: { phone: string }) {
   );
 
   const choose = (s: MarketService) => {
-    setSelected(s); setInterestedAddOnIds([]); setOpen(false); setQuery(s.name);
+    setSelected(s); setInterestedOfferIds([]); setOpen(false); setQuery(s.name);
     trackPixel('ViewContent', { content_name: s.name, content_category: s.category, value: startingPrice(s), currency: 'KES' });
   };
 
   const change = () => {
-    setSelected(null); setInterestedAddOnIds([]); setOpen(true);
+    setSelected(null); setInterestedOfferIds([]); setValueOffers([]); setOpen(true);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
@@ -685,38 +632,54 @@ export default function BookingEngine({ phone }: { phone: string }) {
             </label>
           </div>
 
-          {addOnRecommendations.length > 0 && (
+          {valueOffers.length > 0 && (
             <div className="mt-4 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-extrabold text-[#172033]">You may also need</p>
-                  <p className="mt-1 text-xs text-[#64748B]">Relevant services that customers often consider together.</p>
+                  <p className="text-sm font-extrabold text-[#172033]">Packages and value offers</p>
+                  <p className="mt-1 text-xs text-[#64748B]">Optional offers configured by Concept Cleaning. Choose any you would like our team to consider.</p>
                 </div>
                 <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-[#475569]">Optional</span>
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {addOnRecommendations.map((service) => {
-                  const isInterested = interestedAddOnIds.includes(service.id);
+                {valueOffers.map((offer) => {
+                  const isInterested = interestedOfferIds.includes(offer.id);
+                  const configuredPrice = offer.price_mode === 'fixed'
+                    ? 'Configured offer price: ' + formatKes(Number(offer.price_value) || 0)
+                    : offer.price_mode === 'fixed_discount'
+                      ? 'Configured discount: ' + formatKes(Number(offer.price_value) || 0)
+                      : offer.price_mode === 'percentage_discount'
+                        ? 'Configured discount: ' + String(offer.price_value) + '%'
+                        : 'Price confirmed after review';
+                  const included = offer.relatedServices.filter((x) => x.relationship === 'included').map((x) => x.serviceName);
+                  const recommended = offer.relatedServices.filter((x) => x.relationship === 'recommended').map((x) => x.serviceName);
                   return (
                     <button
-                      key={service.id}
+                      key={offer.id}
                       type="button"
                       aria-pressed={isInterested}
-                      onClick={() => setInterestedAddOnIds((current) =>
+                      onClick={() => setInterestedOfferIds((current) =>
                         isInterested
-                          ? current.filter((id) => id !== service.id)
-                          : current.length < 3 ? [...current, service.id] : current
+                          ? current.filter((id) => id !== offer.id)
+                          : current.length < 3 ? [...current, offer.id] : current
                       )}
-                      className={`flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${isInterested ? 'border-[#0F766E] bg-white text-[#0F766E]' : 'border-[#E2E8F0] bg-white text-[#172033] hover:border-[#94A3B8]'}`}
+                      className={'flex min-h-20 flex-col gap-2 rounded-xl border px-3 py-3 text-left transition ' + (isInterested ? 'border-[#0F766E] bg-white text-[#0F766E]' : 'border-[#E2E8F0] bg-white text-[#172033] hover:border-[#94A3B8]')}
                     >
-                      <span>{service.name}</span>
-                      <span className="shrink-0 text-xs font-bold">{isInterested ? 'Added' : 'Interested +'}</span>
+                      <span className="flex w-full items-start justify-between gap-2">
+                        <span className="font-bold">{offer.title}</span>
+                        <span className="shrink-0 text-xs font-bold">{isInterested ? 'Selected' : 'Add +'}</span>
+                      </span>
+                      <span className="text-xs text-[#475569]">{offer.description || offer.offer_type.replace('_', ' ')}</span>
+                      <span className="text-xs font-semibold text-[#0F766E]">{configuredPrice}</span>
+                      {included.length > 0 && <span className="text-xs text-[#475569]">Includes: {included.join(', ')}</span>}
+                      {recommended.length > 0 && <span className="text-xs text-[#475569]">Also consider: {recommended.join(', ')}</span>}
+                      {offer.terms && <span className="text-xs text-[#64748B]">{offer.terms}</span>}
                     </button>
                   );
                 })}
               </div>
               <p className="mt-2 text-xs text-[#64748B]">
-                These are saved as additional interests for our team. They are not included in the estimate or booked until separately confirmed.
+                Selected offers are added to your request for review. They do not change this estimate or become confirmed services until our team verifies eligibility and pricing.
               </p>
             </div>
           )}
