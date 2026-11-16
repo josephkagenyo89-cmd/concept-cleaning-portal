@@ -162,7 +162,7 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
     .order('name');
 
@@ -170,7 +170,7 @@ export async function fetchMarketServices(): Promise<MarketService[]> {
 
   return ((data || []) as any[]).map((s) => ({
     ...s,
-    category: String(s.category?.name || '').trim(),
+    category: String(s.category?.name || '').trim() || 'Uncategorised',
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
@@ -185,7 +185,7 @@ export async function fetchMarketServicesLimited(limit: number = 6): Promise<Mar
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
     .order('name')
     .limit(limit);
@@ -194,7 +194,7 @@ export async function fetchMarketServicesLimited(limit: number = 6): Promise<Mar
 
   return ((data || []) as any[]).map((s) => ({
     ...s,
-    category: String(s.category?.name || '').trim(),
+    category: String(s.category?.name || '').trim() || 'Uncategorised',
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
@@ -250,7 +250,7 @@ export async function fetchBookingEngineServices(): Promise<MarketService[]> {
       service_code,
       description,
       short_description,
-      category:service_categories!inner(name, image_key),
+      category:service_categories(name, image_key),
       base_price,
       price_per_sqm,
       pricing_model,
@@ -267,7 +267,7 @@ export async function fetchBookingEngineServices(): Promise<MarketService[]> {
 
   return (data || []).map((service: any) => ({
     ...service,
-    category: String(service.category?.name || '').trim(),
+    category: String(service.category?.name || '').trim() || 'Uncategorised',
     slug: service.slug || null,
     base_price: Number(service.base_price) || 0,
     price_per_sqm: Number(service.price_per_sqm) || 0,
@@ -424,7 +424,7 @@ export async function fetchMarketServicesByCategory(
   await loadCategoryImageMap();
   const { data, error } = await supabase
     .from('services')
-    .select('id, name, slug, service_code, description, short_description, category:service_categories!inner(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
+    .select('id, name, slug, service_code, description, short_description, category:service_categories(name, image_key), base_price, price_per_sqm, pricing_model, pricing_unit, is_active, image_url, estimated_duration, service_features')
     .eq('is_active', true)
     .eq('category_id', selectedCategory.id)
     .order('name');
@@ -433,7 +433,7 @@ export async function fetchMarketServicesByCategory(
 
   return ((data || []) as any[]).map((s) => ({
     ...s,
-    category: String(s.category?.name || '').trim(),
+    category: String(s.category?.name || '').trim() || 'Uncategorised',
     slug: s.slug || null,
     base_price: Number(s.base_price) || 0,
     price_per_sqm: Number(s.price_per_sqm) || 0,
