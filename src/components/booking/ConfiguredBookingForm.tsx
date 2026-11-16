@@ -164,7 +164,24 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       if(id) {
         const existing=await supabase.from('booking_engine_requests').select('id,status').eq('id',id).maybeSingle();
         if(existing.error) throw existing.error;
-        if(!existing.data || existing.data.status!=='draft') { id=''; setDraftId(''); window.sessionStorage.removeItem(draftKey); }
+        if (!existing.data) {
+          id = '';
+          setDraftId('');
+          window.sessionStorage.removeItem(draftKey);
+        } else if (existing.data.status !== 'draft') {
+          const activeStatuses = ['submitted','under_review','awaiting_customer','approved','quote_required','quote_prepared','customer_accepted','ready_for_booking','converted'];
+          if (activeStatuses.includes(existing.data.status)) {
+            toast({ title: 'Request already submitted', description: 'You can track its progress under My Bookings.' });
+            window.sessionStorage.removeItem(draftKey);
+            setDraftId('');
+            setLoadedDraftKey('');
+            navigate('/my/bookings?tab=requests');
+            return;
+          }
+          id = '';
+          setDraftId('');
+          window.sessionStorage.removeItem(draftKey);
+        }
       }
       const requestNotes=[quoteMode?'Customer requested a formal quotation.':'',notes.trim()].filter(Boolean).join('\n')||null;
       if(!id) {
@@ -203,10 +220,31 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const submit = async () => {
     const problem=validate();
     if(problem) { toast({title:'Cannot submit yet',description:problem,variant:'destructive'}); return; }
-    if(!draftId || !price) { toast({title:'Review your request first',description:'Calculate the server-side estimate before submitting.',variant:'destructive'}); return; }
-    if(!ack) { toast({title:'Please acknowledge the service scope',variant:'destructive'}); return; }
+    if(!draftId) { toast({title:'Review your request first',description:'Calculate the server-side estimate before submitting.',variant:'destructive'}); return; }
+
     setSaving(true);
     try {
+      const current = await supabase.from('booking_engine_requests')
+        .select('id,status').eq('id',draftId).maybeSingle();
+      if (current.error) throw current.error;
+      if (!current.data) throw new Error('Your saved draft could not be found. Please review your request again.');
+
+      if (current.data.status !== 'draft') {
+        const submittedStatuses = ['submitted','under_review','awaiting_customer','approved','quote_required','quote_prepared','customer_accepted','ready_for_booking','converted'];
+        if (submittedStatuses.includes(current.data.status)) {
+          window.sessionStorage.removeItem(draftKey);
+          setDraftId('');
+          setLoadedDraftKey('');
+          toast({ title: 'Request already submitted', description: 'Your existing request is safe. You can track it under My Bookings.' });
+          navigate('/my/bookings?tab=requests');
+          return;
+        }
+        throw new Error('This request is no longer an editable draft. Start a new request if you still need the service.');
+      }
+
+      if(!price) throw new Error('Review your request and calculate the server-side estimate before submitting.');
+      if(!ack) throw new Error('Please acknowledge the included and excluded service scope.');
+
       const requestNotes=[quoteMode?'Customer requested a formal quotation.':'',notes.trim()].filter(Boolean).join('\n')||null;
       const updated=await supabase.rpc('update_booking_engine_request',{_request_id:draftId,_requested_date:date,_requested_time:time,_service_location:location.trim(),_customer_notes:requestNotes,_customer_acknowledged_scope:true} as any);
       if(updated.error) throw updated.error;
