@@ -489,6 +489,7 @@ BEGIN
 END;
 $function$
 
+;
 
 CREATE OR REPLACE FUNCTION public.convert_booking_engine_request(_request_id uuid)
  RETURNS jsonb
@@ -726,7 +727,7 @@ BEGIN
     'total', v_total
   );
 END;
-$function$
+$function$;
 
 
 REVOKE ALL ON FUNCTION public.transition_booking_engine_request_admin(uuid, public.booking_engine_request_status, text) FROM PUBLIC, anon;
