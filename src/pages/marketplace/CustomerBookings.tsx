@@ -83,7 +83,9 @@ export default function CustomerBookings() {
         toast({ title: 'Quotation accepted', description: 'You can now confirm the booking when ready.' });
         return;
       }
-      if (request.status === 'customer_accepted' || request.status === 'ready_for_booking') {
+      // Customer acceptance still needs the ready transition; an already-ready
+      // staff-approved request must go straight to conversion.
+      if (request.status === 'customer_accepted') {
         const ready = await supabase.rpc('mark_booking_engine_ready_for_booking', { _request_id: request.id } as any);
         if (ready.error) throw ready.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'ready_for_booking' } : row));
