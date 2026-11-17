@@ -12,11 +12,17 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { formatKes } from '@/lib/marketplace';
+import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpload';
 
 type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean };
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
-const optionsFor = (value: any) => Array.isArray(value) ? value.map((x: any) => typeof x === 'string' ? { value: x, label: x } : { value: String(x?.value ?? x?.id ?? x?.label ?? ''), label: String(x?.label ?? x?.value ?? '') }).filter((x: any) => x.value && x.label) : [];
+const optionsFor = (value: any) => Array.isArray(value) ? value.map((x: any) => {
+ if (typeof x === 'string') return { value: x, label: x };
+ const optionValue = x?.value ?? x?.id ?? x?.label ?? '';
+ const optionLabel = x?.label ?? x?.value ?? x?.id ?? '';
+ return { value: String(optionValue), label: String(optionLabel) };
+}).filter((x: any) => x.value !== '' && x.label !== '') : [];
 const answerValidationError = (question: Row, value: any) => {
  const rules=question.validation_rules||{};
  if(value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length))return '';
@@ -41,8 +47,12 @@ const matches = (rule: Row, value: any) => {
   const expected = rule.expected_value;
   if (rule.operator === 'equals') return String(value ?? '') === String(expected ?? '');
   if (rule.operator === 'not_equals') return String(value ?? '') !== String(expected ?? '');
-  if (rule.operator === 'greater_than') return Number(value) > Number(expected);
-  if (rule.operator === 'less_than') return Number(value) < Number(expected);
+  if (rule.operator === 'greater_than' || rule.operator === 'less_than') {
+    if (value === undefined || value === null || String(value).trim() === '') return false;
+    const actualNumber = Number(value), expectedNumber = Number(expected);
+    if (!Number.isFinite(actualNumber) || !Number.isFinite(expectedNumber)) return false;
+    return rule.operator === 'greater_than' ? actualNumber > expectedNumber : actualNumber < expectedNumber;
+  }
   if (rule.operator === 'contains') return Array.isArray(value) ? value.includes(expected) : String(value ?? '').includes(String(expected ?? ''));
   return false;
 };
@@ -56,6 +66,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
+  const [requestItemId,setRequestItemId] = useState(''), [photoCount,setPhotoCount] = useState(0);
   const [loadedDraftKey,setLoadedDraftKey] = useState('');
   const draftKey = 'ccs-booking-engine-draft:' + (user?.id || 'guest') + ':' + serviceId;
 
@@ -102,9 +113,10 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
               setLocation(request.data.service_location || '');
               setNotes(request.data.customer_notes || initialNotes);
               const item = await supabase.from('booking_engine_request_items')
-                .select('quantity,answers,selected_extras')
+                .select('id,quantity,answers,selected_extras')
                 .eq('request_id', saved).eq('service_id', serviceId).maybeSingle();
               if (item.data) {
+                setRequestItemId(item.data.id);
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 setExtras(Array.isArray(item.data.selected_extras) ? item.data.selected_extras : []);
@@ -166,7 +178,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     if(!time) return 'Choose a preferred time.';
     if(!location.trim()) return 'Enter the service address, estate or nearby landmark.';
     if(quantityEnabled && (!Number.isFinite(Number(quantity)) || Number(quantity)<=0 || (quantityConfig.min!=null && Number(quantity)<Number(quantityConfig.min)) || (quantityConfig.max!=null && Number(quantity)>Number(quantityConfig.max)))) return 'Enter a valid quantity within the configured limits.';
-    if(config?.photo_mode==='required') return 'This service requires photos, but photo upload is not available in this booking form. Contact our team before proceeding.';
+    if(config?.photo_mode==='required' && draftId && requestItemId && photoCount < Math.max(1, Number(config.photo_min) || 1)) return 'Upload at least '+Math.max(1, Number(config.photo_min) || 1)+' service photo(s) before submitting.';
+    if(config?.photo_max > 0 && photoCount > Number(config.photo_max)) return 'Remove photos until you meet the maximum of '+config.photo_max+'.';
     for(const q of questions) {
       const state=visibility[q.id], v=answers[q.question_key];
       if(state?.visible && state.required && (v===undefined || v===null || v==='' || (Array.isArray(v)&&!v.length))) return 'Please answer: ' + q.label;
@@ -224,6 +237,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         if(added.error) throw added.error;
         itemId=String(added.data);
       }
+      setRequestItemId(itemId);
       const snapshot={configuration_version:config.config_version,included:groups.included.map(x=>({title:x.title,description:x.description})),excluded:groups.excluded.map(x=>({title:x.title,description:x.description})),selected_extras:groups.extra.filter(x=>extras.includes(x.id)).map(x=>({title:x.title,description:x.description}))};
       const saved=await supabase.from('booking_engine_request_items').update({scope_snapshot:snapshot,service_config_version:config.config_version}).eq('id',itemId);
       if(saved.error) throw saved.error;
@@ -308,8 +322,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       {groups.excluded.map(x=><p key={x.id} className="text-sm text-muted-foreground">Not included: {x.title}{x.description?' — '+x.description:''}</p>)}
       {groups.extra.length>0&&<div className="space-y-2"><p className="text-xs font-semibold">Optional extras · interest only, not included in estimate</p>{groups.extra.map(x=><label key={x.id} className="flex items-start gap-2 text-sm"><Checkbox checked={extras.includes(x.id)} onCheckedChange={v=>{setExtras(old=>v?[...old,x.id]:old.filter(id=>id!==x.id));setPrice(null);}}/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></label>)}</div>}
     </div>
+    {config.photo_mode !== 'none' && <div className="border-t pt-4"><h3 className="mb-2 text-sm font-semibold">Service photos {config.photo_mode === 'required' ? '*' : '(optional)'}</h3>{draftId && requestItemId ? <BookingEnginePhotoUpload requestId={draftId} itemId={requestItemId} minPhotos={config.photo_mode === 'required' ? Math.max(1, Number(config.photo_min) || 1) : 0} maxPhotos={Number(config.photo_max) > 0 ? Number(config.photo_max) : undefined} onCountChange={setPhotoCount} /> : <p className="text-xs text-muted-foreground">Review your details first to create a secure draft, then upload clear photos of the service area.</p>}</div>}
     <div className="space-y-1"><Label>Additional notes (optional)</Label><Textarea rows={2} value={notes} onChange={e=>{setNotes(e.target.value);setPrice(null);}}/></div>
-    {config.photo_mode==='optional'&&<p className="text-xs text-muted-foreground">Photos are optional. Our team may request them later if needed.</p>}
     <Button className="w-full" variant="outline" onClick={()=>void review()} disabled={saving}>{saving?'Calculating…':'Review details & calculate estimate'}</Button>
     {price&&<Card className="border-primary/30"><CardHeader className="pb-2"><CardTitle className="flex items-center justify-between text-sm"><span>Server-calculated estimate</span><Badge variant="outline">{price.status==='quotation_required'?'Quotation required':'Calculated'}</Badge></CardTitle></CardHeader><CardContent className="space-y-3">
       {price.status==='priced'?<div className="text-2xl font-bold">{formatKes(Number(price.total)||0)}</div>:<p className="text-sm">Our team will prepare a formal quotation. No price has been assumed.</p>}
