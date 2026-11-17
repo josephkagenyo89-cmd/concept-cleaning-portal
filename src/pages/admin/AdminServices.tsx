@@ -56,14 +56,14 @@ import {
   downloadServicesPdf,
 } from '@/lib/servicesIo';
 import ServiceCategoriesDialog from '@/components/admin/ServiceCategoriesDialog';
-import { fetchServiceCategoriesStrict } from '@/lib/serviceCategories';
+import { fetchServiceCategoriesStrict, type ServiceCategory } from '@/lib/serviceCategories';
 import { ImportServicesModal } from '../../components/admin/ImportServicesModal';
 
 interface FormState {
   name: string;
   description: string;
   base_price: string;
-  category: string;
+  category_id: string;
   commission_eligible: boolean;
 }
 
@@ -73,13 +73,13 @@ const defaultForm: FormState = {
   name: '',
   description: '',
   base_price: '',
-  category: '',
+  category_id: '',
   commission_eligible: true,
 };
 
 export default function AdminServices() {
   const [services, setServices] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
@@ -126,15 +126,11 @@ export default function AdminServices() {
         return;
       }
 
-      const activeCategories = (result.data || [])
-        .filter((category) => category.is_active)
-        .map((category) => category.name);
-
+      const activeCategories = (result.data || []).filter((category) => category.is_active);
       setCategories(activeCategories);
-
       setActiveTab((previous) => {
         if (previous === ALL_SERVICES) return ALL_SERVICES;
-        if (previous && activeCategories.includes(previous)) return previous;
+        if (previous && activeCategories.some((category) => category.id === previous)) return previous;
         return ALL_SERVICES;
       });
     } catch (error) {
@@ -163,19 +159,8 @@ export default function AdminServices() {
   // The official database catalogue is the only source for category tabs.
   const tabs = categories;
 
-  // Keep an existing unavailable category visible while editing.
-  // It cannot be saved until the user selects an active category.
-  const editCategoryOptions = useMemo(() => {
-    if (
-      !editId ||
-      !form.category ||
-      categories.includes(form.category)
-    ) {
-      return categories;
-    }
-
-    return [form.category, ...categories];
-  }, [editId, form.category, categories]);
+  // Service editing only offers active categories from the authoritative catalogue.
+  // Unlinked or archived services must be assigned to an active category before saving.
 
   // Reconciliation is based on missing official category links,
   // not on whether legacy category text matches a current category name.
@@ -234,7 +219,9 @@ export default function AdminServices() {
   const resetForm = () => {
     setForm({
       ...defaultForm,
-      category: activeTab || tabs[0] || '',
+      category_id: activeTab !== ALL_SERVICES && categories.some((category) => category.id === activeTab)
+        ? activeTab
+        : categories[0]?.id || '',
     });
     setEditId(null);
   };
@@ -249,7 +236,7 @@ export default function AdminServices() {
       name: service.name,
       description: service.description || '',
       base_price: String(service.base_price ?? ''),
-      category: service.category || tabs[0] || '',
+      category_id: service.category_id || '',
       commission_eligible: service.commission_eligible ?? true,
     });
 
@@ -267,7 +254,7 @@ export default function AdminServices() {
       return;
     }
 
-    if (!form.category || !categories.includes(form.category)) {
+    if (!form.category_id || !categories.some((category) => category.id === form.category_id)) {
       toast({
         title: 'Invalid category',
         description: 'Select an active category from the official catalogue.',
@@ -292,7 +279,7 @@ export default function AdminServices() {
         name: form.name.trim(),
         description: form.description.trim(),
         base_price: Number(form.base_price) || 0,
-        category: form.category,
+        category_id: form.category_id,
         commission_eligible: form.commission_eligible,
         pricing_model: 'fixed',
         pricing_unit: 'fixed',
@@ -413,15 +400,8 @@ export default function AdminServices() {
   };
 
   const filtered = services.filter((service) => {
-    const serviceCategory = (
-      service.service_category?.name || service.category || ''
-    ).trim().toLocaleLowerCase();
-
-    const selectedCategory = activeTab.trim().toLocaleLowerCase();
-
-    const matchesCategory =
-      activeTab === ALL_SERVICES ||
-      serviceCategory === selectedCategory;
+    const serviceCategoryId = String(service.category_id || '');
+    const matchesCategory = activeTab === ALL_SERVICES || serviceCategoryId === activeTab;
 
     const matchesSearch =
       service.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -502,13 +482,8 @@ export default function AdminServices() {
                 <div>
                   <Label>Category</Label>
                   <Select
-                    value={form.category}
-                    onValueChange={(value) =>
-                      setForm((current) => ({
-                        ...current,
-                        category: value,
-                      }))
-                    }
+                    value={form.category_id}
+                    onValueChange={(value) => setForm((current) => ({ ...current, category_id: value }))}
                     disabled={
                       categoriesLoading ||
                       Boolean(categoryError) ||
@@ -520,22 +495,14 @@ export default function AdminServices() {
                     </SelectTrigger>
 
                     <SelectContent>
-                      {editCategoryOptions.map((category) => {
-                        const isUnavailable = !categories.includes(category);
-
-                        return (
-                          <SelectItem key={category} value={category}>
-                            {isUnavailable
-                              ? `${category} (inactive or unregistered — reassign)`
-                              : category}
-                          </SelectItem>
-                        );
-                      })}
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Manage the list from the Categories button.
+                    Choose an active category. Unlinked or archived services must be assigned to an active category before saving.
                   </p>
                 </div>
 
@@ -601,7 +568,7 @@ export default function AdminServices() {
                     loading ||
                     categoriesLoading ||
                     Boolean(categoryError) ||
-                    !categories.includes(form.category) ||
+                    !categories.some((category) => category.id === form.category_id) ||
                     !form.name.trim()
                   }
                   className="w-full"
@@ -699,9 +666,7 @@ export default function AdminServices() {
                 Service categories need reconciliation
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                These category values exist on service records but are not
-                active in the official category catalogue. They have not been
-                added automatically.
+                These are legacy category labels on services without an official category link. They are shown only to help you review and manually assign the correct official category. No category is guessed or created automatically.
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 {unregisteredCategories.map((category) => (
@@ -731,9 +696,7 @@ export default function AdminServices() {
             <SelectContent>
               <SelectItem value={ALL_SERVICES}>All Services</SelectItem>
               {tabs.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
+                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

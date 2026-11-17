@@ -83,26 +83,9 @@ const emptyForm: CategoryForm = {
   image_key: 'residential',
 };
 
-function categoryCountKey(name: string): string {
-  return name.trim().toLocaleLowerCase();
-}
-
-function getCategoryServiceCount(
-  categoryId: string,
-  categoryName: string,
-  serviceCounts: Record<string, number>,
-  unlinkedServiceCounts: Record<string, number>,
-): number {
-  const normalizedName = categoryCountKey(categoryName);
-  const unlinkedCount = Object.entries(unlinkedServiceCounts).reduce(
-    (total, [legacyName, count]) =>
-      categoryCountKey(legacyName) === normalizedName
-        ? total + count
-        : total,
-    0,
-  );
-
-  return (serviceCounts[categoryId] || 0) + unlinkedCount;
+function getCategoryServiceCount(categoryId: string, serviceCounts: Record<string, number>): number {
+  // Only category_id links count as assigned; legacy text is never matched by name.
+  return serviceCounts[categoryId] || 0;
 }
 
 function getServiceSnapshot(services: ReconciliationService[]) {
@@ -694,7 +677,7 @@ export default function ServiceCategoriesDialog({
                           Total services
                         </p>
                         <p className="text-sm">
-                          {getCategoryServiceCount(editing.id, editing.name, serviceCounts, unlinkedServiceCounts)}
+                          {getCategoryServiceCount(editing.id, serviceCounts)}
                         </p>
                       </div>
                     ) : null}
@@ -854,12 +837,7 @@ export default function ServiceCategoriesDialog({
                   ) : (
                     <div className="space-y-3">
                       {sorted.map((row) => {
-                        const count = getCategoryServiceCount(
-                          row.id,
-                          row.name,
-                          serviceCounts,
-                          unlinkedServiceCounts,
-                        );
+                        const count = getCategoryServiceCount(row.id, serviceCounts);
 
                         return (
                           <div
@@ -1098,7 +1076,7 @@ export default function ServiceCategoriesDialog({
               {deleteTarget ? (
                 <>
                   You are about to archive <strong>{deleteTarget.name}</strong>.
-                  There are {getCategoryServiceCount(deleteTarget.id, deleteTarget.name, serviceCounts, unlinkedServiceCounts)} total services. The category will become unavailable for new
+                  There are {getCategoryServiceCount(deleteTarget.id, serviceCounts)} service(s) linked by category ID. The category will become unavailable for new
                   assignments, but its assigned services will remain active
                   and their existing records will be preserved.
                 </>

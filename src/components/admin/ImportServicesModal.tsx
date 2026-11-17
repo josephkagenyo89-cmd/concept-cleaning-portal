@@ -15,7 +15,7 @@ interface PreviewRow {
     id: string | null;
     service_code: string | null;
     name: string;
-    category: string;
+    category_name: string;
     category_id: string;
     description: string;
     short_description: string;
@@ -27,6 +27,7 @@ interface PreviewRow {
     provided: string[];
   };
   errors: string[];
+  parseErrors: string[];
 }
 
 interface ImportServicesModalProps {
@@ -37,8 +38,12 @@ interface ImportServicesModalProps {
 
 const normalize = (value: unknown) => String(value ?? '').trim().toLowerCase();
 const hasValue = (value: unknown) => value !== undefined && value !== null && String(value).trim() !== '';
-const parseBoolean = (value: unknown, trueWords: string[]) =>
-  trueWords.includes(String(value ?? '').trim().toLowerCase());
+const parseBoolean = (value: unknown): boolean | null => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['yes', 'true', '1', 'y', 'active'].includes(normalized)) return true;
+  if (['no', 'false', '0', 'n', 'inactive'].includes(normalized)) return false;
+  return null;
+};
 
 export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportServicesModalProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -55,64 +60,61 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
   const validateRows = async (rows: PreviewRow[]): Promise<PreviewRow[]> => {
     const [{ data: existingServices, error: servicesError }, { data: categories, error: categoriesError }] = await Promise.all([
-      supabase.from('services').select('id,name'),
-      supabase.from('service_categories' as any).select('id,name'),
+      supabase.from('services').select('id,name,category_id'),
+      supabase.from('service_categories' as any).select('id,name,is_active'),
     ]);
     if (servicesError) throw new Error('Could not check existing services: ' + servicesError.message);
     if (categoriesError) throw new Error('Could not load service categories: ' + categoriesError.message);
 
-    const existingIds = new Set((existingServices || []).map((service: any) => String(service.id)));
+    const existingById = new Map((existingServices || []).map((service: any) => [String(service.id), service]));
     const existingNames = new Set((existingServices || []).map((service: any) => normalize(service.name)));
-    const categoryList = (categories || []) as unknown as Array<{ id: string; name: string }>;
+    const categoryList = (categories || []) as unknown as Array<{ id: string; name: string; is_active: boolean }>;
     const categoriesById = new Map(categoryList.map(category => [category.id.toLowerCase(), category]));
-    const categoriesByName = new Map<string, Array<{ id: string; name: string }>>();
-    categoryList.forEach(category => {
-      const key = normalize(category.name);
-      categoriesByName.set(key, [...(categoriesByName.get(key) || []), category]);
-    });
 
     const seenIds = new Set<string>();
     const seenNames = new Set<string>();
 
     return rows.map(row => {
       const data = { ...row.data };
-      const errors: string[] = [];
+      const errors: string[] = [...row.parseErrors];
       const id = data.id?.trim() || '';
+      const existing = id ? existingById.get(id) as any : null;
       const nameKey = normalize(data.name);
+      const isProvided = (...keys: string[]) => keys.some(key => data.provided.includes(key));
 
-      if (!data.name?.trim()) errors.push('Missing Service Name');
       if (id) {
-        if (!existingIds.has(id)) errors.push('Service ID was not found; refusing to create a replacement');
+        if (!existing) errors.push('Service ID was not found; refusing to create a replacement');
         if (seenIds.has(id)) errors.push('Duplicate Service ID in import file');
         seenIds.add(id);
+        if (existing && !data.name.trim()) data.name = String(existing.name || '');
+        if (existing && !data.category_id.trim()) data.category_id = String(existing.category_id || '');
       } else {
+        if (!data.name?.trim()) errors.push('Missing Service Name');
         if (existingNames.has(nameKey)) errors.push('Duplicate Name: existing services must include their ID to update');
         if (seenNames.has(nameKey)) errors.push('Duplicate Service Name in import file');
         seenNames.add(nameKey);
         if (!data.service_code?.trim()) errors.push('Missing Code for new service');
+        if (!data.category_id.trim()) errors.push('Missing service_category_id UUID for new service');
+        if (!hasValue(data.base_price)) errors.push('Missing Price for new service');
       }
 
-      if (!data.category?.trim()) {
-        errors.push('Missing Service Category');
-      } else if (data.category_id?.trim()) {
-        if (!categoriesById.has(data.category_id.trim().toLowerCase())) {
-          errors.push('Service Category UUID does not exist in service_categories');
-        }
+      if (data.category_id.trim()) {
+        const category = categoriesById.get(data.category_id.trim().toLowerCase());
+        const categoryChanged = !id || data.category_id.trim().toLowerCase() !== String(existing?.category_id || '').toLowerCase();
+        if (!category) errors.push('Service Category UUID does not exist in service_categories');
+        else if (categoryChanged && !category.is_active) errors.push('Choose an active service category when changing category_id');
+        data.category_name = category?.name || '';
       } else {
-        const matches = categoriesByName.get(normalize(data.category)) || [];
-        if (matches.length === 1) {
-          data.category_id = matches[0].id;
-        } else if (matches.length === 0) {
-          errors.push('No exact category match found; provide service_category_id explicitly');
-        } else {
-          errors.push('Category name is ambiguous; provide service_category_id explicitly');
-        }
+        data.category_name = '';
       }
 
-      if (!id || hasValue(data.base_price)) {
+      if ((!id || isProvided('price (ksh)', 'base_price')) && hasValue(data.base_price)) {
         const price = Number(data.base_price);
         if (!Number.isFinite(price) || price < 0) errors.push('Invalid Price');
       }
+
+      const editableFields = data.provided.filter(key => !['id', 'service_category', 'category'].includes(key));
+      if (id && editableFields.length === 0) errors.push('No update fields supplied. Add at least one editable field besides the ID.');
 
       return { ...row, data, errors };
     });
@@ -151,6 +153,11 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
         const provided = Object.keys(row);
         const commissionValue = read('commission', 'commission_eligible');
         const statusValue = read('status', 'is_active');
+        const commissionParsed = hasValue(commissionValue) ? parseBoolean(commissionValue) : null;
+        const statusParsed = hasValue(statusValue) ? parseBoolean(statusValue) : null;
+        const parseErrors: string[] = [];
+        if (hasValue(commissionValue) && commissionParsed === null) parseErrors.push('Invalid commission_eligible value; use yes/no, true/false, or 1/0');
+        if (hasValue(statusValue) && statusParsed === null) parseErrors.push('Invalid is_active value; use active/inactive, yes/no, true/false, or 1/0');
 
         return {
           index: index + 1,
@@ -158,18 +165,19 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
             id: hasValue(read('id')) ? String(read('id')).trim() : null,
             service_code: hasValue(read('code', 'service_code')) ? String(read('code', 'service_code')).trim() : null,
             name: String(read('service', 'name') || '').trim(),
-            category: String(read('service_category', 'category') || '').trim(),
+            category_name: '',
             category_id: String(read('service_category_id', 'category_id') || '').trim(),
             description: String(read('description') || ''),
             short_description: String(read('short description', 'short_description') || ''),
             base_price: String(read('price (ksh)', 'base_price') || ''),
             pricing_unit: String(read('pricing unit', 'pricing_unit') || ''),
             estimated_duration: String(read('estimated duration', 'estimated_duration') || ''),
-            commission_eligible: parseBoolean(commissionValue, ['yes', 'true', '1', 'y']),
-            is_active: statusValue === '' ? true : parseBoolean(statusValue, ['active', 'yes', 'true', '1', 'y']),
+            commission_eligible: commissionParsed ?? true,
+            is_active: statusParsed ?? true,
             provided: Object.keys(row).filter(key => hasValue(row[key])),
           },
           errors: [],
+          parseErrors,
         };
       });
 
@@ -200,9 +208,28 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
   };
 
   const updateRowData = (index: number, field: string, value: any) => {
-    setPreview(previous => previous.map(row => row.index === index
-      ? { ...row, data: { ...row.data, [field]: value } }
-      : row));
+    const providedKey: Record<string, string> = {
+      name: 'name', service_code: 'service_code', category_id: 'service_category_id',
+      base_price: 'base_price', commission_eligible: 'commission_eligible', is_active: 'is_active',
+    };
+    setPreview(previous => previous.map(row => {
+      if (row.index !== index) return row;
+      const key = providedKey[field];
+      const parseErrors = field === 'commission_eligible'
+        ? row.parseErrors.filter(error => !error.startsWith('Invalid commission_eligible'))
+        : field === 'is_active'
+          ? row.parseErrors.filter(error => !error.startsWith('Invalid is_active'))
+          : row.parseErrors;
+      return {
+        ...row,
+        data: {
+          ...row.data,
+          [field]: value,
+          provided: key ? Array.from(new Set([...row.data.provided, key])) : row.data.provided,
+        },
+        parseErrors,
+      };
+    }));
   };
 
   const confirmImport = async () => {
@@ -219,15 +246,11 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
 
     try {
       for (const { data: row } of validRows) {
-        // The live schema currently uses category/category_id. CSV accepts both
-        // those legacy headers and service_category/service_category_id aliases.
-        const payload: Record<string, any> = {
-          name: row.name,
-          category: row.category,
-          category_id: row.category_id,
-        };
+        const payload: Record<string, any> = {};
         const isProvided = (...keys: string[]) => keys.some(key => row.provided.includes(key));
 
+        if (isProvided('service', 'name')) payload.name = row.name.trim();
+        if (isProvided('service_category_id', 'category_id')) payload.category_id = row.category_id.trim();
         if (isProvided('description')) payload.description = row.description;
         if (isProvided('short description', 'short_description')) payload.short_description = row.short_description;
         if (isProvided('price (ksh)', 'base_price')) payload.base_price = Number(row.base_price);
@@ -253,12 +276,13 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
         }
 
         const result = row.id
-          ? await supabase.from('services').update(payload as any).eq('id', row.id)
-          : await supabase.from('services').insert(payload as any);
+          ? await supabase.from('services').update(payload as any).eq('id', row.id).select('id')
+          : await supabase.from('services').insert(payload as any).select('id');
 
-        if (result.error) {
-          failedRows.push((row.name || 'Unnamed') + ': ' + result.error.message);
-          const failedPreviewRow = validRows.find(item => item.data.id === row.id && item.data.name === row.name);
+        if (result.error || !result.data?.length) {
+          const reason = result.error?.message || 'No service record was affected.';
+          failedRows.push((row.name || row.id || 'Unnamed') + ': ' + reason);
+          const failedPreviewRow = validRows.find(item => item.index === row.index);
           if (failedPreviewRow) failedIndexes.add(failedPreviewRow.index);
         } else if (row.id) {
           updated++;
@@ -388,8 +412,8 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
                       <TableCell className="font-mono text-xs">{row.data.id || 'NEW'}</TableCell>
                       <TableCell>{row.data.service_code || '—'}</TableCell>
                       <TableCell>{row.data.name}</TableCell>
-                      <TableCell>{row.data.category}</TableCell>
-                      <TableCell className="font-mono text-xs">{row.data.category_id}</TableCell>
+                      <TableCell>{row.data.category_name || 'Unassigned'}</TableCell>
+                      <TableCell className="font-mono text-xs">{row.data.category_id || '—'}</TableCell>
                       <TableCell>{row.data.base_price || '—'}</TableCell>
                       <TableCell>{row.data.is_active ? 'Active' : 'Inactive'}</TableCell>
                     </TableRow>)}
@@ -409,16 +433,18 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
                     <TableHeader><TableRow>
                       <TableHead>ID</TableHead><TableHead>Code</TableHead><TableHead>Service</TableHead>
                       <TableHead>Category</TableHead><TableHead>Category UUID</TableHead>
-                      <TableHead>Price</TableHead><TableHead>Errors</TableHead>
+                      <TableHead>Price</TableHead><TableHead>Commission</TableHead><TableHead>Status</TableHead><TableHead>Errors</TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
                       {invalidRows.map(row => <TableRow key={row.index}>
                         <TableCell className="font-mono text-xs">{row.data.id || 'NEW'}</TableCell>
                         <TableCell><EditableCell row={row} field="service_code" /></TableCell>
                         <TableCell><EditableCell row={row} field="name" /></TableCell>
-                        <TableCell><EditableCell row={row} field="category" /></TableCell>
+                        <TableCell>{row.data.category_name || 'Unassigned'}</TableCell>
                         <TableCell><EditableCell row={row} field="category_id" /></TableCell>
                         <TableCell><EditableCell row={row} field="base_price" type="number" /></TableCell>
+                        <TableCell><EditableCell row={row} field="commission_eligible" type="checkbox" /></TableCell>
+                        <TableCell><EditableCell row={row} field="is_active" type="checkbox" /></TableCell>
                         <TableCell>
                           <ul className="list-disc list-inside text-xs text-red-500">
                             {row.errors.map((error, index) => <li key={index}>{error}</li>)}
@@ -429,7 +455,7 @@ export function ImportServicesModal({ open, onOpenChange, onSuccess }: ImportSer
                   </Table>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Existing services must include their ID. Blank category UUIDs are resolved only by an exact category-name match.
+                  New services require a valid active service_category_id UUID. Existing services must include their ID; omitted fields are preserved. Category names are display-only and are never used to guess or assign a category. Correct invalid values in the preview and press Revalidate.
                 </p>
               </div>
             )}
