@@ -307,6 +307,16 @@ DECLARE
   v_keys text[] := ARRAY['instructions','questions','pricing','scope','offers','final_review'];
 BEGIN
   IF NEW.enabled IS TRUE AND OLD.enabled IS DISTINCT FROM TRUE THEN
+    -- Do not allow configuration fields and enabled=true to be changed in one
+    -- statement; fingerprints are checked against the persisted configuration.
+    IF NEW.customer_instructions IS DISTINCT FROM OLD.customer_instructions
+       OR NEW.photo_mode IS DISTINCT FROM OLD.photo_mode
+       OR NEW.photo_min IS DISTINCT FROM OLD.photo_min
+       OR NEW.photo_max IS DISTINCT FROM OLD.photo_max
+       OR NEW.measurement_config IS DISTINCT FROM OLD.measurement_config
+       OR NEW.availability_config IS DISTINCT FROM OLD.availability_config THEN
+      RAISE EXCEPTION 'Save configuration changes first, then review and approve the affected setup steps before enabling.';
+    END IF;
     IF auth.uid() IS NULL OR NOT public.is_admin_or_super(auth.uid()) THEN
       RAISE EXCEPTION 'Only admins and super admins may enable a Smart Booking service';
     END IF;
