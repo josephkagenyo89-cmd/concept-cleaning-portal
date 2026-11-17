@@ -71,7 +71,6 @@ export default function AdminBookingEngine() {
 
  const create=async()=>{setSaving(true);const r=await db.from('booking_engine_service_config').insert({service_id:serviceId,enabled:false}).select('*').single();if(r.error)toast({title:'Create failed',description:r.error.message,variant:'destructive'});else{setConfigs(x=>[...x,r.data]);setConfig(r.data);toast({title:'Disabled configuration created'});}setSaving(false);};
   const activationIssue=(measurementConfig:any)=>{
-   if(photoMode==='required')return 'Required photo upload is not available yet. Keep photo mode optional or none.';
    const activeRules=pricing.filter(x=>x.active);
    if(activeRules.some(x=>['per_unit','tiered'].includes(x.pricing_type))&&measurementConfig?.quantity?.enabled!==true)return 'Per-unit and tiered pricing require measurement_config.quantity.enabled=true and a customer-facing quantity label.';
    for(const rule of activeRules.filter(x=>x.pricing_type==='per_measurement')){

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CalendarDays,
@@ -23,6 +24,8 @@ import {
   primePdfSettings,
 } from '@/lib/customerDownloads';
 
+const db = supabase as any;
+
 export default function CustomerBookings() {
   const { user, isCustomer, customerClient } = useAuth();
   const { settings } = useSettings();
@@ -33,7 +36,11 @@ export default function CustomerBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [quotations, setQuotations] = useState<any[]>([]);
   const [engineRequests, setEngineRequests] = useState<any[]>([]);
+  const [engineRequestItems, setEngineRequestItems] = useState<Record<string, any[]>>({});
+  const [engineRequestOffers, setEngineRequestOffers] = useState<Record<string, any>>({});
   const [requestAction, setRequestAction] = useState('');
+  const [requestEvents, setRequestEvents] = useState<Record<string, any[]>>({});
+  const [clarificationReplies, setClarificationReplies] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [feedbackFor, setFeedbackFor] =
     useState<any | null>(null);
@@ -59,20 +66,54 @@ export default function CustomerBookings() {
 
       setBookings(b.data || []);
       setQuotations(q.data || []);
-      setEngineRequests(r.data || []);
+      const requestRows = r.data || [];
+      setEngineRequests(requestRows);
+      const requestIds = requestRows.map((row: any) => row.id);
+      if (requestIds.length) {
+        const [history, itemResult, offerResult] = await Promise.all([
+          supabase.from('booking_engine_request_events').select('id,request_id,event_type,from_status,to_status,message,actor_name,created_at').in('request_id', requestIds).order('created_at', { ascending: false }),
+          db.from('booking_engine_request_items').select('id,request_id,service_id,quantity,pricing_snapshot,scope_snapshot,service:services(name)').in('request_id', requestIds).order('display_order'),
+          db.from('booking_engine_request_offers').select('request_id,offer_snapshot').in('request_id', requestIds),
+        ]);
+        if (itemResult.error || offerResult.error) toast({ title: 'Could not load request service details', description: itemResult.error?.message || offerResult.error?.message, variant: 'destructive' });
+        const itemGroups: Record<string, any[]> = {};
+        (itemResult.data || []).forEach((item: any) => { (itemGroups[item.request_id] ||= []).push(item); });
+        setEngineRequestItems(itemGroups);
+        const offerGroups: Record<string, any> = {};
+        (offerResult.data || []).forEach((row: any) => { offerGroups[row.request_id] = row.offer_snapshot; });
+        setEngineRequestOffers(offerGroups);
+        if (history.error) toast({ title: 'Could not load request history', description: history.error.message, variant: 'destructive' });
+        const grouped: Record<string, any[]> = {};
+        (history.data || []).forEach((event: any) => { (grouped[event.request_id] ||= []).push(event); });
+        setRequestEvents(grouped);
+      } else { setRequestEvents({}); setEngineRequestItems({}); setEngineRequestOffers({}); }
       setLoading(false);
     })();
   }, [user, isCustomer]);
 
-  const handleEngineRequestAction = async (request: any, action: 'accept' | 'reject' | 'confirm' = 'confirm') => {
+  const refreshRequestHistory = async (requestId: string) => {
+    const history = await supabase.from('booking_engine_request_events').select('id,request_id,event_type,from_status,to_status,message,actor_name,created_at').eq('request_id', requestId).order('created_at', { ascending: false });
+    if (!history.error) setRequestEvents(rows => ({ ...rows, [requestId]: history.data || [] }));
+  };
+
+  const handleEngineRequestAction = async (request: any, action: 'accept' | 'reject' | 'confirm' | 'cancel' = 'confirm') => {
     setRequestAction(request.id);
     try {
+      if (action === 'cancel') {
+        const cancelled = await supabase.rpc('cancel_booking_engine_request', { _request_id: request.id, _reason: 'Customer cancelled from My Bookings.' } as any);
+        if (cancelled.error) throw cancelled.error;
+        setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'cancelled' } : row));
+        await refreshRequestHistory(request.id);
+        toast({ title: 'Request cancelled', description: 'The request has been cancelled.' });
+        return;
+      }
       if (action === 'reject') {
         const rejected = await supabase.rpc('reject_booking_engine_quotation', {
           _request_id: request.id, _reason: 'Customer declined the quotation from My Bookings.',
         } as any);
         if (rejected.error) throw rejected.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'rejected' } : row));
+        await refreshRequestHistory(request.id);
         toast({ title: 'Quotation declined', description: 'The request has been marked as rejected.' });
         return;
       }
@@ -80,6 +121,7 @@ export default function CustomerBookings() {
         const accepted = await supabase.rpc('accept_booking_engine_quotation', { _request_id: request.id } as any);
         if (accepted.error) throw accepted.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'customer_accepted' } : row));
+        await refreshRequestHistory(request.id);
         toast({ title: 'Quotation accepted', description: 'You can now confirm the booking when ready.' });
         return;
       }
@@ -93,6 +135,7 @@ export default function CustomerBookings() {
       const converted = await supabase.rpc('convert_booking_engine_request', { _request_id: request.id } as any);
         if (converted.error) throw converted.error;
         setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'converted', converted_booking_id: converted.data?.booking_id || row.converted_booking_id } : row));
+        await refreshRequestHistory(request.id);
         toast({ title: 'Booking confirmed', description: converted.data?.booking_code ? 'Booking reference: ' + converted.data.booking_code : 'Your request has been converted to a booking.' });
         const refreshed = await supabase.from('bookings').select('*, service_time, services(name)').order('created_at',{ascending:false});
         if (!refreshed.error) setBookings(refreshed.data || []);
@@ -101,6 +144,23 @@ export default function CustomerBookings() {
     } finally {
       setRequestAction('');
     }
+  };
+
+  const sendClarificationResponse = async (request: any) => {
+    const response = (clarificationReplies[request.id] || '').trim();
+    if (!response) { toast({ title: 'Enter your response first', variant: 'destructive' }); return; }
+    setRequestAction(request.id);
+    try {
+      const result = await supabase.rpc('respond_booking_engine_clarification', { _request_id: request.id, _response: response } as any);
+      if (result.error) throw result.error;
+      setEngineRequests(rows => rows.map(row => row.id === request.id ? { ...row, status: 'under_review' } : row));
+      setClarificationReplies(rows => ({ ...rows, [request.id]: '' }));
+      const history = await supabase.from('booking_engine_request_events').select('id,request_id,event_type,from_status,to_status,message,actor_name,created_at').eq('request_id', request.id).order('created_at', { ascending: false });
+      if (!history.error) setRequestEvents(rows => ({ ...rows, [request.id]: history.data || [] }));
+      toast({ title: 'Response sent', description: 'Our team will continue reviewing your request.' });
+    } catch (error: any) {
+      toast({ title: 'Could not send response', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally { setRequestAction(''); }
   };
 
 
@@ -138,6 +198,8 @@ export default function CustomerBookings() {
                 <Badge variant="secondary" className="capitalize">{String(request.status).replaceAll('_',' ')}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">{request.service_location || 'Location not provided'}</p>
+              {engineRequestOffers[request.id]?.title && <div className="rounded-lg border bg-muted/20 p-3"><p className="text-xs font-semibold">Selected package / offer</p><p className="mt-1 text-sm font-medium">{engineRequestOffers[request.id].title}</p>{engineRequestOffers[request.id].description && <p className="mt-1 text-xs text-muted-foreground">{engineRequestOffers[request.id].description}</p>}{Array.isArray(engineRequestOffers[request.id].included_services) && engineRequestOffers[request.id].included_services.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Includes: {engineRequestOffers[request.id].included_services.map((item:any)=>item.name).filter(Boolean).join(', ')}</p>}</div>}
+              {engineRequestItems[request.id]?.length > 0 && <div className="space-y-1 rounded-lg border p-3"><p className="text-xs font-semibold">Requested services</p>{engineRequestItems[request.id].map((item:any)=><div key={item.id} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span>{item.service?.name || 'Service'} · Qty {item.quantity ?? 1}</span>{item.pricing_snapshot?.total != null && <b>{formatKes(Number(item.pricing_snapshot.total))}</b>}</div>)}</div>}
               {request.quotation?.quotation_number && <div className="flex items-center justify-between rounded bg-muted/50 p-2 text-sm"><span>Quotation {request.quotation.quotation_number}</span><b>{formatKes(Number(request.quotation.price))}</b></div>}
               {request.status === 'quote_prepared' && <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => void handleEngineRequestAction(request, 'accept')} disabled={!!requestAction}>Accept quotation</Button>
@@ -146,6 +208,10 @@ export default function CustomerBookings() {
                 }} disabled={!!requestAction}>Decline quotation</Button>
               </div>}
               {(request.status === 'customer_accepted' || request.status === 'ready_for_booking') && <Button size="sm" onClick={() => void handleEngineRequestAction(request, 'confirm')} disabled={!!requestAction}>{requestAction===request.id?'Confirming…':'Confirm booking'}</Button>}
+              {request.status === 'awaiting_customer' && <div className="space-y-2 rounded-lg border p-3"><p className="text-sm font-medium">Our team needs more information</p><Textarea rows={3} maxLength={3000} value={clarificationReplies[request.id] || ''} onChange={e => setClarificationReplies(rows => ({ ...rows, [request.id]: e.target.value }))} placeholder="Type your response…"/><Button size="sm" onClick={() => void sendClarificationResponse(request)} disabled={!!requestAction || !(clarificationReplies[request.id] || '').trim()}>{requestAction===request.id?'Sending…':'Send response'}</Button></div>}
+              {requestEvents[request.id]?.length > 0 && <details className="rounded-lg border p-3"><summary className="cursor-pointer text-xs font-semibold">Request activity ({requestEvents[request.id].length})</summary><ol className="mt-3 space-y-2">{requestEvents[request.id].map((event:any)=><li key={event.id} className="border-l-2 pl-3"><div className="flex flex-wrap justify-between gap-2"><span className="text-xs font-medium capitalize">{String(event.event_type).replaceAll('_',' ')}</span><span className="text-[11px] text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span></div>{event.message&&<p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{event.message}</p>}</li>)}</ol></details>}
+              {['submitted','under_review','awaiting_customer','approved','quote_required','quote_prepared','customer_accepted','ready_for_booking'].includes(request.status) && <Button size="sm" variant="outline" onClick={() => { if (window.confirm('Cancel this guided booking request?')) void handleEngineRequestAction(request, 'cancel'); }} disabled={!!requestAction}>Cancel request</Button>}
+              {request.status === 'cancelled' && <p className="text-xs text-muted-foreground">This request has been cancelled.</p>}
               {request.status === 'rejected' && <p className="text-xs text-muted-foreground">This quotation was declined and the request is closed.</p>}
               {request.status === 'converted' && <p className="text-xs font-medium text-emerald-700">Converted to an ERP booking.</p>}
               {['submitted','under_review','awaiting_customer','approved','quote_required'].includes(request.status) && <p className="text-xs text-muted-foreground">Our team is reviewing this request. No appointment has been confirmed yet.</p>}

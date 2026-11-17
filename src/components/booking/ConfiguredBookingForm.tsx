@@ -16,6 +16,7 @@ import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpl
 
 type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean };
+const db = supabase as any;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
 const optionsFor = (value: any) => Array.isArray(value) ? value.map((x: any) => {
  if (typeof x === 'string') return { value: x, label: x };
@@ -60,9 +61,9 @@ const matches = (rule: Row, value: any) => {
 export default function ConfiguredBookingForm({ serviceId, serviceName, initialNotes = '', quoteMode = false }: Props) {
   const { user, customerClient } = useAuth();
   const navigate = useNavigate();
-  const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]);
+  const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]), [offerOptions,setOfferOptions] = useState<Row[]>([]), [offerServices,setOfferServices] = useState<Row[]>([]);
   const [loading,setLoading] = useState(true), [error,setError] = useState('');
-  const [answers,setAnswers] = useState<Record<string,any>>({}), [extras,setExtras] = useState<string[]>([]);
+  const [answers,setAnswers] = useState<Record<string,any>>({}), [extras,setExtras] = useState<string[]>([]), [selectedOfferId,setSelectedOfferId] = useState('');
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
@@ -79,14 +80,15 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       if (c.error) { if(live) setError(c.error.message); }
       else if (!c.data) { if(live) setError('Guided booking is not enabled for this service.'); }
       else {
-        const [q,s] = await Promise.all([
+        const [q,s,o] = await Promise.all([
           supabase.from('booking_engine_questions').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order'),
-          supabase.from('booking_engine_service_scope').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order')
+          supabase.from('booking_engine_service_scope').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order'),
+          db.from('booking_engine_value_offer_services').select('offer_id,offer:booking_engine_value_offers!inner(id,offer_key,title,description,terms,offer_type,price_mode,price_value,currency,featured,starts_at,ends_at,updated_at)').eq('service_id',serviceId).eq('relationship','trigger').eq('offer.active',true)
         ]);
         const ids=(q.data||[]).map((x:Row)=>x.id);
         const cond=ids.length?await supabase.from('booking_engine_question_conditions').select('*').in('question_id',ids):{data:[],error:null};
-        if(q.error||cond.error||s.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||'Could not load service setup.');}
-        else if(live){const activeIds=new Set(ids);setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);}
+        if(q.error||cond.error||s.error||o.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||o.error?.message||'Could not load service setup.');}
+        else if(live){const activeIds=new Set(ids);const availableOffers=(o.data||[]).map((row:any)=>row.offer).filter((offer:any)=>offer&&offer.offer_type!=='recurring');setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);setOfferOptions(availableOffers);const offerIds=availableOffers.map((offer:any)=>offer.id);if(offerIds.length){const links=await db.from('booking_engine_value_offer_services').select('offer_id,relationship,quantity,service:services!inner(name,description)').in('offer_id',offerIds);if(links.error){if(live)setError(links.error.message);}else if(live)setOfferServices(links.data||[]);}else setOfferServices([]);}
       }
 
       const saved = window.sessionStorage.getItem(draftKey);
@@ -95,6 +97,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             setDraftId(parsed.id || '');
+            setSelectedOfferId(parsed.selectedOfferId || '');
             setAnswers(parsed.answers || {});
             setExtras(Array.isArray(parsed.extras) ? parsed.extras : []);
             setQuantity(String(parsed.quantity ?? '1'));
@@ -117,6 +120,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
                 .eq('request_id', saved).eq('service_id', serviceId).maybeSingle();
               if (item.data) {
                 setRequestItemId(item.data.id);
+                const savedOffer=await db.from('booking_engine_request_offers').select('offer_id').eq('request_id',saved).maybeSingle();
+                if(live)setSelectedOfferId(savedOffer.data?.offer_id||'');
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 setExtras(Array.isArray(item.data.selected_extras) ? item.data.selected_extras : []);
@@ -143,9 +148,9 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   useEffect(() => {
     if (loadedDraftKey !== draftKey) return;
     window.sessionStorage.setItem(draftKey, JSON.stringify({
-      id: draftId, answers, extras, quantity, date, time, location, notes,
+      id: draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes,
     }));
-  }, [loadedDraftKey, draftKey, draftId, answers, extras, quantity, date, time, location, notes]);
+  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes]);
 
   const visibility = useMemo(() => {
     const out: Record<string,{visible:boolean;required:boolean}> = {};
@@ -241,6 +246,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       const snapshot={configuration_version:config.config_version,included:groups.included.map(x=>({title:x.title,description:x.description})),excluded:groups.excluded.map(x=>({title:x.title,description:x.description})),selected_extras:groups.extra.filter(x=>extras.includes(x.id)).map(x=>({title:x.title,description:x.description}))};
       const saved=await supabase.from('booking_engine_request_items').update({scope_snapshot:snapshot,service_config_version:config.config_version}).eq('id',itemId);
       if(saved.error) throw saved.error;
+      const offerResult=await supabase.rpc('set_booking_engine_request_offer',{_request_id:id,_request_item_id:itemId,_offer_id:selectedOfferId||null} as any);
+      if(offerResult.error) throw offerResult.error;
       const updatedRequest=await supabase.rpc('update_booking_engine_request',{_request_id:id,_requested_date:date,_requested_time:time,_service_location:location.trim(),_customer_notes:requestNotes,_customer_acknowledged_scope:false} as any);
       if(updatedRequest.error) throw updatedRequest.error;
       const priced=await supabase.rpc('calculate_booking_engine_request_price',{_request_id:id} as any);
@@ -317,6 +324,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         :<Input minLength={q.validation_rules?.min_length??undefined} maxLength={q.validation_rules?.max_length??undefined} pattern={q.validation_rules?.pattern||undefined} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>}
       </div>;
     })}</div>}
+    {offerOptions.length>0&&<div className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Packages & value offers</h3><p className="text-xs text-muted-foreground">Choose an available package or offer for this service. The final price is validated by our server.</p><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedOfferId} onChange={e=>{setSelectedOfferId(e.target.value);setPrice(null);}}><option value="">No package or offer</option>{offerOptions.map((offer:any)=><option key={offer.id} value={offer.id}>{offer.title}{offer.price_mode==='fixed'?' · '+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?' · '+Number(offer.price_value||0)+'% off':offer.price_mode==='fixed_discount'?' · '+formatKes(Number(offer.price_value)||0)+' off':' · quotation'}</option>)}</select>{offerOptions.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><div key={offer.id} className="rounded-lg border bg-muted/20 p-3"><p className="text-sm font-semibold">{offer.title}</p>{offer.description&&<p className="mt-1 text-xs text-muted-foreground">{offer.description}</p>}{offer.terms&&<p className="mt-1 text-xs text-muted-foreground">{offer.terms}</p>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<div className="mt-2"><p className="text-xs font-semibold">Included services</p><ul className="mt-1 list-disc pl-5 text-xs">{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any,i:number)=><li key={i}>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''}</li>)}</ul></div>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended').length>0&&<div className="mt-2"><p className="text-xs font-semibold">Recommended additions</p><ul className="mt-1 list-disc pl-5 text-xs">{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended').map((link:any,i:number)=><li key={i}>{link.service?.name||'Service'}</li>)}</ul></div>}</div>)}</div>}
     <div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service scope</h3>
       {groups.included.map(x=><p key={x.id} className="flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600"/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></p>)}
       {groups.excluded.map(x=><p key={x.id} className="text-sm text-muted-foreground">Not included: {x.title}{x.description?' — '+x.description:''}</p>)}
