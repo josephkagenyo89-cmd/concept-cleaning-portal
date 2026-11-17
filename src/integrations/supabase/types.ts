@@ -1149,6 +1149,7 @@ export type Database = {
       }
       booking_engine_questions: {
         Row: {
+          active: boolean
           created_at: string
           description: string | null
           display_order: number
@@ -1157,11 +1158,14 @@ export type Database = {
           label: string
           options: Json
           question_key: string
+          question_template_id: string | null
           required: boolean
           service_config_id: string
           updated_at: string
+          validation_rules: Json
         }
         Insert: {
+          active?: boolean
           created_at?: string
           description?: string | null
           display_order?: number
@@ -1170,11 +1174,14 @@ export type Database = {
           label: string
           options?: Json
           question_key: string
+          question_template_id?: string | null
           required?: boolean
           service_config_id: string
           updated_at?: string
+          validation_rules?: Json
         }
         Update: {
+          active?: boolean
           created_at?: string
           description?: string | null
           display_order?: number
@@ -1183,9 +1190,11 @@ export type Database = {
           label?: string
           options?: Json
           question_key?: string
+          question_template_id?: string | null
           required?: boolean
           service_config_id?: string
           updated_at?: string
+          validation_rules?: Json
         }
         Relationships: [
           {

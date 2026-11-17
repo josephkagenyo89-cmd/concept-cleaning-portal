@@ -17,6 +17,26 @@ type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean };
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
 const optionsFor = (value: any) => Array.isArray(value) ? value.map((x: any) => typeof x === 'string' ? { value: x, label: x } : { value: String(x?.value ?? x?.id ?? x?.label ?? ''), label: String(x?.label ?? x?.value ?? '') }).filter((x: any) => x.value && x.label) : [];
+const answerValidationError = (question: Row, value: any) => {
+ const rules=question.validation_rules||{};
+ if(value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length))return '';
+ if(['number','measurement'].includes(question.input_type)){
+  const n=Number(value);
+  if(!Number.isFinite(n))return 'Enter a valid number.';
+  if(rules.min!==undefined&&n<Number(rules.min))return 'Enter at least '+rules.min+'.';
+  if(rules.max!==undefined&&n>Number(rules.max))return 'Enter no more than '+rules.max+'.';
+  return '';
+ }
+ if(question.input_type==='boolean')return typeof value==='boolean'?'':'Choose yes or no.';
+ const options=optionsFor(question.options);
+ if(question.input_type==='select')return options.some((option:any)=>option.value===String(value))?'':'Choose one of the listed options.';
+ if(question.input_type==='multi_select')return Array.isArray(value)&&value.every((entry:any)=>options.some((option:any)=>option.value===String(entry)))?'':'Choose only from the listed options.';
+ const text=String(value);
+ if(rules.min_length!==undefined&&text.length<Number(rules.min_length))return 'Enter at least '+rules.min_length+' characters.';
+ if(rules.max_length!==undefined&&text.length>Number(rules.max_length))return 'Use no more than '+rules.max_length+' characters.';
+ if(rules.pattern){try{if(!new RegExp(rules.pattern).test(text))return 'Use the requested format.';}catch{return 'This question has an invalid format rule. Please contact our team.';}}
+ return '';
+};
 const matches = (rule: Row, value: any) => {
   const expected = rule.expected_value;
   if (rule.operator === 'equals') return String(value ?? '') === String(expected ?? '');
@@ -49,13 +69,13 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       else if (!c.data) { if(live) setError('Guided booking is not enabled for this service.'); }
       else {
         const [q,s] = await Promise.all([
-          supabase.from('booking_engine_questions').select('*').eq('service_config_id',c.data.id).order('display_order'),
+          supabase.from('booking_engine_questions').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order'),
           supabase.from('booking_engine_service_scope').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order')
         ]);
         const ids=(q.data||[]).map((x:Row)=>x.id);
         const cond=ids.length?await supabase.from('booking_engine_question_conditions').select('*').in('question_id',ids):{data:[],error:null};
         if(q.error||cond.error||s.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||'Could not load service setup.');}
-        else if(live){setConfig(c.data);setQuestions(q.data||[]);setConditions(cond.data||[]);setScope(s.data||[]);}
+        else if(live){const activeIds=new Set(ids);setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);}
       }
 
       const saved = window.sessionStorage.getItem(draftKey);
@@ -150,6 +170,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     for(const q of questions) {
       const state=visibility[q.id], v=answers[q.question_key];
       if(state?.visible && state.required && (v===undefined || v===null || v==='' || (Array.isArray(v)&&!v.length))) return 'Please answer: ' + q.label;
+      if(state?.visible){const validation=answerValidationError(q,v);if(validation)return q.label+': '+validation;}
     }
     return '';
   };
@@ -277,9 +298,9 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         :q.input_type==='multi_select'?<div className="grid gap-2 sm:grid-cols-2">{opts.map((o:any)=><label key={o.value} className="flex items-center gap-2 text-sm"><Checkbox checked={Array.isArray(value)&&value.includes(o.value)} onCheckedChange={v=>setAnswer(q.question_key,v?[...value,o.value]:value.filter((x:string)=>x!==o.value))}/>{o.label}</label>)}</div>
         :q.input_type==='boolean'?<select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value==='true')}><option value="">Choose yes or no</option><option value="true">Yes</option><option value="false">No</option></select>
         :q.input_type==='date'||q.input_type==='time'?<Input type={q.input_type} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>
-        :q.input_type==='number'||q.input_type==='measurement'?<Input type="number" min="0" step="0.01" value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value===''?'':Number(e.target.value))}/>
-        :q.input_type==='address'?<Textarea rows={2} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>
-        :<Input value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>}
+        :q.input_type==='number'||q.input_type==='measurement'?<Input type="number" min={q.validation_rules?.min??'0'} max={q.validation_rules?.max??undefined} step="any" value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value===''?'':Number(e.target.value))}/>
+        :q.input_type==='textarea'||q.input_type==='address'?<Textarea rows={2} minLength={q.validation_rules?.min_length??undefined} maxLength={q.validation_rules?.max_length??undefined} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>
+        :<Input minLength={q.validation_rules?.min_length??undefined} maxLength={q.validation_rules?.max_length??undefined} pattern={q.validation_rules?.pattern||undefined} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>}
       </div>;
     })}</div>}
     <div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service scope</h3>

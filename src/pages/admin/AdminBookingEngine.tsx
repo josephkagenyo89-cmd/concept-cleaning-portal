@@ -105,9 +105,9 @@ export default function AdminBookingEngine() {
  };
  const addQuestion=async()=>{
   if(!config||!qLabel.trim()||!qKey.trim())return;
-  if(config.enabled&&qRequired){toast({title:'Required questions are not ready for activation',description:'The database submit function does not yet enforce required answers. Keep this question optional until server-side validation is added.',variant:'destructive'});return;}let opts:any;try{opts=JSON.parse(qOptions);if(!Array.isArray(opts))throw new Error('Options must be a JSON array.');}catch(e){toast({title:'Invalid options',description:e instanceof Error?e.message:'Check options.',variant:'destructive'});return;}
+  let opts:any;try{opts=JSON.parse(qOptions);if(!Array.isArray(opts))throw new Error('Options must be a JSON array.');}catch(e){toast({title:'Invalid options',description:e instanceof Error?e.message:'Check options.',variant:'destructive'});return;}
   if(['select','multi_select'].includes(qType)&&!opts.length){toast({title:'Add options for this question'});return;}
-  const r=await db.from('booking_engine_questions').insert({service_config_id:config.id,question_key:qKey.trim().toLowerCase().replace(/\\s+/g,'_'),label:qLabel.trim(),description:qDesc.trim()||null,input_type:qType,required:qRequired,display_order:questions.length,options:opts}).select('*').single();
+  const r=await db.from('booking_engine_questions').insert({service_config_id:config.id,question_key:qKey.trim().toLowerCase().replace(/\\s+/g,'_'),label:qLabel.trim(),description:qDesc.trim()||null,input_type:qType,required:qRequired,display_order:questions.length,options:opts,validation_rules:{},active:true}).select('*').single();
   if(r.error)toast({title:'Question not added',description:r.error.message,variant:'destructive'});else{await bumpVersion();setQuestions(x=>[...x,r.data]);setQLabel('');setQKey('');setQDesc('');setQOptions('[]');setQRequired(false);}
  };
  const remove=async(table:string,id:string,update:(fn:any)=>void)=>{if(!window.confirm('Delete this configuration item?'))return;const r=await db.from(table).delete().eq('id',id);if(r.error)toast({title:'Delete failed',description:r.error.message,variant:'destructive'});else{update((x:Row[])=>x.filter(y=>y.id!==id));if(table==='booking_engine_questions')setConditions(x=>x.filter(y=>y.question_id!==id&&y.depends_on_question_id!==id));await bumpVersion();}};
@@ -123,7 +123,7 @@ export default function AdminBookingEngine() {
   const r=await db.from('booking_engine_pricing_rules').insert({service_config_id:config.id,pricing_type:priceType,rate,unit_key:priceUnit.trim()||null,minimum_quantity:min,maximum_quantity:max,currency:'KES',version:Math.max(0,...pricing.map(x=>Number(x.version)||0))+1,active:true,created_by:(await supabase.auth.getUser()).data.user?.id??null}).select('*').single();
   if(r.error)toast({title:'Pricing not added',description:r.error.message,variant:'destructive'});else{await bumpVersion();setPricing(x=>[r.data,...x]);setPriceRate('');setPriceUnit('');setPriceMin('');setPriceMax('');}
  };
- const addCondition=async()=>{if(config?.enabled&&action==='required'){toast({title:'Required conditions are not ready',description:'The database submit function does not yet enforce conditional required answers.',variant:'destructive'});return;}if(!target||!source||target===source||!expected.trim())return;let value:any;try{value=JSON.parse(expected);}catch{value=expected;}const r=await db.from('booking_engine_question_conditions').insert({question_id:target,depends_on_question_id:source,operator,expected_value:value,action}).select('*').single();if(r.error)toast({title:'Condition not added',description:r.error.message,variant:'destructive'});else{await bumpVersion();setConditions(x=>[...x,r.data]);setExpected('');}};
+ const addCondition=async()=>{if(!target||!source||target===source||!expected.trim())return;let value:any;try{value=JSON.parse(expected);}catch{value=expected;}const r=await db.from('booking_engine_question_conditions').insert({question_id:target,depends_on_question_id:source,operator,expected_value:value,action}).select('*').single();if(r.error)toast({title:'Condition not added',description:r.error.message,variant:'destructive'});else{await bumpVersion();setConditions(x=>[...x,r.data]);setExpected('');}};
  const activePricing=pricing.filter(x=>x.active).length,activeIncluded=scope.filter(x=>x.active&&x.scope_type==='included').length;
  const activeQuestions=questions.filter(x=>x.active!==false).length;
  const measurementConfig=(()=>{try{return parseObj(measurements);}catch{return {};}})();
@@ -218,6 +218,28 @@ const emptyOfferDraft = () => ({
  starts_at: '', ends_at: '', display_order: '0',
 });
 const makeKey = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+const parseValidationRules = (inputType: string, raw: string) => {
+ const rules=JSON.parse(raw||'{}');
+ if(!rules||typeof rules!=='object'||Array.isArray(rules))throw new Error('Validation rules must be an object.');
+ const numeric=['number','measurement'].includes(inputType);
+ const textual=['text','textarea','date','time','address'].includes(inputType);
+ const allowed=numeric?['min','max']:textual?['min_length','max_length','pattern']:[];
+ const unsupported=Object.keys(rules).filter(key=>!allowed.includes(key));
+ if(unsupported.length)throw new Error('Remove unsupported rules for this answer type: '+unsupported.join(', ')+'.');
+ for(const key of allowed.filter(k=>k!=='pattern')){
+  if(rules[key]===undefined)continue;
+  const value=Number(rules[key]);
+  if(!Number.isFinite(value)||(key.endsWith('_length')&&(!Number.isInteger(value)||value<0)))throw new Error(key.replace('_',' ')+' must be a valid '+(key.endsWith('_length')?'whole number.':'number.'));
+  rules[key]=value;
+ }
+ if(numeric&&rules.min!==undefined&&rules.max!==undefined&&rules.min>rules.max)throw new Error('Minimum cannot be greater than maximum.');
+ if(textual&&rules.min_length!==undefined&&rules.max_length!==undefined&&rules.min_length>rules.max_length)throw new Error('Minimum length cannot be greater than maximum length.');
+ if(textual&&rules.pattern!==undefined){
+  if(typeof rules.pattern!=='string')throw new Error('Pattern must be text.');
+  try{new RegExp(rules.pattern);}catch{throw new Error('Pattern is not a valid regular expression.');}
+ }
+ return rules;
+};
 
 function BookingEngineLibrary({ services, configs }: { services: Service[]; configs: Config[] }) {
  const [templates,setTemplates]=useState<LibraryTemplate[]>([]);
@@ -253,6 +275,12 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  const configuredServices=configs.map(c=>({config:c,service:services.find(s=>s.id===c.service_id)})).filter(x=>x.service?.is_active);
  const filteredServices=services.filter(s=>s.is_active&&(!serviceSearch.trim()||s.name.toLowerCase().includes(serviceSearch.toLowerCase())||(s.service_code||'').toLowerCase().includes(serviceSearch.toLowerCase())));
  const setT=(key:string,value:any)=>setTemplateDraft(old=>({...old,[key]:value}));
+ const templateValidation=(()=>{try{return JSON.parse(templateDraft.validation_rules||'{}');}catch{return {};}})();
+ const setValidationRule=(key:string,value:string)=>{
+  const current=(()=>{try{return JSON.parse(templateDraft.validation_rules||'{}');}catch{return {};}})();
+  if(value.trim()==='')delete current[key];else current[key]=key==='pattern'?value:Number(value);
+  setT('validation_rules',JSON.stringify(current));
+ };
  const setO=(key:string,value:any)=>setOfferDraft(old=>({...old,[key]:value}));
 
  const editTemplate=(t:LibraryTemplate)=>{
@@ -262,7 +290,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  const saveTemplate=async()=>{
   if(!templateDraft.label.trim()||!templateDraft.question_key.trim()){toast({title:'Enter a question label and unique key'});return;}
   let options:any,validation:any;
-  try{options=JSON.parse(templateDraft.options);validation=JSON.parse(templateDraft.validation_rules);if(!Array.isArray(options)||!validation||typeof validation!=='object'||Array.isArray(validation))throw new Error('Options must be an array and validation rules must be an object.');}
+  try{options=JSON.parse(templateDraft.options);validation=parseValidationRules(templateDraft.input_type,templateDraft.validation_rules);if(!Array.isArray(options))throw new Error('Options must be an array.');if(['select','multi_select'].includes(templateDraft.input_type)&&!options.length)throw new Error('Add at least one option for select questions.');}
   catch(e){toast({title:'Check question JSON',description:e instanceof Error?e.message:'Invalid JSON.',variant:'destructive'});return;}
   const order=Number(templateDraft.display_order);if(!Number.isInteger(order)){toast({title:'Display order must be a whole number'});return;}
   const user=(await supabase.auth.getUser()).data.user?.id??null;
@@ -273,8 +301,12 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
    :await db.from('booking_engine_question_templates').insert({...payload,created_by:user}).select('*').single();
   if(result.error){toast({title:'Question template was not saved',description:result.error.message,variant:'destructive'});setSaving(false);return;}
   if(editingTemplate){
-   const sync=await db.from('booking_engine_questions').update({question_key:payload.question_key,label:payload.label,description:payload.description,input_type:payload.input_type,required:payload.required_default,options:payload.options,active:payload.active,updated_at:new Date().toISOString()}).eq('question_template_id',editingTemplate);
+   const sync=await db.from('booking_engine_questions').update({question_key:payload.question_key,label:payload.label,description:payload.description,input_type:payload.input_type,required:payload.required_default,options:payload.options,validation_rules:payload.validation_rules,active:payload.active,updated_at:new Date().toISOString()}).eq('question_template_id',editingTemplate).select('service_config_id');
    if(sync.error){toast({title:'Template saved; applied questions need a refresh',description:sync.error.message,variant:'destructive'});}
+   else{
+    const affected=[...new Set((sync.data||[]).map((row:any)=>row.service_config_id))];
+    if(affected.length){const bumped=await db.rpc('bump_booking_engine_config_versions',{_config_ids:affected});if(bumped.error)toast({title:'Questions updated; configuration versions need a refresh',description:bumped.error.message,variant:'destructive'});}
+   }
   }
   setSelectedTemplateId(result.data.id);setEditingTemplate(result.data.id);await reload();toast({title:'Question template saved'});setSaving(false);
  };
@@ -282,11 +314,17 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
   const template=templates.find(x=>x.id===selectedTemplateId);
   if(!template||!template.active){toast({title:'Select an active question template'});return;}
   if(!selectedConfigIds.length){toast({title:'Select at least one configured service'});return;}
-  const rows=selectedConfigIds.map(id=>({service_config_id:id,question_template_id:template.id,question_key:template.question_key,label:template.label,description:template.description,input_type:template.input_type,required:template.required_default,display_order:template.display_order,options:template.options||[],active:true}));
+  const rows=selectedConfigIds.map(id=>({service_config_id:id,question_template_id:template.id,question_key:template.question_key,label:template.label,description:template.description,input_type:template.input_type,required:template.required_default,display_order:template.display_order,options:template.options||[],validation_rules:template.validation_rules||{},active:true}));
   setSaving(true);
-  const r=await db.from('booking_engine_questions').upsert(rows,{onConflict:'service_config_id,question_template_id'}).select('id');
+  const r=await db.from('booking_engine_questions').upsert(rows,{onConflict:'service_config_id,question_template_id'}).select('service_config_id');
   if(r.error)toast({title:'Could not apply question template',description:r.error.message,variant:'destructive'});
-  else{toast({title:'Question applied',description:'Applied or updated on '+selectedConfigIds.length+' selected service configuration(s).'});setSelectedConfigIds([]);}
+  else{
+   const affected=[...new Set((r.data||[]).map((row:any)=>row.service_config_id))];
+   const bumped=affected.length?await db.rpc('bump_booking_engine_config_versions',{_config_ids:affected}):{error:null};
+   if(bumped.error)toast({title:'Question applied, but configuration versions need a refresh',description:bumped.error.message,variant:'destructive'});
+   else toast({title:'Question applied',description:'Applied or updated on '+affected.length+' selected service configuration(s). Setup approvals will need to be reviewed again.'});
+   setSelectedConfigIds([]);
+  }
   setSaving(false);
  };
  const removeTemplate=async(t:LibraryTemplate)=>{
@@ -354,14 +392,16 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
      <Card><CardHeader><CardTitle className="text-base">{editingTemplate?'Edit question template':'Create question template'}</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">
       <div className="space-y-1"><Label>Question label</Label><Input value={templateDraft.label} onChange={e=>{setT('label',e.target.value);if(!editingTemplate)setT('question_key',makeKey(e.target.value));}}/></div>
       <div className="space-y-1"><Label>Unique question key</Label><Input value={templateDraft.question_key} onChange={e=>setT('question_key',e.target.value)}/></div>
-      <div className="space-y-1"><Label>Answer type</Label><Select value={templateDraft.input_type} onValueChange={v=>setT('input_type',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['text','textarea','number','boolean','select','multi_select','measurement','date'].map(v=><SelectItem key={v} value={v}>{v.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-1"><Label>Answer type</Label><Select value={templateDraft.input_type} onValueChange={v=>{setT('input_type',v);setT('validation_rules','{}');}}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['text','textarea','number','boolean','select','multi_select','measurement','date'].map(v=><SelectItem key={v} value={v}>{v.replace('_',' ')}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-1"><Label>Question group (free text)</Label><Input value={templateDraft.prompt_group} onChange={e=>setT('prompt_group',e.target.value)}/></div>
       <div className="space-y-1 sm:col-span-2"><Label>Help text</Label><Input value={templateDraft.description} onChange={e=>setT('description',e.target.value)}/></div>
       <div className="space-y-1"><Label>Display order</Label><Input type="number" value={templateDraft.display_order} onChange={e=>setT('display_order',e.target.value)}/></div>
       <div className="flex items-center gap-2 pt-6"><Switch checked={templateDraft.required_default} onCheckedChange={v=>setT('required_default',v)}/><Label>Required by default</Label></div>
       <div className="flex items-center gap-2 sm:col-span-2"><Switch checked={templateDraft.active} onCheckedChange={v=>setT('active',v)}/><Label>Available in library</Label></div>
       <div className="space-y-1 sm:col-span-2"><Label>Options (JSON array for select questions)</Label><Textarea rows={4} className="font-mono text-xs" value={templateDraft.options} onChange={e=>setT('options',e.target.value)}/></div>
-      <div className="space-y-1 sm:col-span-2"><Label>Validation rules (JSON object)</Label><Textarea rows={3} className="font-mono text-xs" value={templateDraft.validation_rules} onChange={e=>setT('validation_rules',e.target.value)}/></div>
+      {['number','measurement'].includes(templateDraft.input_type)&&<div className="grid gap-3 sm:grid-cols-2 sm:col-span-2"><div className="space-y-1"><Label>Minimum answer</Label><Input type="number" step="any" value={templateValidation.min??''} onChange={e=>setValidationRule('min',e.target.value)}/></div><div className="space-y-1"><Label>Maximum answer</Label><Input type="number" step="any" value={templateValidation.max??''} onChange={e=>setValidationRule('max',e.target.value)}/></div></div>}
+      {['text','textarea','date','time','address'].includes(templateDraft.input_type)&&<div className="grid gap-3 sm:grid-cols-2 sm:col-span-2"><div className="space-y-1"><Label>Minimum characters</Label><Input type="number" min="0" step="1" value={templateValidation.min_length??''} onChange={e=>setValidationRule('min_length',e.target.value)}/></div><div className="space-y-1"><Label>Maximum characters</Label><Input type="number" min="0" step="1" value={templateValidation.max_length??''} onChange={e=>setValidationRule('max_length',e.target.value)}/></div><div className="space-y-1 sm:col-span-2"><Label>Format pattern (optional)</Label><Input value={templateValidation.pattern??''} onChange={e=>setValidationRule('pattern',e.target.value)} placeholder="Example: ^[A-Za-z ]+$"/></div></div>}
+      {!['number','measurement','text','textarea','date','time','address'].includes(templateDraft.input_type)&&<p className="text-xs text-muted-foreground sm:col-span-2">This answer type is validated against its configured options or answer type. No extra limits are needed.</p>}
       <div className="flex flex-wrap gap-2 sm:col-span-2"><Button onClick={()=>void saveTemplate()} disabled={saving}>{saving?'Saving…':'Save template'}</Button><Button variant="outline" onClick={resetTemplate}>New template</Button></div>
      </CardContent></Card>
     </div>
