@@ -24,6 +24,7 @@ const parseObj = (s: string) => { const x = JSON.parse(s); if (!x || typeof x !=
 export default function AdminBookingEngine() {
  const [services,setServices]=useState<Service[]>([]),[configs,setConfigs]=useState<Config[]>([]);
  const [serviceId,setServiceId]=useState(''),[config,setConfig]=useState<Config|null>(null);
+ const [adminSection,setAdminSection]=useState<'packages'|'services'>('packages');
  const [viewMode,setViewMode]=useState<'guide'|'advanced'>('guide'),[activeTab,setActiveTab]=useState('setup');
  const [setupProgress,setSetupProgress]=useState<any>(null),[setupProgressLoading,setSetupProgressLoading]=useState(false),[approvingStep,setApprovingStep]=useState<string|null>(null);
  const [questions,setQuestions]=useState<Row[]>([]),[conditions,setConditions]=useState<Row[]>([]),[scope,setScope]=useState<Row[]>([]),[pricing,setPricing]=useState<Row[]>([]);
@@ -154,9 +155,9 @@ export default function AdminBookingEngine() {
  };
  const openStep=(tab:string)=>{setActiveTab(tab);setViewMode('advanced');};
  return <div className="space-y-6">
-  <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Smart Booking Engine</h1><p className="text-sm text-muted-foreground">Set up online bookings one clear step at a time.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>void refresh()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4"/>Refresh</Button>{config&&<Button variant={viewMode==='guide'?'default':'outline'} onClick={()=>setViewMode(viewMode==='guide'?'advanced':'guide')}>{viewMode==='guide'?'Advanced Setup':'Back to Setup Guide'}</Button>}</div></div>
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-2xl font-bold">Smart Booking Engine</h1><p className="text-sm text-muted-foreground">Review packages or manage individual service settings.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>void refresh()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4"/>Refresh</Button><Button variant={adminSection==='packages'?'default':'outline'} onClick={()=>setAdminSection('packages')}>Packages & offers</Button><Button variant={adminSection==='services'?'default':'outline'} onClick={()=>setAdminSection('services')}>Service settings</Button>{adminSection==='services'&&config&&<Button variant={viewMode==='guide'?'default':'outline'} onClick={()=>setViewMode(viewMode==='guide'?'advanced':'guide')}>{viewMode==='guide'?'Advanced Setup':'Back to Setup Guide'}</Button>}</div></div>
   <Card className="border-amber-500/40 bg-amber-500/5"><CardContent className="flex gap-3 p-4 text-sm"><AlertTriangle className="h-5 w-5 shrink-0 text-amber-600"/><div><b>Nothing is enabled automatically.</b><p className="text-muted-foreground">The guide checks the selected service's real configuration. It will not invent prices, questions, service mappings or offers, and existing ERP service prices remain untouched.</p></div></CardContent></Card>
-  <div className="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]">
+  {adminSection==='packages'?<BookingEngineLibrary services={services} configs={configs} />:<div className="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]">
    <Card className="h-fit"><CardHeader><CardTitle className="text-base">1. Choose a service</CardTitle><p className="text-xs text-muted-foreground">Select the service you want to configure.</p></CardHeader><CardContent className="space-y-2">{loading?'Loading services…':services.map(s=>{const c=configs.find(x=>x.service_id===s.id);return <button key={s.id} onClick={()=>{setServiceId(s.id);setViewMode('guide');}} className={'w-full rounded-lg border p-3 text-left '+(serviceId===s.id?'border-primary bg-primary/5':'hover:bg-muted/50')}><span className="block text-sm font-medium">{s.name}</span><span className="mt-1 flex gap-1 text-xs text-muted-foreground">{s.service_code||'No code'} <Badge variant={c?.enabled?'default':'secondary'}>{c?.enabled?'Enabled':c?'Disabled':'Not configured'}</Badge></span></button>;})}</CardContent></Card>
    <div className="min-w-0 space-y-4">
     {!selected?<Card><CardContent className="p-8 text-center text-muted-foreground">Select a service to begin.</CardContent></Card>:!config?<Card><CardHeader><CardTitle>Start setup: {selected.name}</CardTitle><p className="text-sm text-muted-foreground">First create a disabled Smart Booking configuration. This does not publish the service or change its ERP price.</p></CardHeader><CardContent className="space-y-4"><div className="flex items-start gap-3 rounded-lg border p-4"><ClipboardCheck className="mt-0.5 h-5 w-5 text-primary"/><div className="space-y-1"><b className="text-sm">What happens next?</b><p className="text-sm text-muted-foreground">You will add customer questions, choose a pricing method, define included work and optionally create value offers. The guide will show which parts are complete.</p></div></div><Button onClick={()=>void create()} disabled={saving}>{saving?'Creating…':'Create configuration and continue'}<ArrowRight className="ml-2 h-4 w-4"/></Button></CardContent></Card>:viewMode==='guide'?<>
@@ -190,7 +191,7 @@ export default function AdminBookingEngine() {
      <Card><CardContent className="grid gap-2 p-4 text-sm sm:grid-cols-3"><div>{questions.length} questions</div><div>{activeIncluded} active included scope items</div><div>{activePricing} active pricing rules</div></CardContent></Card>
     </>}
    </div>
-  </div>
+  </div>}
   <AdminBookingEngineRequests />
  </div>;
 }
