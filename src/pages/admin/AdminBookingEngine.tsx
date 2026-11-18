@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { getBookingOfferReadinessIssues } from '@/lib/bookingEngineOffers';
 import { AlertTriangle, ArrowRight, CheckCircle2, Circle, CirclePlus, ClipboardCheck, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react';
 import AdminBookingEngineRequests from '@/pages/admin/AdminBookingEngineRequests';
 
@@ -270,6 +271,27 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  useEffect(()=>{void reload();},[reload]);
 
  const serviceName=(id:string)=>services.find(x=>x.id===id)?.name||'Unavailable service';
+ const validateOfferReadiness=async(offerType:string,links:OfferLink[],startsAt:string|null,endsAt:string|null)=>{
+  const requiredIds=[...new Set(links.filter(x=>x.relationship==='trigger'||x.relationship==='included').map(x=>x.service_id))];
+  if(!requiredIds.length)return getBookingOfferReadinessIssues({offer_type:offerType,links,services:[],configurations:[],starts_at:startsAt,ends_at:endsAt});
+  const [serviceResult,configResult]=await Promise.all([
+   db.from('services').select('id,name,is_active').in('id',requiredIds),
+   db.from('booking_engine_service_config').select('id,service_id,enabled').in('service_id',requiredIds)
+  ]);
+  if(serviceResult.error||configResult.error)return ['Could not verify service eligibility. Refresh the library and try again.'];
+  const configRows=configResult.data||[];
+  const configIds=configRows.map((row:any)=>row.id);
+  const pricingResult=configIds.length
+   ?await db.from('booking_engine_pricing_rules').select('service_config_id').in('service_config_id',configIds).eq('active',true)
+   :{data:[],error:null};
+  if(pricingResult.error)return ['Could not verify active pricing rules. Refresh the library and try again.'];
+  const pricedConfigIds=new Set((pricingResult.data||[]).map((row:any)=>row.service_config_id));
+  return getBookingOfferReadinessIssues({
+   offer_type:offerType,links,services:serviceResult.data||[],
+   configurations:configRows.map((row:any)=>({service_id:row.service_id,enabled:row.enabled===true,has_active_pricing:pricedConfigIds.has(row.id)})),
+   starts_at:startsAt,ends_at:endsAt
+  });
+ };
  const configuredServices=configs.map(c=>({config:c,service:services.find(s=>s.id===c.service_id)})).filter(x=>x.service?.is_active);
  const filteredServices=services.filter(s=>s.is_active&&(!serviceSearch.trim()||s.name.toLowerCase().includes(serviceSearch.toLowerCase())||(s.service_code||'').toLowerCase().includes(serviceSearch.toLowerCase())));
  const setT=(key:string,value:any)=>setTemplateDraft(old=>({...old,[key]:value}));
@@ -354,9 +376,23 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
   if((offerDraft.offer_type==='add_on'||offerDraft.offer_type==='upgrade')&&offerDraft.price_mode==='quotation'){toast({title:'Optional extras and upgrades need a configured amount or discount. Use a fixed price or discount.'});return;}
   if(offerServiceLinks.trigger.some(id=>offerServiceLinks.included.includes(id))){toast({title:'A starting service cannot also be listed as an included service.'});return;}
   const order=Number(offerDraft.display_order),amount=offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value);
-  if(!Number.isInteger(order)|| (amount!==null&&(!Number.isFinite(amount)||amount<0)) || (amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Check the offer display order and price'});return;}
+  if(!Number.isInteger(order)||(amount!==null&&(!offerDraft.price_value.trim()||!Number.isFinite(amount)||amount<=0||(offerDraft.price_mode==='percentage_discount'&&amount>100)))||(amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Enter a valid positive offer amount and display order. Percentage discounts cannot exceed 100%.'});return;}
+  const startDate=offerDraft.starts_at?new Date(offerDraft.starts_at):null;
+  const endDate=offerDraft.ends_at?new Date(offerDraft.ends_at):null;
+  if((startDate&&!Number.isFinite(startDate.getTime()))||(endDate&&!Number.isFinite(endDate.getTime()))){toast({title:'Enter valid campaign dates'});return;}
+  const startsAt=startDate?.toISOString()??null;
+  const endsAt=endDate?.toISOString()??null;
+  if(offerDraft.active){
+   const links:OfferLink[]=[
+    ...offerServiceLinks.trigger.map(service_id=>({service_id,relationship:'trigger' as const,quantity:1})),
+    ...offerServiceLinks.included.map(service_id=>({service_id,relationship:'included' as const,quantity:1})),
+    ...offerServiceLinks.recommended.map(service_id=>({service_id,relationship:'recommended' as const,quantity:1}))
+   ];
+   const issues=await validateOfferReadiness(offerDraft.offer_type,links,startsAt,endsAt);
+   if(issues.length){toast({title:'Offer is not ready to publish',description:issues.join(' '),variant:'destructive'});return;}
+  }
   const user=(await supabase.auth.getUser()).data.user?.id??null;
-  const payload={offer_key:key,offer_type:offerDraft.offer_type,title:offerDraft.title.trim(),description:offerDraft.description.trim()||null,terms:offerDraft.terms.trim()||null,price_mode:offerDraft.price_mode,price_value:amount,currency:'KES',active:offerDraft.active,featured:offerDraft.featured,starts_at:offerDraft.starts_at?new Date(offerDraft.starts_at).toISOString():null,ends_at:offerDraft.ends_at?new Date(offerDraft.ends_at).toISOString():null,display_order:order,updated_by:user,updated_at:new Date().toISOString()};
+  const payload={offer_key:key,offer_type:offerDraft.offer_type,title:offerDraft.title.trim(),description:offerDraft.description.trim()||null,terms:offerDraft.terms.trim()||null,price_mode:offerDraft.price_mode,price_value:amount,currency:'KES',active:offerDraft.active,featured:offerDraft.featured,starts_at:startsAt,ends_at:endsAt,display_order:order,updated_by:user,updated_at:new Date().toISOString()};
   setSaving(true);
   const result=editingOffer
    ?await db.from('booking_engine_value_offers').update(payload).eq('id',editingOffer).select('*').single()
@@ -377,7 +413,10 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  };
  const toggleOffer=async(o:LibraryOffer)=>{
   const links=offerLinks[o.id]||[];
-  if(!o.active&&(!links.some(x=>x.relationship==='trigger')||(o.offer_type==='package'&&!links.some(x=>x.relationship==='included')))){toast({title:'Complete the offer service links before activating it'});return;}
+  if(!o.active){
+   const issues=await validateOfferReadiness(o.offer_type,links,o.starts_at,o.ends_at);
+   if(issues.length){toast({title:'Offer is not ready to publish',description:issues.join(' '),variant:'destructive'});return;}
+  }
   const r=await db.from('booking_engine_value_offers').update({active:!o.active,updated_at:new Date().toISOString(),updated_by:(await supabase.auth.getUser()).data.user?.id??null}).eq('id',o.id);
   if(r.error)toast({title:'Offer status not updated',description:r.error.message,variant:'destructive'});else await reload();
  };
@@ -443,7 +482,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
         <div className="space-y-1"><Label>Stop publishing (optional)</Label><Input type="datetime-local" value={offerDraft.ends_at} onChange={e=>setO('ends_at',e.target.value)}/></div>
        </div>
       </details>
-      <p className="text-xs text-muted-foreground">Only active packages with an available starting service and at least one included item can appear in the customer marketplace. The booking engine verifies the final price.</p>
+      <p className="text-xs text-muted-foreground">Before publishing, every starting and included service must be active, enabled in Smart Booking and have an active pricing rule. Optional recommended services do not block publication. An “included” service is not automatically free: complimentary pricing must be explicitly supported by the approved pricing configuration.</p>
       <div className="flex flex-wrap gap-2"><Button onClick={()=>void saveOffer()} disabled={saving}>{saving?'Saving…':'Save package / offer'}</Button><Button variant="outline" onClick={()=>{setEditingOffer(null);setOfferDraft(emptyOfferDraft());setOfferServiceLinks({trigger:[],included:[],recommended:[]});}}>New offer</Button></div>
      </CardContent></Card>
     </div>

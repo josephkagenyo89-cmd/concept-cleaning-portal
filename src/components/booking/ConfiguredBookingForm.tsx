@@ -85,12 +85,54 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         const [q,s,o] = await Promise.all([
           supabase.from('booking_engine_questions').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order'),
           supabase.from('booking_engine_service_scope').select('*').eq('service_config_id',c.data.id).eq('active',true).order('display_order'),
-          db.from('booking_engine_value_offer_services').select('offer_id,offer:booking_engine_value_offers!inner(id,offer_key,title,description,terms,offer_type,price_mode,price_value,currency,featured,starts_at,ends_at,updated_at)').eq('service_id',serviceId).eq('relationship','trigger').eq('offer.active',true)
+          db.from('booking_engine_value_offer_services').select('offer_id,offer:booking_engine_value_offers!inner(id,offer_key,title,description,terms,offer_type,price_mode,price_value,currency,featured,starts_at,ends_at,updated_at,display_order)').eq('service_id',serviceId).eq('relationship','trigger').eq('offer.active',true)
         ]);
         const ids=(q.data||[]).map((x:Row)=>x.id);
         const cond=ids.length?await supabase.from('booking_engine_question_conditions').select('*').in('question_id',ids):{data:[],error:null};
         if(q.error||cond.error||s.error||o.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||o.error?.message||'Could not load service setup.');}
-        else if(live){const activeIds=new Set(ids);const now=Date.now();const availableOffers=(o.data||[]).map((row:any)=>row.offer).filter((offer:any)=>offer&&offer.offer_type!=='recurring'&&isBookingOfferCurrent(offer,now));setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);setOfferOptions(availableOffers);loadedOffers=availableOffers;if(initialOfferId&&availableOffers.some((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package'))setSelectedOfferId(initialOfferId);const offerIds=availableOffers.map((offer:any)=>offer.id);if(offerIds.length){const links=await db.from('booking_engine_value_offer_services').select('offer_id,relationship,quantity,service:services!inner(name,description)').in('offer_id',offerIds);if(links.error){if(live)setError(links.error.message);}else if(live)setOfferServices(links.data||[]);}else setOfferServices([]);}
+        else if(live){
+          const activeIds=new Set(ids);
+          const now=Date.now();
+          const currentOffers=(o.data||[])
+            .map((row:any)=>row.offer)
+            .filter((offer:any)=>offer&&offer.offer_type!=='recurring'&&isBookingOfferCurrent(offer,now));
+          const candidateIds=currentOffers.map((offer:any)=>offer.id);
+          const linksResult=candidateIds.length
+            ?await db.from('booking_engine_value_offer_services')
+              .select('offer_id,relationship,quantity,service:services!inner(id,name,description,is_active)')
+              .in('offer_id',candidateIds)
+              .neq('relationship','trigger')
+            :{data:[],error:null};
+          if(linksResult.error){
+            if(live)setError(linksResult.error.message);
+          }else{
+            const allLinks=linksResult.data||[];
+            const eligibleOffers=currentOffers.filter((offer:any)=>{
+              const included=allLinks.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
+              // A package must contain at least one included service, and every included service must still be active.
+              if(offer.offer_type==='package')return included.length>0&&included.every((link:any)=>link.service?.is_active===true);
+              // Add-ons/upgrades with service inclusions are valid only while those services remain active.
+              return included.every((link:any)=>link.service?.is_active===true);
+            }).sort((a:any,b:any)=>
+              Number(Boolean(b.featured))-Number(Boolean(a.featured))||
+              Number(a.display_order??0)-Number(b.display_order??0)||
+              String(a.title).localeCompare(String(b.title))
+            );
+            const eligibleIds=new Set(eligibleOffers.map((offer:any)=>offer.id));
+            const visibleLinks=allLinks.filter((link:any)=>
+              eligibleIds.has(link.offer_id)&&link.service?.is_active===true
+            );
+            setConfig(c.data);
+            setQuestions(q.data||[]);
+            setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));
+            setScope(s.data||[]);
+            setOfferOptions(eligibleOffers);
+            loadedOffers=eligibleOffers;
+            if(initialOfferId&&!eligibleOffers.some((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package'))setSelectedOfferId('');
+            else if(initialOfferId&&eligibleOffers.some((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package'))setSelectedOfferId(initialOfferId);
+            setOfferServices(visibleLinks);
+          }
+        }
       }
 
       const saved = window.sessionStorage.getItem(draftKey);
@@ -100,7 +142,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             setDraftId(parsed.id || '');
             const restoredOffer = loadedOffers.find((offer:any)=>offer.id===parsed.selectedOfferId);
-            setSelectedOfferId(restoredOffer?.offer_type==='package'?restoredOffer.id:(initialOfferId||''));
+            const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');
+            setSelectedOfferId(restoredOffer?.offer_type==='package'?restoredOffer.id:(eligibleInitialPackage?.id||''));
             setAnswers(parsed.answers || {});
             const restoredExtras = Array.isArray(parsed.extras) ? parsed.extras : [];
             setExtras(restoredOffer&&restoredOffer.offer_type!=='package'
@@ -129,7 +172,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
                 const savedOffer=await db.from('booking_engine_request_offers').select('offer_id,offer:booking_engine_value_offers!inner(offer_type)').eq('request_id',saved).maybeSingle();
                 const savedOfferId=savedOffer.data?.offer_id||'';
                 const currentSavedOffer=loadedOffers.find((offer:any)=>offer.id===savedOfferId);
-                if(live)setSelectedOfferId(currentSavedOffer?.offer_type==='package'?savedOfferId:(initialOfferId||''));
+                if(live){const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');setSelectedOfferId(currentSavedOffer?.offer_type==='package'?savedOfferId:(eligibleInitialPackage?.id||''));}
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 const savedExtras=Array.isArray(item.data.selected_extras)?item.data.selected_extras:[];
@@ -388,7 +431,28 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         :<Input minLength={q.validation_rules?.min_length??undefined} maxLength={q.validation_rules?.max_length??undefined} pattern={q.validation_rules?.pattern||undefined} value={String(value)} onChange={e=>setAnswer(q.question_key,e.target.value)}/>}
       </div>;
     })}</section>}
-    {packageOffers.length>0&&<div className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Choose a package</h3><p className="text-xs text-muted-foreground">Select one package for this service. The booking engine checks its final price.</p><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedOfferId} onChange={e=>{setSelectedOfferId(e.target.value);setPrice(null);}}><option value="">No package</option>{packageOffers.map((offer:any)=><option key={offer.id} value={offer.id}>{offer.title}{offer.price_mode==='fixed'?' · '+formatKes(Number(offer.price_value)||0):' · quotation'}</option>)}</select>{packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><div key={offer.id} className="rounded-lg border bg-muted/20 p-3"><p className="text-sm font-semibold">{offer.title}</p>{offer.description&&<p className="mt-1 text-xs text-muted-foreground">{offer.description}</p>}{offer.terms&&<p className="mt-1 text-xs text-muted-foreground">{offer.terms}</p>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<div className="mt-2"><p className="text-xs font-semibold">Included services</p><ul className="mt-1 list-disc pl-5 text-xs">{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any,i:number)=><li key={i}>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''}</li>)}</ul></div>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended').length>0&&<div className="mt-2"><p className="text-xs font-semibold">Related services</p><ul className="mt-1 list-disc pl-5 text-xs">{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended').map((link:any,i:number)=><li key={i}>{link.service?.name||'Service'}</li>)}</ul></div>}</div>)}</div>}
+    {packageOffers.length>0&&<section className="space-y-3 border-t pt-4">
+      <div><h3 className="text-sm font-semibold">Packages recommended for {serviceName}</h3><p className="text-xs text-muted-foreground">These offers are matched to the service you selected. Compare what is included and choose a package if it suits your needs.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {packageOffers.map((offer:any)=>{
+          const selected=selectedOfferId===offer.id;
+          const included=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
+          const recommended=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended');
+          return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>{setSelectedOfferId(selected?'':offer.id);setPrice(null);setAck(false);}} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
+            <span className="flex w-full flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">{offer.title}</span>
+              <span className="flex items-center gap-1.5">{offer.featured&&<Badge variant="secondary">Featured</Badge>}<Badge variant={selected?'default':'outline'}>{selected?'Selected':'Choose'}</Badge></span>
+            </span>
+            {offer.description&&<span className="mt-2 text-xs leading-5 text-muted-foreground">{offer.description}</span>}
+            <span className="mt-3 text-sm font-semibold">{offer.price_mode==='fixed'?formatKes(Number(offer.price_value)||0):'Price confirmed after review'}</span>
+            {included.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Included in this package</span><span className="mt-1 block space-y-1">{included.map((link:any,i:number)=><span key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600"/><span>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''}</span></span>)}</span></span>}
+            {recommended.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Optional complementary services</span><span className="mt-1 block space-y-1">{recommended.map((link:any,i:number)=><span key={i} className="block text-xs text-muted-foreground">• {link.service?.name||'Service'}</span>)}</span></span>}
+            {offer.terms&&<span className="mt-3 block w-full border-t pt-2 text-xs text-muted-foreground">{offer.terms}</span>}
+          </button>;
+        })}
+      </div>
+      <button type="button" onClick={()=>{setSelectedOfferId('');setPrice(null);setAck(false);}} className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground">Continue with {serviceName} only</button>
+    </section>}
     {addonOffers.length>0&&<div className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Optional extras and upgrades</h3><p className="text-xs text-muted-foreground">Choose any additions you want. Their configured prices or discounts are included in the server-calculated estimate.</p><div className="space-y-2">{addonOffers.map((offer:any)=>{const key=bookingOfferSelectionKey(offer.id);const selected=extras.includes(key);const priceLabel=offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?Number(offer.price_value||0)+'% off':'included in quotation';return <label key={offer.id} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm"><Checkbox checked={selected} onCheckedChange={v=>{setExtras(old=>toggleBookingOfferSelection(old,offer.id,!!v));setPrice(null);}}/><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><b>{offer.title}</b><Badge variant="secondary">{priceLabel}</Badge></span>{offer.description&&<span className="mt-1 block text-xs text-muted-foreground">{offer.description}</span>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<span className="mt-1 block text-xs text-muted-foreground">Includes: {offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any)=>link.service?.name||'Service').join(', ')}</span>}</span></label>;})}</div></div>}
     <div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service scope</h3>
       {groups.included.map(x=><p key={x.id} className="flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600"/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></p>)}
