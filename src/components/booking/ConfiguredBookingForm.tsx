@@ -15,7 +15,7 @@ import { formatKes } from '@/lib/marketplace';
 import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpload';
 
 type Row = { id: string; [key: string]: any };
-type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean };
+type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean; initialOfferId?: string };
 const db = supabase as any;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
 const optionsFor = (value: any) => Array.isArray(value) ? value.map((x: any) => {
@@ -58,7 +58,7 @@ const matches = (rule: Row, value: any) => {
   return false;
 };
 
-export default function ConfiguredBookingForm({ serviceId, serviceName, initialNotes = '', quoteMode = false }: Props) {
+export default function ConfiguredBookingForm({ serviceId, serviceName, initialNotes = '', quoteMode = false, initialOfferId = '' }: Props) {
   const { user, customerClient } = useAuth();
   const navigate = useNavigate();
   const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]), [offerOptions,setOfferOptions] = useState<Row[]>([]), [offerServices,setOfferServices] = useState<Row[]>([]);
@@ -88,7 +88,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         const ids=(q.data||[]).map((x:Row)=>x.id);
         const cond=ids.length?await supabase.from('booking_engine_question_conditions').select('*').in('question_id',ids):{data:[],error:null};
         if(q.error||cond.error||s.error||o.error){if(live)setError(q.error?.message||cond.error?.message||s.error?.message||o.error?.message||'Could not load service setup.');}
-        else if(live){const activeIds=new Set(ids);const availableOffers=(o.data||[]).map((row:any)=>row.offer).filter((offer:any)=>offer&&offer.offer_type!=='recurring');setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);setOfferOptions(availableOffers);const offerIds=availableOffers.map((offer:any)=>offer.id);if(offerIds.length){const links=await db.from('booking_engine_value_offer_services').select('offer_id,relationship,quantity,service:services!inner(name,description)').in('offer_id',offerIds);if(links.error){if(live)setError(links.error.message);}else if(live)setOfferServices(links.data||[]);}else setOfferServices([]);}
+        else if(live){const activeIds=new Set(ids);const now=Date.now();const availableOffers=(o.data||[]).map((row:any)=>row.offer).filter((offer:any)=>offer&&offer.offer_type!=='recurring'&&(!offer.starts_at||new Date(offer.starts_at).getTime()<=now)&&(!offer.ends_at||new Date(offer.ends_at).getTime()>=now));setConfig(c.data);setQuestions(q.data||[]);setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));setScope(s.data||[]);setOfferOptions(availableOffers);if(initialOfferId&&availableOffers.some((offer:any)=>offer.id===initialOfferId))setSelectedOfferId(initialOfferId);const offerIds=availableOffers.map((offer:any)=>offer.id);if(offerIds.length){const links=await db.from('booking_engine_value_offer_services').select('offer_id,relationship,quantity,service:services!inner(name,description)').in('offer_id',offerIds);if(links.error){if(live)setError(links.error.message);}else if(live)setOfferServices(links.data||[]);}else setOfferServices([]);}
       }
 
       const saved = window.sessionStorage.getItem(draftKey);
@@ -97,7 +97,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             setDraftId(parsed.id || '');
-            setSelectedOfferId(parsed.selectedOfferId || '');
+            setSelectedOfferId(parsed.selectedOfferId || initialOfferId || '');
             setAnswers(parsed.answers || {});
             setExtras(Array.isArray(parsed.extras) ? parsed.extras : []);
             setQuantity(String(parsed.quantity ?? '1'));
@@ -121,7 +121,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
               if (item.data) {
                 setRequestItemId(item.data.id);
                 const savedOffer=await db.from('booking_engine_request_offers').select('offer_id').eq('request_id',saved).maybeSingle();
-                if(live)setSelectedOfferId(savedOffer.data?.offer_id||'');
+                if(live)setSelectedOfferId(savedOffer.data?.offer_id||initialOfferId||'');
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 setExtras(Array.isArray(item.data.selected_extras) ? item.data.selected_extras : []);

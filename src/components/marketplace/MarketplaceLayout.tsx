@@ -1,11 +1,12 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { ArrowLeft, LayoutGrid, UserRound } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, PackageOpen, UserRound } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 
 import GlobalDiscountBanner from "@/components/marketplace/GlobalDiscountBanner";
 const NAV = [
   { to: '/', label: 'Home', mobileLabel: 'Home', icon: ArrowLeft, end: true },
   { to: '/categories', label: 'Categories', mobileLabel: 'Services', icon: LayoutGrid },
+  { to: '/packages', label: 'Packages', mobileLabel: 'Packages', icon: PackageOpen },
   { to: '/my/account', label: 'My Account', mobileLabel: 'Account', icon: UserRound },
 ];
 
@@ -45,7 +46,7 @@ export default function MarketplaceLayout() {
           </nav>
         </div>
 
-        <nav aria-label="Mobile marketplace navigation" className="grid grid-cols-3 border-t border-[#E9E5DC] px-2 py-1 md:hidden">
+        <nav aria-label="Mobile marketplace navigation" className="grid grid-cols-4 border-t border-[#E9E5DC] px-2 py-1 md:hidden">
           {NAV.map((item) => (
             <NavLink
               key={item.to}

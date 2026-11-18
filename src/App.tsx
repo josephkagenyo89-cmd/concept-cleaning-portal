@@ -79,6 +79,7 @@ const MarketplaceLayout = lazy(() => import("@/components/marketplace/Marketplac
 const MarketHome = lazy(() => import("@/pages/marketplace/MarketHome"));
 const MarketCategories = lazy(() => import("@/pages/marketplace/MarketCategories"));
 const MarketServiceDetail = lazy(() => import("@/pages/marketplace/MarketServiceDetail"));
+const MarketPackages = lazy(() => import("@/pages/marketplace/MarketPackages"));
 const CustomerAuth = lazy(() => import("@/pages/marketplace/CustomerAuth"));
 const CustomerBookings = lazy(() => import("@/pages/marketplace/CustomerBookings"));
 const CustomerDocuments = lazy(() => import("@/pages/marketplace/CustomerDocuments"));
@@ -114,6 +115,7 @@ const marketplaceRoutes = (
     <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
     <Route path="/marketplace" element={<MarketHome />} />
     <Route path="/categories" element={<MarketCategories />} />
+    <Route path="/packages" element={<MarketPackages />} />
     <Route path="/service/:id" element={<MarketServiceDetail />} />
     <Route path="/customer-auth" element={<CustomerAuth />} />
 

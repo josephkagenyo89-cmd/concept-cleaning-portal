@@ -746,7 +746,7 @@ export default function MarketServiceDetail() {
                 <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">We could not verify this service’s booking setup. Please contact our team before continuing.</p>
               ) : bookingEngineEnabled ? (
                 user && isCustomer && customerClient ? (
-                  <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} />
+                  <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} initialOfferId={params.get("offer") || ""} />
                 ) : (
                   <div className="space-y-3 rounded-lg border p-4">
                     <p className="text-sm">{!user ? 'Sign in or create a customer account to complete this guided booking.' : isCustomer ? 'Your customer profile is still being linked. Please wait and try again.' : 'This guided booking is available to customer accounts only.'}</p>
