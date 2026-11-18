@@ -188,7 +188,12 @@ BEGIN
     v_final_addons := v_final_addons || jsonb_build_array(v_addon);
   END LOOP;
 
-  IF v_status = 'priced' AND NOT v_has_quotation_addon THEN
+  IF v_status = 'configuration_required' THEN
+    v_result := v_base || jsonb_build_object(
+      'selected_addons', v_final_addons,
+      'addons_pending_configuration', true
+    );
+  ELSIF v_status = 'priced' AND NOT v_has_quotation_addon THEN
     v_result := v_base || jsonb_build_object(
       'selected_addons', v_final_addons,
       'addons_amount', v_addons_amount,
