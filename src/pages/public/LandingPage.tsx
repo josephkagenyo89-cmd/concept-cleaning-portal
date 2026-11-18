@@ -9,6 +9,7 @@ import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import commercialHero from '@/assets/market/commercial.jpg';
 import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { usePublicDiscount } from '@/hooks/usePublicDiscount';
 import BookingEngine from '@/components/public/BookingEngine';
 import { ServicesCatalogueContent } from './MarketingPages';
 import SocialLinks from '@/components/public/SocialLinks';
@@ -23,6 +24,7 @@ function slugify(value: string) {
 
 export default function LandingPage() {
   const { general } = usePublicSettings();
+  const { discount } = usePublicDiscount();
   const phone = general.phone || '+254796563741';
   const company = general.company_name || 'Concept Cleaning Services';
   const logo = general.logo_url || conceptLogo;
@@ -87,6 +89,9 @@ export default function LandingPage() {
         .ccs-jumia-home .ccs-product-card { border:1px solid #eee; background:white; transition:box-shadow .18s ease,transform .18s ease; }
         .ccs-jumia-home .ccs-product-card:hover { transform:translateY(-2px); box-shadow:0 5px 16px rgba(0,0,0,.12); }
         .ccs-jumia-home .ccs-orange { background:#f68b1e; }
+        .ccs-jumia-home .ccs-promo-track { display:flex; width:max-content; min-width:200%; animation:ccs-promo-marquee 24s linear infinite; }
+        .ccs-jumia-home .ccs-promo-track:hover { animation-play-state:paused; }
+        @keyframes ccs-promo-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
         .ccs-jumia-home .ccs-pulse { animation:ccs-pulse 2.2s ease-in-out infinite; }
         .ccs-jumia-home .ccs-hover-info { opacity:0; visibility:hidden; transform:translateY(7px); transition:opacity .18s ease,transform .18s ease,visibility .18s; }
         .ccs-jumia-home .ccs-info-trigger:hover .ccs-hover-info, .ccs-jumia-home .ccs-info-trigger:focus-within .ccs-hover-info { opacity:1; visibility:visible; transform:translateY(0); }
@@ -102,7 +107,7 @@ export default function LandingPage() {
         }
         @media (prefers-reduced-motion:reduce) {
           .ccs-jumia-home *, .ccs-jumia-home *::before, .ccs-jumia-home *::after { transition-duration:.01ms !important; animation-duration:.01ms !important; }
-          .ccs-jumia-home .ccs-pulse { animation:none !important; }
+          .ccs-jumia-home .ccs-pulse, .ccs-jumia-home .ccs-promo-track { animation:none !important; }
         }
       `}</style>
 
@@ -126,6 +131,22 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {discount.active && (
+        <div className="relative z-30 flex h-12 items-center overflow-hidden bg-[#111018] text-white shadow-sm" aria-label={`${discount.label || 'Special offer'}: ${discount.percentage}% off all services`}>
+          <div className="ccs-promo-track items-center whitespace-nowrap">
+            {[0, 1].map((copy) => (
+              <div key={copy} aria-hidden={copy === 1} className="flex min-w-[50vw] items-center justify-around gap-8 px-8 text-sm font-extrabold sm:gap-12">
+                <span className="tracking-[.12em]">CONCEPT ✦</span>
+                <span className="text-lg font-black text-[#ff6b1a] sm:text-xl">{discount.label || 'SPECIAL OFFERS'}</span>
+                <span className="text-xs font-black tracking-wide sm:text-sm">{discount.percentage}% OFF ALL SERVICES</span>
+                <Link to="/marketplace" tabIndex={copy === 1 ? -1 : 0} className="rounded-full bg-white px-5 py-2 text-xs font-black tracking-wider text-[#282828] transition-colors hover:bg-[#ff6b1a] hover:text-white">SHOP THE OFFER <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+                <span className="rounded-full bg-[#f68b1e] px-3 py-1 text-[10px] font-black tracking-widest">LIVE NOW</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <header className="sticky top-0 z-40 border-b border-[#e7e7e7] bg-white shadow-sm">
         <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-4 py-3 sm:px-6 lg:gap-7">
