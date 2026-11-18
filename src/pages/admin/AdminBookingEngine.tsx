@@ -341,8 +341,8 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  const toggleOfferService=(relationship:'trigger'|'included'|'recommended',id:string,checked:boolean)=>{
   setOfferServiceLinks(old=>{
    const next={...old,[relationship]:checked?[...old[relationship],id]:old[relationship].filter(x=>x!==id)};
-   if(offerDraft.offer_type==='package'&&checked&&relationship==='trigger') next.included=next.included.filter(x=>x!==id);
-   if(offerDraft.offer_type==='package'&&checked&&relationship==='included') next.trigger=next.trigger.filter(x=>x!==id);
+   if(checked&&relationship==='trigger') next.included=next.included.filter(x=>x!==id);
+   if(checked&&relationship==='included') next.trigger=next.trigger.filter(x=>x!==id);
    return next;
   });
  };
@@ -352,7 +352,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
   if(offerDraft.offer_type==='package'&&!offerServiceLinks.included.length){toast({title:'A package needs at least one included service'});return;}
   if(offerDraft.offer_type==='package'&&offerDraft.price_mode!=='fixed'&&offerDraft.price_mode!=='quotation'){toast({title:'Packages use a fixed bundle price or a staff quotation. Choose an add-on or upgrade for discounts.'});return;}
   if((offerDraft.offer_type==='add_on'||offerDraft.offer_type==='upgrade')&&offerDraft.price_mode==='quotation'){toast({title:'Optional extras and upgrades need a configured amount or discount. Use a fixed price or discount.'});return;}
-  if(offerDraft.offer_type==='package'&&offerServiceLinks.trigger.some(id=>offerServiceLinks.included.includes(id))){toast({title:'The starting service cannot also be listed as included in the package.'});return;}
+  if(offerServiceLinks.trigger.some(id=>offerServiceLinks.included.includes(id))){toast({title:'A starting service cannot also be listed as an included service.'});return;}
   const order=Number(offerDraft.display_order),amount=offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value);
   if(!Number.isInteger(order)|| (amount!==null&&(!Number.isFinite(amount)||amount<0)) || (amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Check the offer display order and price'});return;}
   const user=(await supabase.auth.getUser()).data.user?.id??null;
