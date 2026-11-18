@@ -339,12 +339,19 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
   setOfferServiceLinks({trigger:links.filter(x=>x.relationship==='trigger').map(x=>x.service_id),included:links.filter(x=>x.relationship==='included').map(x=>x.service_id),recommended:links.filter(x=>x.relationship==='recommended').map(x=>x.service_id)});
  };
  const toggleOfferService=(relationship:'trigger'|'included'|'recommended',id:string,checked:boolean)=>{
-  setOfferServiceLinks(old=>({...old,[relationship]:checked?[...old[relationship],id]:old[relationship].filter(x=>x!==id)}));
+  setOfferServiceLinks(old=>{
+   const next={...old,[relationship]:checked?[...old[relationship],id]:old[relationship].filter(x=>x!==id)};
+   if(offerDraft.offer_type==='package'&&checked&&relationship==='trigger') next.included=next.included.filter(x=>x!==id);
+   if(offerDraft.offer_type==='package'&&checked&&relationship==='included') next.trigger=next.trigger.filter(x=>x!==id);
+   return next;
+  });
  };
  const saveOffer=async()=>{
   const key=makeKey(offerDraft.offer_key||offerDraft.title);
   if(!key||!offerDraft.title.trim()||!offerServiceLinks.trigger.length){toast({title:'Add a title and at least one triggering service'});return;}
   if(offerDraft.offer_type==='package'&&!offerServiceLinks.included.length){toast({title:'A package needs at least one included service'});return;}
+  if(offerDraft.offer_type==='package'&&offerDraft.price_mode!=='fixed'&&offerDraft.price_mode!=='quotation'){toast({title:'Packages use a fixed bundle price or a staff quotation. Choose an add-on or upgrade for discounts.'});return;}
+  if(offerDraft.offer_type==='package'&&offerServiceLinks.trigger.some(id=>offerServiceLinks.included.includes(id))){toast({title:'The starting service cannot also be listed as included in the package.'});return;}
   const order=Number(offerDraft.display_order),amount=offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value);
   if(!Number.isInteger(order)|| (amount!==null&&(!Number.isFinite(amount)||amount<0)) || (amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Check the offer display order and price'});return;}
   const user=(await supabase.auth.getUser()).data.user?.id??null;
@@ -416,8 +423,8 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
      <Card><CardHeader><CardTitle className="text-base">{editingOffer?'Edit customer package / offer':'Create a customer package or offer'}</CardTitle></CardHeader><CardContent className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
        <div className="space-y-1"><Label>Package or offer name</Label><Input value={offerDraft.title} onChange={e=>{setO('title',e.target.value);if(!editingOffer)setO('offer_key',makeKey(e.target.value));}}/></div>
-       <div className="space-y-1"><Label>What are you creating?</Label><Select value={offerDraft.offer_type} onValueChange={v=>setO('offer_type',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="package">Package</SelectItem><SelectItem value="add_on">Add-on</SelectItem><SelectItem value="upgrade">Upgrade</SelectItem><SelectItem value="recurring">Recurring offer</SelectItem></SelectContent></Select></div>
-       <div className="space-y-1"><Label>How should the price work?</Label><Select value={offerDraft.price_mode} onValueChange={v=>setO('price_mode',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="quotation">Price confirmed after review</SelectItem><SelectItem value="fixed">Fixed package price</SelectItem><SelectItem value="percentage_discount">Percentage discount</SelectItem><SelectItem value="fixed_discount">Fixed amount discount</SelectItem></SelectContent></Select></div>
+       <div className="space-y-1"><Label>What are you creating?</Label><Select value={offerDraft.offer_type} onValueChange={v=>{setO('offer_type',v);if(v==='package'&&['percentage_discount','fixed_discount'].includes(offerDraft.price_mode))setO('price_mode','fixed');}}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="package">Package</SelectItem><SelectItem value="add_on">Add-on</SelectItem><SelectItem value="upgrade">Upgrade</SelectItem><SelectItem value="recurring">Recurring offer</SelectItem></SelectContent></Select></div>
+       <div className="space-y-1"><Label>How should the price work?</Label><Select value={offerDraft.price_mode} onValueChange={v=>setO('price_mode',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="quotation">Price confirmed after review</SelectItem><SelectItem value="fixed">{offerDraft.offer_type==='package'?'Fixed package price':'Fixed amount added'}</SelectItem>{offerDraft.offer_type!=='package'&&<><SelectItem value="percentage_discount">Percentage discount</SelectItem><SelectItem value="fixed_discount">Fixed amount discount</SelectItem></>}</SelectContent></Select></div>
        <div className="space-y-1"><Label>{offerDraft.price_mode==='percentage_discount'?'Discount percentage (%)':'Amount (KES)'}</Label><Input type="number" min="0" step="0.01" disabled={offerDraft.price_mode==='quotation'} value={offerDraft.price_value} onChange={e=>setO('price_value',e.target.value)}/></div>
        <div className="space-y-1 sm:col-span-2"><Label>Short description customers will see</Label><Textarea rows={2} value={offerDraft.description} onChange={e=>setO('description',e.target.value)}/></div>
        <div className="flex items-center gap-2"><Switch checked={offerDraft.featured} onCheckedChange={v=>setO('featured',v)}/><Label>Feature this package</Label></div>
