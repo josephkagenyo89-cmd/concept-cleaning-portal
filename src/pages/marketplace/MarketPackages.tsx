@@ -6,13 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatKes } from '@/lib/marketplace';
 import { supabase } from '@/integrations/supabase/client';
+import { isBookingOfferCurrent } from '@/lib/bookingEngineOffers';
 
 type ServiceLink = { offer_id: string; service_id: string; relationship: string; quantity: number; service?: { id: string; name: string; description?: string | null } };
 type Offer = { id: string; title: string; description: string | null; terms: string | null; offer_type: string; price_mode: string; price_value: number | null; featured: boolean; starts_at: string | null; ends_at: string | null; display_order: number; links: ServiceLink[]; bookingServices: { id: string; name: string }[] };
 
-const activeNow = (offer: any, now: number) =>
-  (!offer.starts_at || new Date(offer.starts_at).getTime() <= now) &&
-  (!offer.ends_at || new Date(offer.ends_at).getTime() >= now);
+const activeNow = (offer: any, now: number) => isBookingOfferCurrent(offer, now);
 
 const priceLabel = (offer: Offer) => {
   const amount = Number(offer.price_value);
