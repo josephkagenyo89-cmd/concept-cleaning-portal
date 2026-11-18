@@ -127,17 +127,15 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
               if (item.data) {
                 setRequestItemId(item.data.id);
                 const savedOffer=await db.from('booking_engine_request_offers').select('offer_id,offer:booking_engine_value_offers!inner(offer_type)').eq('request_id',saved).maybeSingle();
-                if(live){
-                  const savedOfferId=savedOffer.data?.offer_id||'';
-                  const savedOfferType=savedOffer.data?.offer?.offer_type;
-                  if(savedOfferId&&savedOfferType&&savedOfferType!=='package'){
-                    setSelectedOfferId(initialOfferId||'');
-                    setExtras(old=>Array.from(new Set([...old,bookingOfferSelectionKey(savedOfferId)])));
-                  }else setSelectedOfferId(savedOfferId||initialOfferId||'');
-                }
+                const savedOfferId=savedOffer.data?.offer_id||'';
+                const currentSavedOffer=loadedOffers.find((offer:any)=>offer.id===savedOfferId);
+                if(live)setSelectedOfferId(currentSavedOffer?.offer_type==='package'?savedOfferId:(initialOfferId||''));
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
-                setExtras(Array.isArray(item.data.selected_extras) ? item.data.selected_extras : []);
+                const savedExtras=Array.isArray(item.data.selected_extras)?item.data.selected_extras:[];
+                setExtras(currentSavedOffer&&currentSavedOffer.offer_type!=='package'
+                  ?Array.from(new Set([...savedExtras,bookingOfferSelectionKey(savedOfferId)]))
+                  :savedExtras);
               }
             } else {
               setDraftId('');
@@ -405,7 +403,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     </div>
     {price&&<Card className="overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{price.status==='quotation_required'?'Quotation required':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
       {price.status==='priced'?<div><p className="text-xs text-muted-foreground">Estimated total</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will prepare a formal quotation. No price has been assumed.</p>}
-      <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium">Your selections</p><div className="mt-2 flex flex-wrap gap-1.5">{quantityEnabled&&<Badge variant="secondary">{quantity} {quantityUnit}</Badge>}{selectedOfferId&&packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><Badge key={offer.id} variant="secondary">Package: {offer.title}</Badge>)}{addonOffers.filter((offer:any)=>extras.includes('offer:'+offer.id)).map((offer:any)=><Badge key={offer.id} variant="secondary">Extra: {offer.title}</Badge>)}{questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!=='' ).map(q=><Badge key={q.id} variant="secondary">{q.label}: {Array.isArray(answers[q.question_key])?answers[q.question_key].join(', '):String(answers[q.question_key])}</Badge>)}</div></div>
+      <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium">Your selections</p><div className="mt-2 flex flex-wrap gap-1.5">{quantityEnabled&&<Badge variant="secondary">{quantity} {quantityUnit}</Badge>}{selectedOfferId&&packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><Badge key={offer.id} variant="secondary">Package: {offer.title}</Badge>)}{addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id))).map((offer:any)=><Badge key={offer.id} variant="secondary">Extra: {offer.title}</Badge>)}{questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!=='' ).map(q=><Badge key={q.id} variant="secondary">{q.label}: {Array.isArray(answers[q.question_key])?answers[q.question_key].join(', '):String(answers[q.question_key])}</Badge>)}</div>{Array.isArray(price.selected_addons)&&price.selected_addons.length>0&&<div className="mt-3 border-t pt-3"><p className="text-xs font-semibold">Optional extras included in this estimate</p><ul className="mt-2 space-y-1.5">{price.selected_addons.map((addon:any)=><li key={addon.id} className="flex items-start justify-between gap-3 text-xs"><span>{addon.title}</span><span className="shrink-0 font-medium tabular-nums">{addon.price_mode==='fixed'?'+'+formatKes(Number(addon.price_value)||0):addon.price_mode==='fixed_discount'?'-'+formatKes(Number(addon.calculated_amount??addon.price_value)||0):addon.price_mode==='percentage_discount'?Number(addon.price_value||0)+'% discount':'Included in quotation'}</span></li>)}</ul></div>}</div>
       <p className="text-xs text-muted-foreground">This is an estimate, not a confirmed appointment. Our team will review your request and confirm availability.</p>
       <label className="flex items-start gap-2 text-sm"><Checkbox checked={ack} onCheckedChange={v=>setAck(!!v)}/><span>I have reviewed and acknowledge the included and excluded service scope.</span></label>
       <Button className="w-full" onClick={()=>void submit()} disabled={saving||!ack}>{saving?'Submitting request…':'Submit booking request'}</Button>
