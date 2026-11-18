@@ -165,3 +165,10 @@ VALUES
   ('access_notes', 'Are there any access or parking instructions?', 'Share gate, parking, floor or access details that may help the team.', 'textarea', false, '[]'::jsonb, '{}'::jsonb, 'access', 140),
   ('special_requirements', 'Anything else our team should know?', 'Share special requests or concerns before we prepare your estimate.', 'textarea', false, '[]'::jsonb, '{}'::jsonb, 'additional', 150)
 ON CONFLICT (question_key) DO NOTHING;
+
+GRANT SELECT ON public.booking_engine_question_templates TO anon, authenticated;
+GRANT SELECT ON public.booking_engine_value_offers TO anon, authenticated;
+GRANT SELECT ON public.booking_engine_value_offer_services TO anon, authenticated;
+GRANT ALL ON public.booking_engine_question_templates TO authenticated;
+GRANT ALL ON public.booking_engine_value_offers TO authenticated;
+GRANT ALL ON public.booking_engine_value_offer_services TO authenticated;
