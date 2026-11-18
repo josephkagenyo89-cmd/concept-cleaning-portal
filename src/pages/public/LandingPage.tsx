@@ -13,7 +13,9 @@ import BookingEngine from '@/components/public/BookingEngine';
 import { ServicesCatalogueContent } from './MarketingPages';
 import SocialLinks from '@/components/public/SocialLinks';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
-import { categoryImage } from '@/lib/marketplace';
+import { categoryImage, CATEGORY_IMAGE_OPTIONS } from '@/lib/marketplace';
+
+const landingBackgroundImages = CATEGORY_IMAGE_OPTIONS.filter((item) => item.key !== 'monthly-offers');
 
 function slugify(value: string) {
   return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -50,7 +52,7 @@ export default function LandingPage() {
   const slide = slides[activeSlide];
 
   return (
-    <div className="ccs-jumia-home min-h-screen bg-[#f1f1f2] text-[#313133]">
+    <div className="ccs-jumia-home relative isolate min-h-screen overflow-hidden bg-[#f1f1f2] text-[#313133]">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -65,7 +67,7 @@ export default function LandingPage() {
 
       <style>{`
         .ccs-jumia-home { --ccs-orange:#f68b1e; --ccs-ink:#282828; --ccs-muted:#75757a; --ccs-line:#e8e8e8; }
-        .ccs-jumia-home .market-catalogue { background:#f1f1f2; }
+        .ccs-jumia-home .market-catalogue { background:transparent; }
         .ccs-jumia-home .market-catalogue > section { margin:0 auto 14px; max-width:1280px; background:#fff; padding-left:20px; padding-right:20px; }
         .ccs-jumia-home .market-catalogue > section:first-child { background:#fff; color:#282828; padding-top:28px; padding-bottom:28px; }
         .ccs-jumia-home .market-catalogue > section:first-child h1 { color:#282828; }
@@ -78,6 +80,10 @@ export default function LandingPage() {
         .ccs-jumia-home .ccs-product-card { border:1px solid #eee; background:white; transition:box-shadow .18s ease,transform .18s ease; }
         .ccs-jumia-home .ccs-product-card:hover { transform:translateY(-2px); box-shadow:0 5px 16px rgba(0,0,0,.12); }
         .ccs-jumia-home .ccs-orange { background:#f68b1e; }
+        @media (max-width:1023px) {
+          .ccs-jumia-home .ccs-market-hero { grid-template-columns:190px minmax(0,1fr); }
+          .ccs-jumia-home .ccs-side-promos { display:none; }
+        }
         @media (max-width:767px) {
           .ccs-jumia-home .ccs-market-hero { grid-template-columns:1fr; }
           .ccs-jumia-home .ccs-market-sidebar { display:none; }
@@ -88,7 +94,17 @@ export default function LandingPage() {
         }
       `}</style>
 
-      <div className="bg-[#f68b1e] text-white">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 grid grid-cols-2 grid-rows-3 gap-1 overflow-hidden p-1 sm:grid-cols-3 sm:grid-rows-2">
+        {landingBackgroundImages.map((item) => (
+          <div key={item.key} className="relative min-h-0 overflow-hidden rounded-sm">
+            <img src={item.src} alt="" className="h-full w-full object-cover opacity-70" />
+            <div className="absolute inset-0 bg-white/75" />
+          </div>
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-white/55 to-white/70" />
+      </div>
+
+      <div className="relative z-20 bg-[#f68b1e] text-white">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-1.5 text-[11px] font-semibold sm:px-6">
           <span className="tracking-wide">CONCEPT CLEANING SERVICES · NAIROBI</span>
           <div className="flex items-center gap-4">
@@ -120,7 +136,7 @@ export default function LandingPage() {
         {mobileMenuOpen && <nav className="grid gap-1 border-t bg-white px-4 py-3 lg:hidden"><Link to="/services" className="rounded px-3 py-2 text-sm font-semibold">All Services</Link><Link to="/packages" className="rounded px-3 py-2 text-sm font-semibold">Packages</Link><Link to="/marketplace" className="rounded px-3 py-2 text-sm font-semibold">Book Online</Link><Link to="/blog" className="rounded px-3 py-2 text-sm font-semibold">Cleaning Guides</Link><Link to="/contact" className="rounded px-3 py-2 text-sm font-semibold">Contact</Link></nav>}
       </header>
 
-      <main className="mx-auto max-w-[1280px] px-2 pb-12 pt-3 sm:px-4">
+      <main className="relative z-10 mx-auto max-w-[1280px] px-2 pb-12 pt-3 sm:px-4">
         <div className="mb-3 hidden items-center gap-5 rounded bg-white px-4 py-2 text-xs font-semibold text-[#555] md:flex">
           <Link to="/services" className="text-[#e77d10]">All Services</Link><Link to="/services">Cleaning Services</Link><Link to="/packages">Packages</Link><Link to="/marketplace">Book Online</Link><Link to="/blog">Cleaning Guides</Link><Link to="/contact">Contact</Link>
           <span className="ml-auto text-[#888]">Professional cleaning · Nairobi, Kenya</span>
