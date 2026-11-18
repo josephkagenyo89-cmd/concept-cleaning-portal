@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  ArrowRight, CalendarDays, CheckCircle2, ChevronRight, Headphones,
-  MapPin, Menu, MessageCircle, Search, ShieldCheck, Sparkles, X
+  ArrowRight, CalendarDays, ChevronRight, Headphones,
+  MapPin, Menu, MessageCircle, Search, ShieldCheck, X
 } from 'lucide-react';
 import conceptLogo from '@/assets/concept-cleaning-logo.png';
 import commercialHero from '@/assets/market/commercial.jpg';
