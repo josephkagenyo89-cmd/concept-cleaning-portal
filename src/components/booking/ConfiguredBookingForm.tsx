@@ -108,11 +108,15 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           }else{
             const allLinks=linksResult.data||[];
             const eligibleOffers=currentOffers.filter((offer:any)=>{
-              const included=allLinks.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
-              // A package must contain at least one included service, and every included service must still be active.
-              if(offer.offer_type==='package')return included.length>0&&included.every((link:any)=>link.service?.is_active===true);
-              // Add-ons/upgrades with service inclusions are valid only while those services remain active.
-              return included.every((link:any)=>link.service?.is_active===true);
+              const linkedServices=allLinks.filter((link:any)=>
+                link.offer_id===offer.id&&(link.relationship==='included'||link.relationship==='recommended')
+              );
+              const linkedServicesActive=linkedServices.every((link:any)=>link.service?.is_active===true);
+              const included=linkedServices.filter((link:any)=>link.relationship==='included');
+              // The server rejects an offer snapshot if any included or recommended catalogue service is inactive.
+              // Keep the customer list aligned with that rule so estimate/submit cannot fail unexpectedly.
+              if(offer.offer_type==='package')return included.length>0&&linkedServicesActive;
+              return linkedServicesActive;
             }).sort((a:any,b:any)=>
               Number(Boolean(b.featured))-Number(Boolean(a.featured))||
               Number(a.display_order??0)-Number(b.display_order??0)||

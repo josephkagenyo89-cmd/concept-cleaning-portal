@@ -68,7 +68,7 @@ const readyPackageInput = {
   services: [
     { id: 'sofa', name: 'Sofa Cleaning', is_active: true },
     { id: 'mattress', name: 'Mattress Cleaning', is_active: true },
-    { id: 'carpet', name: 'Carpet Cleaning', is_active: false },
+    { id: 'carpet', name: 'Carpet Cleaning', is_active: true },
   ],
   configurations: [
     { service_id: 'sofa', enabled: true, has_active_pricing: true },
@@ -81,8 +81,23 @@ describe('Smart Booking offer readiness', () => {
     expect(getBookingOfferReadinessIssues(readyPackageInput)).toEqual([]);
   });
 
-  it('does not block an offer because an optional recommendation is inactive', () => {
-    expect(getBookingOfferReadinessIssues(readyPackageInput)).toEqual([]);
+  it('blocks publication when a recommended service is inactive because the server snapshots it', () => {
+    const input = {
+      ...readyPackageInput,
+      services: readyPackageInput.services.map((service) =>
+        service.id === 'carpet' ? { ...service, is_active: false } : service,
+      ),
+    };
+    expect(getBookingOfferReadinessIssues(input))
+      .toContain('Carpet Cleaning is inactive in the service catalogue.');
+  });
+
+  it('does not require recommended services to have their own booking configuration or pricing', () => {
+    const input = {
+      ...readyPackageInput,
+      configurations: readyPackageInput.configurations.filter((config) => config.service_id !== 'carpet'),
+    };
+    expect(getBookingOfferReadinessIssues(input)).toEqual([]);
   });
 
   it('blocks publication when an included service is inactive', () => {

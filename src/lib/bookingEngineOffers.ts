@@ -96,6 +96,20 @@ export function getBookingOfferReadinessIssues(input: BookingOfferReadinessInput
     }
   }
 
+  // The server snapshots both included and recommended service details and rejects inactive links.
+  // Recommendations do not need their own Booking Engine configuration or pricing rule.
+  const recommendedIds = Array.from(new Set(input.links
+    .filter((link) => link.relationship === 'recommended')
+    .map((link) => link.service_id)));
+  for (const id of recommendedIds) {
+    const service = input.services.find((item) => item.id === id);
+    if (!service) {
+      issues.push('A recommended service could not be found in the service catalogue.');
+    } else if (!service.is_active) {
+      issues.push((service.name?.trim() || 'Recommended service') + ' is inactive in the service catalogue.');
+    }
+  }
+
   const start = input.starts_at ? new Date(input.starts_at).getTime() : null;
   const end = input.ends_at ? new Date(input.ends_at).getTime() : null;
   if (start !== null && !Number.isFinite(start)) issues.push('The campaign start date is invalid.');
