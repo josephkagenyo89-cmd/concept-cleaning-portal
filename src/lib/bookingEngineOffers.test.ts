@@ -4,6 +4,7 @@ import {
   groupBookingOffers,
   isBookingOfferCurrent,
   toggleBookingOfferSelection,
+  summarizeBookingOfferPerformance,
 } from './bookingEngineOffers';
 
 describe('Smart Booking offer availability', () => {
@@ -123,5 +124,49 @@ describe('Smart Booking offer readiness', () => {
   it('rejects an end date that is not later than the start date', () => {
     expect(getBookingOfferReadinessIssues({ ...readyPackageInput, ends_at: '2026-10-01T00:00:00.000Z' }))
       .toContain('The campaign end date must be later than its start date.');
+  });
+});
+
+
+describe('Smart Booking offer performance summaries', () => {
+  it('counts unique request selections and converted bookings per offer', () => {
+    const summary = summarizeBookingOfferPerformance(
+      [
+        { offer_id: 'package-a', request_id: 'request-1' },
+        { offer_id: 'package-a', request_id: 'request-1' },
+        { offer_id: 'package-a', request_id: 'request-2' },
+        { offer_id: 'package-b', request_id: 'request-3' },
+      ],
+      [
+        { id: 'request-1', status: 'converted', converted_booking_id: 'booking-1' },
+        { id: 'request-2', status: 'submitted', converted_booking_id: null },
+        { id: 'request-3', status: 'ready_for_booking', converted_booking_id: null },
+      ],
+    );
+
+    expect(summary['package-a']).toEqual({ selections: 2, convertedBookings: 1, conversionRate: 50 });
+    expect(summary['package-b']).toEqual({ selections: 1, convertedBookings: 0, conversionRate: 0 });
+  });
+
+  it('uses the converted booking reference even if the request status has not caught up', () => {
+    const summary = summarizeBookingOfferPerformance(
+      [{ offer_id: 'package-a', request_id: 'request-1' }],
+      [{ id: 'request-1', status: 'ready_for_booking', converted_booking_id: 'booking-1' }],
+    );
+
+    expect(summary['package-a'].convertedBookings).toBe(1);
+    expect(summary['package-a'].conversionRate).toBe(100);
+  });
+
+  it('ignores missing offer IDs and selections without a matching request', () => {
+    const summary = summarizeBookingOfferPerformance(
+      [
+        { offer_id: null, request_id: 'request-1' },
+        { offer_id: 'package-a', request_id: 'request-missing' },
+      ],
+      [],
+    );
+
+    expect(summary['package-a']).toEqual({ selections: 1, convertedBookings: 0, conversionRate: 0 });
   });
 });

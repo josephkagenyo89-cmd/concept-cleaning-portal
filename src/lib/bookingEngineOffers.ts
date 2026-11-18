@@ -106,3 +106,57 @@ export function getBookingOfferReadinessIssues(input: BookingOfferReadinessInput
 
   return Array.from(new Set(issues));
 }
+
+
+export type BookingOfferPerformanceSelection = {
+  offer_id: string | null;
+  request_id: string;
+};
+
+export type BookingOfferPerformanceRequest = {
+  id: string;
+  status: string;
+  converted_booking_id?: string | null;
+};
+
+export type BookingOfferPerformance = {
+  selections: number;
+  convertedBookings: number;
+  conversionRate: number;
+};
+
+/**
+ * Summarizes unique request selections and converted bookings per offer.
+ * Draft selections remain in the denominator; this is selection-to-booking
+ * conversion, not quote acceptance or revenue attribution.
+ */
+export function summarizeBookingOfferPerformance(
+  selections: BookingOfferPerformanceSelection[],
+  requests: BookingOfferPerformanceRequest[],
+): Record<string, BookingOfferPerformance> {
+  const requestsById = new Map(requests.map((request) => [request.id, request]));
+  const selectedRequests = new Map<string, Set<string>>();
+
+  for (const selection of selections) {
+    if (!selection.offer_id || !selection.request_id) continue;
+    const ids = selectedRequests.get(selection.offer_id) ?? new Set<string>();
+    ids.add(selection.request_id);
+    selectedRequests.set(selection.offer_id, ids);
+  }
+
+  return Object.fromEntries(
+    Array.from(selectedRequests.entries()).map(([offerId, requestIds]) => {
+      let convertedBookings = 0;
+      for (const requestId of requestIds) {
+        const request = requestsById.get(requestId);
+        if (request?.converted_booking_id || request?.status === 'converted') convertedBookings += 1;
+      }
+      const selectionsCount = requestIds.size;
+      return [offerId, {
+        selections: selectionsCount,
+        convertedBookings,
+        conversionRate: selectionsCount ? Math.round((convertedBookings / selectionsCount) * 1000) / 10 : 0,
+      }];
+    }),
+  );
+}

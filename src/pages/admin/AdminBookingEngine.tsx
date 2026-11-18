@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getBookingOfferReadinessIssues } from '@/lib/bookingEngineOffers';
+import { getBookingOfferReadinessIssues, summarizeBookingOfferPerformance } from '@/lib/bookingEngineOffers';
 import { AlertTriangle, ArrowRight, CheckCircle2, Circle, CirclePlus, ClipboardCheck, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react';
 import AdminBookingEngineRequests from '@/pages/admin/AdminBookingEngineRequests';
 
@@ -244,6 +244,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  const [templates,setTemplates]=useState<LibraryTemplate[]>([]);
  const [offers,setOffers]=useState<LibraryOffer[]>([]);
  const [offerLinks,setOfferLinks]=useState<Record<string,OfferLink[]>>({});
+ const [offerPerformance,setOfferPerformance]=useState<Record<string,{selections:number;convertedBookings:number;conversionRate:number}>>({});
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [editingTemplate,setEditingTemplate]=useState<string|null>(null);
  const [templateDraft,setTemplateDraft]=useState(emptyTemplateDraft);
@@ -266,7 +267,23 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
   if(links.error){toast({title:'Could not load offer service links',description:links.error.message,variant:'destructive'});setLoading(false);return;}
   const grouped:Record<string,OfferLink[]>={};
   for(const row of links.data||[]){(grouped[row.offer_id]??=[]).push({service_id:row.service_id,relationship:row.relationship,quantity:Number(row.quantity)||1});}
-  setTemplates((t.data||[]) as LibraryTemplate[]);setOffers(offerRows);setOfferLinks(grouped);setLoading(false);
+  const offerIds=offerRows.map(offer=>offer.id);
+  const selections=offerIds.length
+   ?await db.from('booking_engine_request_offers').select('offer_id,request_id,created_at').in('offer_id',offerIds).order('created_at',{ascending:false}).limit(1000)
+   :{data:[],error:null};
+  let performance:Record<string,{selections:number;convertedBookings:number;conversionRate:number}>={};
+  if(!selections.error&&selections.data?.length){
+   const requestIds=[...new Set(selections.data.map((row:any)=>row.request_id))];
+   const requests=await db.from('booking_engine_requests').select('id,status,converted_booking_id').in('id',requestIds);
+   if(!requests.error){
+    performance=summarizeBookingOfferPerformance(selections.data,requests.data||[]);
+   }else{
+    toast({title:'Offer performance is temporarily unavailable',description:requests.error.message,variant:'destructive'});
+   }
+  }else if(selections.error){
+   toast({title:'Offer performance is temporarily unavailable',description:selections.error.message,variant:'destructive'});
+  }
+  setTemplates((t.data||[]) as LibraryTemplate[]);setOffers(offerRows);setOfferLinks(grouped);setOfferPerformance(performance);setLoading(false);
  },[]);
  useEffect(()=>{void reload();},[reload]);
 
@@ -459,7 +476,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
    </TabsContent>
    <TabsContent value="offers" className="space-y-4">
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-     <Card><CardHeader><CardTitle className="text-base">Packages and value offers</CardTitle></CardHeader><CardContent className="space-y-2">{offers.map(o=><div key={o.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><b className="text-sm">{o.title}</b><p className="text-xs text-muted-foreground">{o.offer_type==='package'?'Customer package':o.offer_type==='upgrade'?'Upgrade':o.offer_type==='recurring'?'Recurring offer':'Add-on'} · {o.active?'Published':'Draft'}</p></div><div className="flex items-center gap-1"><Switch checked={o.active} onCheckedChange={()=>void toggleOffer(o)}/><Button size="icon" variant="ghost" onClick={()=>void editOffer(o)}><Save className="h-4 w-4"/></Button><Button size="icon" variant="ghost" onClick={()=>void deleteOffer(o)}><Trash2 className="h-4 w-4"/></Button></div></div>{o.description&&<p className="mt-1 text-xs text-muted-foreground">{o.description}</p>}</div>)}{!offers.length&&<p className="text-sm text-muted-foreground">No offers or packages created yet. Nothing is advertised automatically.</p>}</CardContent></Card>
+     <Card><CardHeader><CardTitle className="text-base">Packages and value offers</CardTitle><p className="text-xs text-muted-foreground">Performance reflects up to the 1,000 most recent saved offer selections. Conversion means a request was converted into an ERP booking; it is not revenue attribution.</p></CardHeader><CardContent className="space-y-2">{offers.map(o=>{const stats=offerPerformance[o.id]||{selections:0,convertedBookings:0,conversionRate:0};return <div key={o.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><b className="text-sm">{o.title}</b><p className="text-xs text-muted-foreground">{o.offer_type==='package'?'Customer package':o.offer_type==='upgrade'?'Upgrade':o.offer_type==='recurring'?'Recurring offer':'Add-on'} · {o.active?'Published':'Draft'}</p></div><div className="flex items-center gap-1"><Switch checked={o.active} onCheckedChange={()=>void toggleOffer(o)}/><Button size="icon" variant="ghost" onClick={()=>void editOffer(o)}><Save className="h-4 w-4"/></Button><Button size="icon" variant="ghost" onClick={()=>void deleteOffer(o)}><Trash2 className="h-4 w-4"/></Button></div></div>{o.description&&<p className="mt-1 text-xs text-muted-foreground">{o.description}</p>}<div className="mt-3 grid grid-cols-3 gap-2 border-t pt-3 text-xs"><div><span className="block text-muted-foreground">Selections</span><b className="tabular-nums">{stats.selections}</b></div><div><span className="block text-muted-foreground">ERP bookings</span><b className="tabular-nums">{stats.convertedBookings}</b></div><div><span className="block text-muted-foreground">Conversion</span><b className="tabular-nums">{stats.conversionRate}%</b></div></div></div>;})}{!offers.length&&<p className="text-sm text-muted-foreground">No offers or packages created yet. Nothing is advertised automatically.</p>}</CardContent></Card>
      <Card><CardHeader><CardTitle className="text-base">{editingOffer?'Edit customer package / offer':'Create a customer package or offer'}</CardTitle></CardHeader><CardContent className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
        <div className="space-y-1"><Label>Package or offer name</Label><Input value={offerDraft.title} onChange={e=>{setO('title',e.target.value);if(!editingOffer)setO('offer_key',makeKey(e.target.value));}}/></div>
