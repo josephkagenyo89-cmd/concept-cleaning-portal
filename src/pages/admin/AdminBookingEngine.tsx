@@ -471,7 +471,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
        <div className="flex items-center gap-2"><Switch checked={offerDraft.active} onCheckedChange={v=>setO('active',v)}/><Label>Publish for customers</Label></div>
       </div>
       <div className="space-y-1"><Label>Find services</Label><Input value={serviceSearch} onChange={e=>setServiceSearch(e.target.value)} placeholder="Search services by name…"/></div>
-      <div className="grid gap-2 md:grid-cols-3">{servicePicker('trigger','Which service should customers start with?')}{servicePicker('included','What is included in the package?')}{servicePicker('recommended','Optional additions to suggest')}</div>
+      <div className="grid gap-2 md:grid-cols-3">{servicePicker('trigger','Which service should customers start with?')}{servicePicker('included','Which service(s) should be complimentary?')}{servicePicker('recommended','Optional additions to suggest')}</div>
       <details className="rounded-lg border p-3">
        <summary className="cursor-pointer text-sm font-semibold">Advanced settings (optional)</summary>
        <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -482,7 +482,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
         <div className="space-y-1"><Label>Stop publishing (optional)</Label><Input type="datetime-local" value={offerDraft.ends_at} onChange={e=>setO('ends_at',e.target.value)}/></div>
        </div>
       </details>
-      <p className="text-xs text-muted-foreground">Before publishing, every starting and included service must be active, enabled in Smart Booking and have an active pricing rule. Optional recommended services do not block publication. An “included” service is not automatically free: complimentary pricing must be explicitly supported by the approved pricing configuration.</p>
+      <p className="text-xs text-muted-foreground">Before publishing, every starting and complimentary service must be active, enabled in Smart Booking and have an active pricing rule. A package must have at least one complimentary service. Each service selected here is saved as a separate KSh 0 line item in the quotation and booking; the package price is charged separately. Optional recommended services are paid suggestions and do not block publication.</p>
       <div className="flex flex-wrap gap-2"><Button onClick={()=>void saveOffer()} disabled={saving}>{saving?'Saving…':'Save package / offer'}</Button><Button variant="outline" onClick={()=>{setEditingOffer(null);setOfferDraft(emptyOfferDraft());setOfferServiceLinks({trigger:[],included:[],recommended:[]});}}>New offer</Button></div>
      </CardContent></Card>
     </div>

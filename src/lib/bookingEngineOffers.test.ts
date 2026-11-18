@@ -117,7 +117,7 @@ describe('Smart Booking offer readiness', () => {
   it('requires at least one included service for packages', () => {
     const links = readyPackageInput.links.filter((link) => link.relationship !== 'included');
     expect(getBookingOfferReadinessIssues({ ...readyPackageInput, links }))
-      .toContain('A package needs at least one included service.');
+      .toContain('A package needs at least one complimentary service.');
   });
 
   it('rejects an end date that is not later than the start date', () => {

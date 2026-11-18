@@ -59,7 +59,7 @@ export type BookingOfferReadinessInput = {
 
 /**
  * Returns actionable reasons an offer cannot safely be published.
- * Trigger and included services must be active, Booking Engine-enabled,
+ * Trigger and complimentary included services must be active, Booking Engine-enabled,
  * and backed by at least one active pricing rule. Recommended services are
  * optional and do not block publication.
  */
@@ -69,7 +69,7 @@ export function getBookingOfferReadinessIssues(input: BookingOfferReadinessInput
   const includedIds = Array.from(new Set(input.links.filter((link) => link.relationship === 'included').map((link) => link.service_id)));
 
   if (triggerIds.length === 0) issues.push('Choose at least one starting service.');
-  if (input.offer_type === 'package' && includedIds.length === 0) issues.push('A package needs at least one included service.');
+  if (input.offer_type === 'package' && includedIds.length === 0) issues.push('A package needs at least one complimentary service.');
 
   const overlap = triggerIds.filter((id) => includedIds.includes(id));
   if (overlap.length) issues.push('A starting service cannot also be an included service.');

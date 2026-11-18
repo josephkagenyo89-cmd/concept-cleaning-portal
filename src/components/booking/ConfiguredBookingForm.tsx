@@ -432,7 +432,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       </div>;
     })}</section>}
     {packageOffers.length>0&&<section className="space-y-3 border-t pt-4">
-      <div><h3 className="text-sm font-semibold">Packages recommended for {serviceName}</h3><p className="text-xs text-muted-foreground">These offers are matched to the service you selected. Compare what is included and choose a package if it suits your needs.</p></div>
+      <div><h3 className="text-sm font-semibold">Packages recommended for {serviceName}</h3><p className="text-xs text-muted-foreground">These offers are matched to the service you selected. Every service listed as complimentary is included at no additional charge.</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
         {packageOffers.map((offer:any)=>{
           const selected=selectedOfferId===offer.id;
@@ -445,7 +445,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             </span>
             {offer.description&&<span className="mt-2 text-xs leading-5 text-muted-foreground">{offer.description}</span>}
             <span className="mt-3 text-sm font-semibold">{offer.price_mode==='fixed'?formatKes(Number(offer.price_value)||0):'Price confirmed after review'}</span>
-            {included.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Included in this package</span><span className="mt-1 block space-y-1">{included.map((link:any,i:number)=><span key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600"/><span>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''}</span></span>)}</span></span>}
+            {included.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Complimentary services · no extra charge</span><span className="mt-1 block space-y-1">{included.map((link:any,i:number)=><span key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600"/><span>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''} <span className="font-semibold text-emerald-700">· FREE</span></span></span>)}</span></span>}
             {recommended.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Optional complementary services</span><span className="mt-1 block space-y-1">{recommended.map((link:any,i:number)=><span key={i} className="block text-xs text-muted-foreground">• {link.service?.name||'Service'}</span>)}</span></span>}
             {offer.terms&&<span className="mt-3 block w-full border-t pt-2 text-xs text-muted-foreground">{offer.terms}</span>}
           </button>;
