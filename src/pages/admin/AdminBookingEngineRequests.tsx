@@ -44,10 +44,10 @@ export default function AdminBookingEngineRequests(){
   setClients(c.data??[]);setItems(i.data??[]);
   const serviceIds=[...new Set((i.data??[]).map((x:Row)=>x.service_id))];
   if(serviceIds.length){const s=await db.from('services').select('id,name,service_code').in('id',serviceIds);if(s.error)toast({title:'Could not load service names',description:s.error.message,variant:'destructive'});setServices(s.data??[]);}else setServices([]);
-  const roleRows=await db.from('user_roles').select('user_id,role').in('role',['agent','admin','super_admin']);
-  if(roleRows.error)toast({title:'Could not load staff accounts',description:roleRows.error.message,variant:'destructive'});
+  const roleRows=await db.from('user_roles').select('user_id,role').in('role',['admin','super_admin']);
+  if(roleRows.error)toast({title:'Could not load reviewer accounts',description:roleRows.error.message,variant:'destructive'});
   const staffIds=(roleRows.data??[]).map((x:Row)=>x.user_id);
-  if(staffIds.length){const p=await db.from('profiles').select('user_id,full_name').in('user_id',staffIds);if(p.error)toast({title:'Could not load staff profiles',description:p.error.message,variant:'destructive'});setStaff(p.data??[]);}else setStaff([]);
+  if(staffIds.length){const p=await db.from('profiles').select('user_id,full_name').in('user_id',staffIds);if(p.error)toast({title:'Could not load reviewer profiles',description:p.error.message,variant:'destructive'});setStaff(p.data??[]);}else setStaff([]);
   setLoading(false);
  },[]);
  useEffect(()=>{void refresh();},[refresh]);
@@ -130,7 +130,7 @@ export default function AdminBookingEngineRequests(){
     <Card><CardHeader><CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base"><span>{selected.request_number}</span><Badge>{statusLabel(selected.status)}</Badge></CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
      <div className="grid gap-2 sm:grid-cols-2"><div><span className="text-xs text-muted-foreground">Customer</span><p className="font-medium">{client?.full_name||'Customer record unavailable'}</p><p className="text-xs text-muted-foreground">{client?.phone||''}</p></div><div><span className="text-xs text-muted-foreground">Preferred schedule</span><p>{selected.requested_date||'Not specified'} {selected.requested_time||''}</p></div><div className="sm:col-span-2"><span className="text-xs text-muted-foreground">Location</span><p>{selected.service_location||'Not provided'}</p></div></div>
      {selected.customer_notes&&<div className="rounded border p-3"><b className="text-xs">Customer notes</b><p className="mt-1 whitespace-pre-wrap">{selected.customer_notes}</p></div>}
-     <div className="rounded border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><b className="text-xs">Assigned staff member</b><span className="text-xs text-muted-foreground">{staff.find(x=>x.user_id===selected.assigned_to)?.full_name||'Unassigned'}</span></div><select className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm" value={selected.assigned_to||''} onChange={e=>void assign(e.target.value)} disabled={saving}><option value="">Unassigned</option>{staff.map(member=><option key={member.user_id} value={member.user_id}>{member.full_name||member.user_id}</option>)}</select></div>
+     <div className="rounded border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><b className="text-xs">Assigned reviewer</b><span className="text-xs text-muted-foreground">{staff.find(x=>x.user_id===selected.assigned_to)?.full_name||'Unassigned'}</span></div><select className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm" value={selected.assigned_to||''} onChange={e=>void assign(e.target.value)} disabled={saving}><option value="">Unassigned</option>{staff.map(member=><option key={member.user_id} value={member.user_id}>{member.full_name||member.user_id}</option>)}</select></div>
      <div><b className="text-xs">Requested services</b><div className="mt-2 space-y-2">{selectedItems.map(item=><div key={item.id} className="rounded border p-3">
       <div className="flex flex-wrap justify-between gap-2"><b>{serviceName(item.service_id)}</b><span className="text-xs text-muted-foreground">Qty {item.quantity??1}</span></div>
       {Object.keys(item.answers||{}).length>0&&<pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(item.answers,null,2)}</pre>}
