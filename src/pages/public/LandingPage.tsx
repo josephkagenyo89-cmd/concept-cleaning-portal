@@ -30,6 +30,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
   const title = 'Professional Cleaning Services in Nairobi, Kenya | Concept Cleaning';
   const description = 'Book professional residential, office, upholstery, carpet, mattress and commercial cleaning, plus pest control in Nairobi and nearby areas.';
 
@@ -48,6 +49,12 @@ export default function LandingPage() {
     { eyebrow: 'BOOK WITH CONFIDENCE', heading: 'Cleaning solutions for every space.', copy: 'Compare service options, review what is included and request a booking online.', image: categoryImage('Residential Cleaning', 'residential'), action: 'Browse services', href: '/marketplace' },
     { eyebrow: 'HOME · OFFICE · COMMERCIAL', heading: 'Professional care. Clear service choices.', copy: 'Find the right cleaning option for your property and get support from our team.', image: categoryImage('Upholstery Cleaning', 'upholstery'), action: 'View packages', href: '/packages' },
   ];
+
+  useEffect(() => {
+    if (carouselPaused) return;
+    const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % slides.length), 5500);
+    return () => window.clearInterval(timer);
+  }, [carouselPaused, slides.length]);
 
   const slide = slides[activeSlide];
 
@@ -80,6 +87,10 @@ export default function LandingPage() {
         .ccs-jumia-home .ccs-product-card { border:1px solid #eee; background:white; transition:box-shadow .18s ease,transform .18s ease; }
         .ccs-jumia-home .ccs-product-card:hover { transform:translateY(-2px); box-shadow:0 5px 16px rgba(0,0,0,.12); }
         .ccs-jumia-home .ccs-orange { background:#f68b1e; }
+        .ccs-jumia-home .ccs-pulse { animation:ccs-pulse 2.2s ease-in-out infinite; }
+        .ccs-jumia-home .ccs-hover-info { opacity:0; visibility:hidden; transform:translateY(7px); transition:opacity .18s ease,transform .18s ease,visibility .18s; }
+        .ccs-jumia-home .ccs-info-trigger:hover .ccs-hover-info, .ccs-jumia-home .ccs-info-trigger:focus-within .ccs-hover-info { opacity:1; visibility:visible; transform:translateY(0); }
+        @keyframes ccs-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(246,139,30,.35); } 50% { box-shadow:0 0 0 8px rgba(246,139,30,0); } }
         @media (max-width:1023px) {
           .ccs-jumia-home .ccs-market-hero { grid-template-columns:190px minmax(0,1fr); }
           .ccs-jumia-home .ccs-side-promos { display:none; }
@@ -91,6 +102,7 @@ export default function LandingPage() {
         }
         @media (prefers-reduced-motion:reduce) {
           .ccs-jumia-home *, .ccs-jumia-home *::before, .ccs-jumia-home *::after { transition-duration:.01ms !important; animation-duration:.01ms !important; }
+          .ccs-jumia-home .ccs-pulse { animation:none !important; }
         }
       `}</style>
 
@@ -156,14 +168,14 @@ export default function LandingPage() {
             <Link to="/services" className="mx-3 mb-3 mt-1 flex items-center justify-center rounded border border-[#f0a24e] py-2 text-xs font-bold text-[#d97706] hover:bg-[#fff5eb]">View all categories <ArrowRight className="ml-2 h-3.5 w-3.5" /></Link>
           </aside>
 
-          <div className="relative min-h-[360px] overflow-hidden rounded bg-[#303943] shadow-sm">
+          <div className="relative min-h-[360px] overflow-hidden rounded bg-[#303943] shadow-sm" onMouseEnter={() => setCarouselPaused(true)} onMouseLeave={() => setCarouselPaused(false)} onFocus={() => setCarouselPaused(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCarouselPaused(false); }}>
             <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#14202b]/90 via-[#14202b]/55 to-transparent" />
             <div className="relative flex min-h-[360px] max-w-[650px] flex-col items-start justify-center px-7 py-8 text-white sm:px-10">
               <p className="rounded bg-white/15 px-3 py-1.5 text-[10px] font-extrabold tracking-[.16em]">{slide.eyebrow}</p>
               <h1 className="mt-4 max-w-xl text-3xl font-black leading-tight sm:text-4xl lg:text-[42px]">{slide.heading}</h1>
               <p className="mt-3 max-w-md text-sm leading-6 text-white/90">{slide.copy}</p>
-              <Link to={slide.href} className="mt-6 inline-flex items-center rounded bg-[#f68b1e] px-5 py-3 text-sm font-extrabold text-white hover:bg-[#e77d10]">{slide.action}<ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link to={slide.href} className="ccs-pulse mt-6 inline-flex items-center rounded bg-[#f68b1e] px-5 py-3 text-sm font-extrabold text-white hover:bg-[#e77d10]">{slide.action}<ArrowRight className="ml-2 h-4 w-4" /></Link>
             </div>
             <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2">
               {slides.map((item, index) => <button key={item.heading} type="button" aria-label={'Show banner ' + (index + 1)} aria-pressed={activeSlide === index} onClick={() => setActiveSlide(index)} className={`h-2 rounded-full transition-all ${activeSlide === index ? 'w-7 bg-[#f68b1e]' : 'w-2 bg-white/70'}`} />)}
@@ -171,9 +183,9 @@ export default function LandingPage() {
           </div>
 
           <aside className="ccs-side-promos grid grid-rows-2 gap-3">
-            <div className="flex flex-col justify-between rounded bg-white p-4 shadow-sm">
+            <div className="ccs-info-trigger group relative flex flex-col justify-between rounded bg-white p-4 shadow-sm transition-shadow hover:shadow-lg">
               <div className="flex items-center gap-2 text-[#d97706]"><Headphones className="h-6 w-6" /><span className="text-[11px] font-extrabold uppercase">Need assistance?</span></div>
-              <div><p className="text-lg font-black leading-tight text-[#333]">Talk to our team</p><p className="mt-1 text-xs leading-5 text-[#777]">Get help choosing the right service for your property.</p></div>
+              <div><p className="text-lg font-black leading-tight text-[#333]">Talk to our team</p><p className="mt-1 text-xs leading-5 text-[#777]">Get help choosing the right service for your property.</p></div><div className="ccs-hover-info pointer-events-none absolute inset-x-2 top-full z-50 rounded-b bg-white p-3 text-xs text-[#555] shadow-xl">Ask about service options, property requirements and booking availability.</div>
               <a href={waHome} target="_blank" rel="noopener noreferrer" className="text-xs font-extrabold text-[#d97706]">CHAT ON WHATSAPP <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></a>
             </div>
             <div className="flex flex-col justify-between rounded bg-white p-4 shadow-sm">
@@ -231,6 +243,7 @@ export default function LandingPage() {
           </div>
         </footer>
       </main>
+      <a href={waHome} target="_blank" rel="noopener noreferrer" aria-label="Chat with Concept Cleaning on WhatsApp" className="ccs-pulse fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-[#20b858] px-4 py-3 text-sm font-extrabold text-white shadow-xl transition-transform hover:-translate-y-1 hover:bg-[#159447]"><MessageCircle className="h-5 w-5" /><span className="hidden sm:inline">Chat on WhatsApp</span></a>
     </div>
   );
 }
