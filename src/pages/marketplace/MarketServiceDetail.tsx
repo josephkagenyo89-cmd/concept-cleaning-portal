@@ -82,14 +82,23 @@ export default function MarketServiceDetail() {
 
   const [service, setService] = useState<MarketService | null>(null);
   const [bookingEngineEnabled, setBookingEngineEnabled] = useState(false);
+  const [bookingEngineCheckComplete, setBookingEngineCheckComplete] = useState(false);
+  const [bookingEngineCheckError, setBookingEngineCheckError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     let active = true;
+    setBookingEngineCheckComplete(false);
+    setBookingEngineCheckError(false);
     supabase.from('booking_engine_service_config').select('id').eq('service_id', id).eq('enabled', true).maybeSingle().then(({ data, error }) => {
       if (!active) return;
-      if (error) console.warn('Could not check guided booking configuration:', error.message);
-      setBookingEngineEnabled(!error && !!data);
+      if (error) {
+        console.warn('Could not check guided booking configuration:', error.message);
+        setBookingEngineCheckError(true);
+      } else {
+        setBookingEngineEnabled(!!data);
+      }
+      setBookingEngineCheckComplete(true);
     });
     return () => { active = false; };
   }, [id]);
@@ -731,8 +740,19 @@ export default function MarketServiceDetail() {
             </CardHeader>
 
             <CardContent className="space-y-3">
-              {bookingEngineEnabled && user && isCustomer && customerClient ? (
-                <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} />
+              {!bookingEngineCheckComplete ? (
+                <p className="text-sm text-muted-foreground">Checking the available booking options…</p>
+              ) : bookingEngineCheckError ? (
+                <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">We could not verify this service’s booking setup. Please contact our team before continuing.</p>
+              ) : bookingEngineEnabled ? (
+                user && isCustomer && customerClient ? (
+                  <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} />
+                ) : (
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <p className="text-sm">{!user ? 'Sign in or create a customer account to complete this guided booking.' : isCustomer ? 'Your customer profile is still being linked. Please wait and try again.' : 'This guided booking is available to customer accounts only.'}</p>
+                    {!user && <Button type="button" className="w-full" onClick={requireLogin}>Sign in or create account</Button>}
+                  </div>
+                )
               ) : (
                 <>
 

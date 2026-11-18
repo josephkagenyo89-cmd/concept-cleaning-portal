@@ -308,7 +308,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <div className="space-y-1"><Label>Preferred date</Label><Input type="date" min={today()} value={date} onChange={e=>{setDate(e.target.value);setPrice(null);}}/></div>
       <div className="space-y-1"><Label>Preferred time</Label><Input type="time" value={time} onChange={e=>{setTime(e.target.value);setPrice(null);}}/></div>
       <div className="space-y-1 sm:col-span-2"><Label>Service address / estate / landmark</Label><Input value={location} onChange={e=>{setLocation(e.target.value);setPrice(null);}} placeholder="Estate, building, road or nearby landmark"/></div>
-      {quantityEnabled&&<div className="space-y-1"><Label>{quantityConfig.label||'Quantity / units'}</Label><Input type="number" min={quantityConfig.min??'0.01'} max={quantityConfig.max??undefined} step="0.01" value={quantity} onChange={e=>{setQuantity(e.target.value);setPrice(null);}}/></div>}
+      {quantityEnabled&&<div className="space-y-1"><Label>{quantityConfig.label||'Quantity / units'}</Label><Input type="number" min={quantityConfig.min??'0.01'} max={quantityConfig.max??undefined} step={quantityConfig.step??'0.01'} value={quantity} onChange={e=>{setQuantity(e.target.value);setPrice(null);}}/></div>}
     </div>
     {questions.length>0&&<div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service details</h3>{questions.map(q=>{
       const st=visibility[q.id]; if(!st?.visible)return null;

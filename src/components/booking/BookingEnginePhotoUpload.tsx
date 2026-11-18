@@ -10,7 +10,7 @@ type PhotoRow = { id: string; storage_path: string; photo_category: string; orig
 type Props = { requestId: string; itemId: string; minPhotos?: number; maxPhotos?: number; onCountChange?: (count: number) => void };
 const db = supabase as any;
 const BUCKET = 'booking-engine-photos';
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 1 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const CATEGORIES = [
   { value: 'overall_area', label: 'Overall area' },
@@ -59,7 +59,7 @@ export default function BookingEnginePhotoUpload({ requestId, itemId, minPhotos 
         return;
       }
       if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
-        toast({ title: 'Photo is too large', description: 'Each image must be 10 MB or smaller.', variant: 'destructive' });
+        toast({ title: 'Photo is too large', description: 'Each image must be 1 MB or smaller.', variant: 'destructive' });
         return;
       }
     }
@@ -115,7 +115,7 @@ export default function BookingEnginePhotoUpload({ requestId, itemId, minPhotos 
 
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs text-muted-foreground">JPG, PNG or WebP · maximum 10 MB each</p>
+      <p className="text-xs text-muted-foreground">JPG, PNG or WebP · maximum 1 MB each</p>
       <Badge variant={photos.length >= minPhotos ? 'secondary' : 'outline'}>{photos.length}{minPhotos ? ' / at least ' + minPhotos : ' uploaded'}{maxPhotos ? ' · max ' + maxPhotos : ''}</Badge>
     </div>
     <div className="flex flex-col gap-2 sm:flex-row">

@@ -412,6 +412,26 @@ export default function BookingEngine({ phone }: { phone: string }) {
       return;
     }
 
+    // Guided services must use their configured question and pricing flow.
+    const guidedConfig = await supabase
+      .from('booking_engine_service_config')
+      .select('id')
+      .eq('service_id', selected.id)
+      .eq('enabled', true)
+      .maybeSingle();
+
+    if (guidedConfig.error) {
+      setSubmitError('We could not verify this service booking setup. Please try again.');
+      return;
+    }
+
+    if (guidedConfig.data) {
+      const guidedParams = new URLSearchParams({ date, time, location: location.trim() });
+      if (mode === 'quotation') guidedParams.set('mode', 'quote');
+      navigate(`/service/${encodeURIComponent(selected.id)}?${guidedParams.toString()}`);
+      return;
+    }
+
     // Guests must provide a valid international phone number.
     if (!validCustomerPhone) {
       setSubmitError('Enter a valid phone number with country code, e.g. +254712345678.');
