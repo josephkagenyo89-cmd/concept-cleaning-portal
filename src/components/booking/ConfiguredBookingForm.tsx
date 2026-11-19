@@ -151,7 +151,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             setDraftId(parsed.id || '');
             const restoredOffer = loadedOffers.find((offer:any)=>offer.id===parsed.selectedOfferId);
             const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');
-            setSelectedOfferId(restoredOffer?.offer_type==='package'?restoredOffer.id:(eligibleInitialPackage?.id||''));
+            setSelectedOfferId(eligibleInitialPackage?.id || (restoredOffer?.offer_type==='package'?restoredOffer.id:''));
             setAnswers(parsed.answers || {});
             setGuestName(parsed.guestName || '');
             setGuestPhone(parsed.guestPhone || '');

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { isBookingOfferCurrent } from '@/lib/bookingEngineOffers';
 
-type PackageItem = { id: string; service_id: string; item_label: string | null; size_label: string; quantity: number; individual_price: number | null; complimentary: boolean; display_order: number; service?: { name?: string } | null };
+type PackageItem = { id: string; service_id: string; item_label: string | null; size_label: string; quantity: number; individual_price: number | null; complimentary: boolean; display_order: number; service?: { name?: string; is_active?: boolean } | null };
 type Offer = { id: string; title: string; description: string | null; offer_type: string; featured: boolean; starts_at: string | null; ends_at: string | null; display_order: number; price_mode: string; price_value: number | null; items: PackageItem[] };
 
 export default function MarketPackages() {
@@ -28,12 +28,16 @@ export default function MarketPackages() {
    const current = ((data || []) as Omit<Offer,'items'>[]).filter(o => isBookingOfferCurrent(o, now));
    const ids = current.map(o => o.id);
    const itemResult = ids.length ? await supabase.from('booking_engine_package_items')
-    .select('id,offer_id,service_id,item_label,size_label,quantity,individual_price,complimentary,display_order,service:services(name)')
-    .in('offer_id', ids).eq('active', true).order('display_order') : { data: [], error: null };
+    .select('id,offer_id,service_id,item_label,size_label,quantity,individual_price,complimentary,display_order,service:services!inner(name,is_active)')
+    .in('offer_id', ids).eq('active', true).order('display_order').order('created_at') : { data: [], error: null };
    if (itemResult.error) throw itemResult.error;
    const byOffer: Record<string, PackageItem[]> = {};
    for (const row of (itemResult.data || []) as any[]) (byOffer[row.offer_id] ||= []).push(row);
-   const complete = current.filter(o => (byOffer[o.id] || []).length > 0 && (byOffer[o.id] || []).every(i => !!i.size_label));
+   const firstServiceIds=[...new Set(current.map(o=>(byOffer[o.id]||[])[0]?.service_id).filter(Boolean))];
+   const configResult=firstServiceIds.length?await supabase.from('booking_engine_service_config').select('service_id').in('service_id',firstServiceIds).eq('enabled',true):{data:[],error:null};
+   if(configResult.error)throw configResult.error;
+   const configuredTriggers=new Set((configResult.data||[]).map((row:any)=>row.service_id));
+   const complete = current.filter(o => { const items=byOffer[o.id]||[]; const total=items.reduce((sum,i)=>sum+(i.complimentary?0:Number(i.individual_price)*Number(i.quantity)),0); return items.length>0 && configuredTriggers.has(items[0].service_id) && items.every(i=>!!i.size_label?.trim() && Number(i.quantity)>0 && i.service?.is_active===true && (i.complimentary || (i.individual_price!=null && Number(i.individual_price)>0))) && Math.abs(total-Number(o.price_value))<=0.01; });
    if (live) setOffers(complete.map(o => ({ ...o, items: byOffer[o.id] || [] })));
   })().catch(error => { console.error('Could not load published packages:', error); if (live) setFailed(true); })
    .finally(() => { if (live) setLoading(false); });
@@ -56,7 +60,7 @@ export default function MarketPackages() {
    : offers.length ? <>
     {featured.length > 0 && <div className="mb-5 flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4 text-[#9A7A43]"/>Featured packages</div>}
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{offers.map(offer => {
-     const firstService = offer.items.find(i => !i.complimentary) || offer.items[0];
+     const firstService = offer.items[0];
      const customerDescription = offer.description && !/Included services:|Price: To be quoted/i.test(offer.description) ? offer.description : null;
      return <article key={offer.id} className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#E9E5DC] bg-white shadow-[0_8px_24px_rgba(41,40,36,0.04)]">
       <div className="border-b border-[#EEE9DF] bg-gradient-to-br from-[#FBF8F0] to-white p-5"><div className="flex items-start justify-between gap-3"><h2 className="text-lg font-extrabold leading-snug">{offer.title}</h2>{offer.featured&&<Badge className="shrink-0 bg-[#292824] text-white hover:bg-[#292824]">Featured</Badge>}</div>

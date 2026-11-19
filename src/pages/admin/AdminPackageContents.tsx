@@ -44,7 +44,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
  const addItem = async () => {
   const quantity = Number(draft.quantity);
   const price = draft.complimentary ? 0 : Number(draft.individual_price);
-  if (!offerId || !draft.service_id || !draft.size_label.trim() || !Number.isFinite(quantity) || quantity <= 0 || (!draft.complimentary && (!draft.individual_price.trim() || !Number.isFinite(price) || price < 0))) {
+  if (!offerId || !draft.service_id || !draft.size_label.trim() || !Number.isFinite(quantity) || quantity <= 0 || (!draft.complimentary && (!draft.individual_price.trim() || !Number.isFinite(price) || price <= 0))) {
    toast({ title: 'Complete the service, size/variant, quantity and individual price', variant: 'destructive' }); return;
   }
   setSaving(true);
@@ -69,8 +69,8 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
  };
  const savePrice = async () => {
   if (!selected || !items.length) { toast({ title: 'Add the package contents before saving its price' }); return; }
-  if (items.some(i => !i.size_label.trim() || (!i.complimentary && (!i.individual_price.trim() || !Number.isFinite(Number(i.individual_price)) || Number(i.individual_price) < 0)))) {
-   toast({ title: 'Every item needs a size/variant and a valid individual price, unless complimentary', variant: 'destructive' }); return;
+  if (items.some(i => !i.size_label.trim() || (!i.complimentary && (!i.individual_price.trim() || !Number.isFinite(Number(i.individual_price)) || Number(i.individual_price) <= 0)))) {
+   toast({ title: 'Every chargeable item needs a size/variant and an individual price greater than zero; mark free items as complimentary', variant: 'destructive' }); return;
   }
   const finalPrice = items.filter(i => i.active && !i.complimentary).reduce((sum, i) => sum + Number(i.individual_price) * Number(i.quantity), 0);
   if (finalPrice <= 0) { toast({ title: 'The package final price must be greater than zero', variant: 'destructive' }); return; }

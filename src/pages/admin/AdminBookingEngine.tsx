@@ -435,14 +435,18 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  };
  const toggleOffer=async(o:LibraryOffer)=>{
   if(!o.active&&o.offer_type==='package'){
-   const packageItems=await db.from('booking_engine_package_items').select('id,service_id,size_label,quantity,individual_price,complimentary,active').eq('offer_id',o.id).eq('active',true);
+   const packageItems=await db.from('booking_engine_package_items').select('id,service_id,size_label,quantity,individual_price,complimentary,active,service:services!inner(is_active)').eq('offer_id',o.id).eq('active',true).order('display_order').order('created_at');
    if(packageItems.error){toast({title:'Could not verify package contents',description:packageItems.error.message,variant:'destructive'});return;}
    const rows=packageItems.data||[];
-   if(!rows.length||rows.some((x:any)=>!x.size_label?.trim()||!Number.isFinite(Number(x.quantity))||Number(x.quantity)<=0||(!x.complimentary&&(x.individual_price===null||!Number.isFinite(Number(x.individual_price))||Number(x.individual_price)<0)))||!o.price_value||o.price_mode!=='fixed'){
+   if(!rows.length||rows.some((x:any)=>!x.size_label?.trim()||!Number.isFinite(Number(x.quantity))||Number(x.quantity)<=0||(!x.complimentary&&(x.individual_price===null||!Number.isFinite(Number(x.individual_price))||Number(x.individual_price)<=0))||x.service?.is_active!==true)||!o.price_value||o.price_mode!=='fixed'){
     toast({title:'Package is not ready to publish',description:'Add every service with its size, quantity and individual price, save the final package price, then approve it.',variant:'destructive'});return;
    }
+   const calculatedTotal=rows.reduce((sum:number,x:any)=>sum+(x.complimentary?0:Number(x.individual_price)*Number(x.quantity)),0);
+   if(Math.abs(calculatedTotal-Number(o.price_value))>0.01){toast({title:'Package total does not match its contents',description:'Save the final package price again before publishing. The final price must equal the sum of chargeable item prices × quantities.',variant:'destructive'});return;}
    const first=rows[0];
-   const linkRows=[{offer_id:o.id,service_id:first.service_id,relationship:'trigger',quantity:first.quantity},...rows.slice(1).map((x:any)=>({offer_id:o.id,service_id:x.service_id,relationship:'included',quantity:x.quantity}))];
+   const triggerConfig=await db.from('booking_engine_service_config').select('id,enabled').eq('service_id',first.service_id).eq('enabled',true).maybeSingle();
+   if(triggerConfig.error||!triggerConfig.data){toast({title:'Package entry service is not ready for guided booking',description:triggerConfig.error?.message||'The first package service must have an enabled Booking Engine configuration before the package can be published.',variant:'destructive'});return;}
+   const linkRows=[{offer_id:o.id,service_id:first.service_id,relationship:'trigger',quantity:first.quantity}];
    const cleared=await db.from('booking_engine_value_offer_services').delete().eq('offer_id',o.id);
    if(cleared.error){toast({title:'Package links could not be prepared',description:cleared.error.message,variant:'destructive'});return;}
    const linked=await db.from('booking_engine_value_offer_services').insert(linkRows);
