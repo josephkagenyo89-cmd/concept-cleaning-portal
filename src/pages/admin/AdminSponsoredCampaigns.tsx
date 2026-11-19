@@ -145,7 +145,7 @@ function SponsoredMediaPicker({value,onChange}:{value:string;onChange:(url:strin
   setLoading(false);
  },[]);
  useEffect(()=>{if(open)void load();},[open,load]);
- const filtered=useMemo(()=>items.filter(item=>item.name.toLowerCase().includes(search.toLowerCase().trim())),[items,search]);
+ const filtered=items.filter(item=>item.name.toLowerCase().includes(search.toLowerCase().trim()));
  const upload=async(file?:File)=>{
   if(!file)return;setUploading(true);
   try{
