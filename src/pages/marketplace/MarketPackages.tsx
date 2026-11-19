@@ -57,12 +57,13 @@ export default function MarketPackages() {
     {featured.length > 0 && <div className="mb-5 flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4 text-[#9A7A43]"/>Featured packages</div>}
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{offers.map(offer => {
      const firstService = offer.items.find(i => !i.complimentary) || offer.items[0];
+     const customerDescription = offer.description && !/Included services:|Price: To be quoted/i.test(offer.description) ? offer.description : null;
      return <article key={offer.id} className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#E9E5DC] bg-white shadow-[0_8px_24px_rgba(41,40,36,0.04)]">
       <div className="border-b border-[#EEE9DF] bg-gradient-to-br from-[#FBF8F0] to-white p-5"><div className="flex items-start justify-between gap-3"><h2 className="text-lg font-extrabold leading-snug">{offer.title}</h2>{offer.featured&&<Badge className="shrink-0 bg-[#292824] text-white hover:bg-[#292824]">Featured</Badge>}</div>
        <p className="mt-4 text-2xl font-black tracking-tight">{money(offer.price_value || 0)}</p><p className="mt-1 text-[11px] text-[#918B80]">Final package price · no quotation required</p>
       </div>
       <div className="flex flex-1 flex-col space-y-4 p-5">
-       {offer.description&&<p className="text-sm leading-6 text-[#77736B]">{offer.description}</p>}
+       {customerDescription&&<p className="text-sm leading-6 text-[#77736B]">{customerDescription}</p>}
        <div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#77736B]">What's included</p><ul className="space-y-3">{offer.items.map(item => <li key={item.id} className="flex items-start gap-2 text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6B755D]"/><span className="min-w-0"><span className="font-semibold">{item.item_label || item.service?.name || 'Cleaning service'}</span><span className="block text-xs text-[#77736B]">{item.size_label} · Qty {Number(item.quantity)}</span>{item.complimentary&&<Badge className="mt-1 bg-[#292824] text-white hover:bg-[#292824]">Complimentary</Badge>}</span></li>)}</ul></div>
        <div className="mt-auto border-t border-[#EEE9DF] pt-4"><p className="mb-3 text-xs leading-5 text-[#77736B]">The package price covers the services and quantities listed above. Additional work can be discussed separately.</p>
         <Button asChild className="w-full bg-[#292824] text-white hover:bg-[#45413B]"><Link to={firstService?'/service/'+firstService.service_id+'?offer='+offer.id:'/marketplace'}>Book this package <ArrowRight className="ml-2 h-4 w-4"/></Link></Button>
