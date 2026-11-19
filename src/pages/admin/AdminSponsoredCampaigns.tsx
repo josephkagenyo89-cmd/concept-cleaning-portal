@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Megaphone, Plus, RefreshCw, Save, ShieldCheck } from 'lucide-react';
+import { Megaphone, Plus, RefreshCw, Save, ShieldCheck, ImagePlus, Loader2, Search, Trash2, Upload, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const db=supabase as any;
 const blank=()=>({campaign_code:'',owner_type:'concept',provider_name:'',provider_email:'',provider_phone:'',title:'',description:'',destination_url:'',creative_image_url:'',billing_model:'none',budget_amount:'',agreed_amount:'',billing_status:'not_invoiced',starts_at:'',ends_at:'',internal_notes:''});
@@ -91,7 +92,7 @@ export default function AdminSponsoredCampaigns(){
     <div className="grid gap-3 sm:grid-cols-2"><div><Label>Campaign reference code *</Label><Input value={draft.campaign_code} onChange={e=>set('campaign_code',e.target.value.toUpperCase())} placeholder="e.g. NOV26-CONCEPT-01"/><p className="mt-1 text-xs text-muted-foreground">A unique internal code to identify this campaign. Use letters, numbers and hyphens.</p></div><div><Label>Who is running this campaign?</Label><Select value={draft.owner_type} onValueChange={v=>{set('owner_type',v);if(v==='third_party'&&draft.billing_model==='none')set('billing_model','fixed');}}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="concept">Concept-owned</SelectItem><SelectItem value="third_party">Third-party paid</SelectItem></SelectContent></Select></div></div>
     {draft.owner_type==='third_party'&&<div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3"><div><Label>Business / advertiser name *</Label><Input value={draft.provider_name} onChange={e=>set('provider_name',e.target.value)} placeholder="e.g. ABC Home Supplies"/><p className="mt-1 text-xs text-muted-foreground">Name of the business paying for the advert.</p></div><div><Label>Advertiser email address</Label><Input type="email" value={draft.provider_email} onChange={e=>set('provider_email',e.target.value)} placeholder="name@business.co.ke"/></div><div><Label>Advertiser phone number</Label><Input value={draft.provider_phone} onChange={e=>set('provider_phone',e.target.value)} placeholder="e.g. 0712 345 678"/></div></div>}
     <div><Label>Advert headline / campaign title *</Label><Input value={draft.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. Trusted home cleaning products"/><p className="mt-1 text-xs text-muted-foreground">The short heading customers will see on the sponsored card.</p></div><div><Label>Short advert description</Label><Textarea value={draft.description} onChange={e=>set('description',e.target.value)} placeholder="Briefly explain what is being promoted and why a customer should click. Keep it clear and customer-friendly."/><p className="mt-1 text-xs text-muted-foreground">Write 1–2 short sentences. Avoid internal notes or billing information here.</p></div>
-    <div className="grid gap-3 sm:grid-cols-2"><div><Label>Where should the customer go? (Destination link)</Label><Input value={draft.destination_url} onChange={e=>set('destination_url',e.target.value)} placeholder="https://example.co.ke/product-or-page"/><p className="mt-1 text-xs text-muted-foreground">Paste the full website page or booking link opened when the advert is clicked.</p></div><div><Label>Advert image link</Label><Input value={draft.creative_image_url} onChange={e=>set('creative_image_url',e.target.value)} placeholder="https://example.co.ke/images/advert.jpg"/><p className="mt-1 text-xs text-muted-foreground">Paste a direct HTTPS link to the campaign banner or product image. Leave blank to use the standard card design.</p></div></div>
+    <div className="grid gap-3 sm:grid-cols-2"><div><Label>Where should the customer go? (Destination link)</Label><Input value={draft.destination_url} onChange={e=>set('destination_url',e.target.value)} placeholder="https://example.co.ke/product-or-page"/><p className="mt-1 text-xs text-muted-foreground">Paste the full website page or booking link opened when the advert is clicked.</p></div><div><Label>Campaign image / banner</Label><SponsoredMediaPicker value={draft.creative_image_url} onChange={url=>set('creative_image_url',url)}/></div></div>
     <div className="grid gap-3 sm:grid-cols-2"><div><Label>Campaign start date and time</Label><Input type="datetime-local" value={draft.starts_at} onChange={e=>set('starts_at',e.target.value)}/><p className="mt-1 text-xs text-muted-foreground">When the advert is allowed to start showing. Uses Kenya local time.</p></div><div><Label>Campaign end date and time</Label><Input type="datetime-local" value={draft.ends_at} onChange={e=>set('ends_at',e.target.value)}/><p className="mt-1 text-xs text-muted-foreground">When the advert should stop showing. Leave blank for no scheduled end.</p></div></div>
     {draft.owner_type==='third_party'&&<div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-semibold">Provider commercial terms</p><div className="grid gap-3 sm:grid-cols-2"><div><Label>How will the advertiser be charged?</Label><Select value={draft.billing_model} onValueChange={v=>set('billing_model',v)}><SelectTrigger><SelectValue placeholder="Choose a charging method"/></SelectTrigger><SelectContent>{billingModels.map(x=><SelectItem key={x.value} value={x.value}>{x.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Fixed fee = one agreed price. CPC = charged per click. CPM = charged per 1,000 advert views.</p></div><div><Label>Payment status</Label><Select value={draft.billing_status} onValueChange={v=>set('billing_status',v)}><SelectTrigger><SelectValue placeholder="Choose payment status"/></SelectTrigger><SelectContent>{billingStatuses.map(x=><SelectItem key={x.value} value={x.value}>{x.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Select the current invoice/payment position. A third-party campaign must be paid or waived before approval.</p></div><div><Label>Campaign budget (KES)</Label><Input type="number" min="0" value={draft.budget_amount} onChange={e=>set('budget_amount',e.target.value)} placeholder="e.g. 15000"/><p className="mt-1 text-xs text-muted-foreground">Optional planned amount allocated to this campaign.</p></div><div><Label>Agreed advertising fee (KES)</Label><Input type="number" min="0" value={draft.agreed_amount} onChange={e=>set('agreed_amount',e.target.value)} placeholder="e.g. 10000"/><p className="mt-1 text-xs text-muted-foreground">The amount Concept agreed to charge the advertiser.</p></div></div></div>}
     <div><Label>Internal admin notes (not shown to customers)</Label><Textarea value={draft.internal_notes} onChange={e=>set('internal_notes',e.target.value)} placeholder="Add follow-up reminders, special instructions or approval context for the Concept team."/></div>
@@ -103,4 +104,98 @@ export default function AdminSponsoredCampaigns(){
   </div></div>
   <p className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900"><ShieldCheck className="h-4 w-4 shrink-0"/>Admin-only campaign controls. Public reads are restricted to approved campaign creative fields; billing records and tracking writes are not exposed to browser roles.</p>
  </div>;
+}
+
+
+const SPONSORED_MEDIA_BUCKET = 'assets';
+const SPONSORED_MEDIA_PREFIX = 'sponsored-campaigns';
+const SPONSORED_MEDIA_MAX_BYTES = 20 * 1024;
+type SponsoredMediaItem = { name: string; metadata?: Record<string, unknown> };
+
+async function compressSponsoredImage(file: File): Promise<Blob> {
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('Choose a JPG, PNG or WebP image.');
+ const bitmap=await createImageBitmap(file);
+ try {
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+  if(!ctx) throw new Error('Your browser could not prepare this image.');
+  const scales=[1,.85,.7,.58,.48,.38,.3,.24,.19,.15,.12],qualities=[.82,.7,.58,.46,.34,.24,.16,.1];
+  for(const scale of scales){
+   const factor=Math.min(scale,1600/Math.max(bitmap.width,bitmap.height));
+   canvas.width=Math.max(1,Math.round(bitmap.width*factor));canvas.height=Math.max(1,Math.round(bitmap.height*factor));
+   ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+   for(const quality of qualities){
+    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+    if(!blob||blob.type!=='image/webp') throw new Error('This browser cannot encode WebP images.');
+    if(blob.size<=SPONSORED_MEDIA_MAX_BYTES)return blob;
+   }
+  }
+  throw new Error('This image cannot be reduced to 20 KB. Try a simpler image with fewer details.');
+ } finally {bitmap.close();}
+}
+
+function SponsoredMediaPicker({value,onChange}:{value:string;onChange:(url:string)=>void}){
+ const [open,setOpen]=useState(false),[items,setItems]=useState<SponsoredMediaItem[]>([]),[search,setSearch]=useState('');
+ const [loading,setLoading]=useState(false),[uploading,setUploading]=useState(false),[deleting,setDeleting]=useState('');
+ const publicUrl=(name:string)=>supabase.storage.from(SPONSORED_MEDIA_BUCKET).getPublicUrl(SPONSORED_MEDIA_PREFIX+'/'+name).data.publicUrl;
+ const load=useCallback(async()=>{
+  setLoading(true);
+  const {data,error}=await supabase.storage.from(SPONSORED_MEDIA_BUCKET).list(SPONSORED_MEDIA_PREFIX,{limit:100,offset:0,sortBy:{column:'created_at',order:'desc'}});
+  if(error)toast({title:'Media library could not be loaded',description:error.message,variant:'destructive'});
+  else setItems((data||[]).filter(item=>!!item.name&&!!item.metadata?.mimetype&&String(item.metadata.mimetype).startsWith('image/')) as SponsoredMediaItem[]);
+  setLoading(false);
+ },[]);
+ useEffect(()=>{if(open)void load();},[open,load]);
+ const filtered=useMemo(()=>items.filter(item=>item.name.toLowerCase().includes(search.toLowerCase().trim())),[items,search]);
+ const upload=async(file?:File)=>{
+  if(!file)return;setUploading(true);
+  try{
+   const compressed=await compressSponsoredImage(file);
+   if(compressed.size>SPONSORED_MEDIA_MAX_BYTES)throw new Error('The compressed image exceeds the 20 KB maximum.');
+   const base=file.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,36)||'campaign-image';
+   const name=base+'-'+crypto.randomUUID()+'.webp';
+   const {error}=await supabase.storage.from(SPONSORED_MEDIA_BUCKET).upload(SPONSORED_MEDIA_PREFIX+'/'+name,compressed,{contentType:'image/webp',cacheControl:'31536000',upsert:false});
+   if(error)throw error;
+   onChange(publicUrl(name));await load();
+   toast({title:'Image compressed and uploaded',description:(compressed.size/1024).toFixed(1)+' KB · WebP'});
+  }catch(error){toast({title:'Image upload failed',description:error instanceof Error?error.message:'Please try another image.',variant:'destructive'});}
+  finally{setUploading(false);}
+ };
+ const remove=async(item:SponsoredMediaItem)=>{
+  const url=publicUrl(item.name);setDeleting(item.name);
+  const {data:used,error:usageError}=await (supabase as any).from('sponsored_campaigns').select('id').eq('creative_image_url',url).limit(1);
+  if(usageError){toast({title:'Could not check image usage',description:usageError.message,variant:'destructive'});setDeleting('');return;}
+  if(used?.length){toast({title:'Image is in use',description:'Remove it from its campaign before deleting it.',variant:'destructive'});setDeleting('');return;}
+  const {error}=await supabase.storage.from(SPONSORED_MEDIA_BUCKET).remove([SPONSORED_MEDIA_PREFIX+'/'+item.name]);
+  if(error)toast({title:'Image could not be deleted',description:error.message,variant:'destructive'});
+  else{toast({title:'Image deleted'});await load();}
+  setDeleting('');
+ };
+ return <>
+  <div className="space-y-2">
+   <div className="flex flex-wrap items-center gap-2"><Input value={value} onChange={event=>onChange(event.target.value)} placeholder="Paste an external HTTPS image URL (optional)" className="min-w-0 flex-1"/><Button type="button" variant="outline" onClick={()=>setOpen(true)}><ImagePlus className="mr-2 h-4 w-4"/>Media picker</Button></div>
+   {value&&<div className="flex items-center gap-3 rounded-md border p-2"><img src={value} alt="Selected campaign creative" className="h-16 w-24 rounded object-cover"/><div className="min-w-0 flex-1"><p className="text-xs font-medium">Selected campaign image</p><p className="truncate text-xs text-muted-foreground">{value}</p></div><Button type="button" size="sm" variant="ghost" onClick={()=>onChange('')}>Clear</Button></div>}
+   <p className="text-xs text-muted-foreground">Upload JPG, PNG or WebP. Images are converted to WebP and must be 20 KB or smaller. Existing external image URLs remain supported.</p>
+  </div>
+  <Dialog open={open} onOpenChange={setOpen}>
+   <DialogContent className="flex max-h-[90vh] w-[calc(100%-1rem)] max-w-3xl flex-col overflow-hidden">
+    <DialogHeader><DialogTitle>Campaign media library</DialogTitle><DialogDescription>Choose an existing image or upload a new image compressed to a maximum of 20 KB.</DialogDescription></DialogHeader>
+    <div className="flex flex-wrap gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"/><Input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search campaign images" className="pl-9"/></div>
+     <Button type="button" disabled={uploading} onClick={()=>document.getElementById('sponsored-media-upload')?.click()}>{uploading?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Upload className="mr-2 h-4 w-4"/>}{uploading?'Compressing…':'Upload image'}</Button>
+     <input id="sponsored-media-upload" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event=>{const file=event.target.files?.[0];event.target.value='';void upload(file);}}/>
+    </div>
+    <div className="min-h-0 flex-1 overflow-y-auto">
+     {loading?<div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Loading media…</div>
+      :!filtered.length?<div className="py-12 text-center text-sm text-muted-foreground">No campaign images found. Upload the first one.</div>
+      :<div className="grid grid-cols-2 gap-3 py-2 sm:grid-cols-3 lg:grid-cols-4">{filtered.map(item=>{
+       const url=publicUrl(item.name),size=Number(item.metadata?.size||0),selected=value===url;
+       return <div key={item.name} className={'overflow-hidden rounded-lg border '+(selected?'border-primary ring-2 ring-primary/20':'')}>
+        <button type="button" onClick={()=>{onChange(url);setOpen(false);}} className="block w-full text-left"><img src={url} alt={item.name} loading="lazy" className="aspect-[4/3] w-full bg-muted object-cover"/><div className="space-y-1 p-2"><p className="truncate text-xs font-medium">{item.name}</p><div className="flex items-center justify-between gap-1"><Badge variant="secondary">{(size/1024).toFixed(1)} KB</Badge>{selected&&<Check className="h-4 w-4 text-primary"/>}</div></div></button>
+        <div className="border-t p-1"><Button type="button" size="sm" variant="ghost" className="h-7 w-full text-xs text-destructive" disabled={deleting===item.name} onClick={()=>void remove(item)}>{deleting===item.name?<Loader2 className="mr-1 h-3 w-3 animate-spin"/>:<Trash2 className="mr-1 h-3 w-3"/>}Delete</Button></div>
+       </div>;
+      })}</div>}
+    </div>
+    <div className="flex justify-end border-t pt-3"><Button type="button" variant="outline" onClick={()=>setOpen(false)}>Close</Button></div>
+   </DialogContent>
+  </Dialog>
+ </>;
 }
