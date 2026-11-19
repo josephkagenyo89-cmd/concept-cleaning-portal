@@ -11,6 +11,7 @@ import { waLink } from '@/components/public/PublicShell';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { usePublicDiscount } from '@/hooks/usePublicDiscount';
 import BookingEngine from '@/components/public/BookingEngine';
+import SponsoredPlacements from '@/components/public/SponsoredPlacements';
 import { ServicesCatalogueContent } from './MarketingPages';
 import SocialLinks from '@/components/public/SocialLinks';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
@@ -248,6 +249,8 @@ export default function LandingPage() {
             </div>
           </aside>
         </section>
+
+        <div className="mt-3 rounded bg-white p-4 shadow-sm sm:p-5"><SponsoredPlacements placementKey="homepage_featured" /></div>
 
         <section className="mt-3 grid grid-cols-2 gap-2 rounded bg-white p-3 shadow-sm sm:grid-cols-4 lg:grid-cols-6">
           {[

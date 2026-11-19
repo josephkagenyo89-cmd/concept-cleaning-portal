@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import { MarketService, categoryImage, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import SponsoredPlacements from '@/components/public/SponsoredPlacements';
 import { trackCategoryClick } from '@/lib/marketplaceBehavior';
 
 const normalizeSearch = (value: string) =>
@@ -94,6 +95,9 @@ export default function MarketHome() {
             <span className="hidden rounded-full border border-[#E7E1D5] bg-white px-4 py-2 text-xs font-semibold text-[#77736B] sm:inline-flex">{grouped.length} categories</span>
           ) : null}
         </div>
+
+        {searchQuery && !loading && <div className="mb-6"><SponsoredPlacements placementKey="search_featured" serviceIds={searchResults.map((service) => service.id)} /></div>}
+        {!searchQuery && <div className="mb-6"><SponsoredPlacements placementKey="marketplace_featured" /></div>}
 
         {searchQuery ? (
           loading ? (

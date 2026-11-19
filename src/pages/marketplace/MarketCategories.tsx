@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
+import SponsoredPlacements from '@/components/public/SponsoredPlacements';
 import {
   CATEGORY_ORDER,
   categoryImage,
@@ -80,6 +81,8 @@ export default function MarketCategories() {
               : 'Choose a service category to explore its available services, descriptions and pricing details.'}
           </p>
         </header>
+
+        {active && <div className="mb-6"><SponsoredPlacements placementKey="category_featured" categoryName={active} /></div>}
 
         <nav
           aria-label="Filter by service category"
