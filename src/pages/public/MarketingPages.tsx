@@ -51,7 +51,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', end: true },
   { to: '/services', label: 'Services' },
   { to: '/about', label: 'About Us' },
-  { to: '/gallery', label: 'Gallery' },
+  { to: '/blog', label: 'Cleaning Guides' },
   { to: '/contact', label: 'Contact' },
 ];
 
@@ -143,7 +143,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
             <ul className="mt-3 space-y-2 text-sm text-white/75">
               <li><Link to="/services" className="hover:text-white">Cleaning services</Link></li>
               <li><Link to="/about" className="hover:text-white">About us</Link></li>
-              <li><Link to="/gallery" className="hover:text-white">Gallery</Link></li>
+              <li><Link to="/blog" className="hover:text-white">Cleaning guides</Link></li>
               <li><Link to="/blog" className="hover:text-white">Cleaning guides</Link></li>
               <li><Link to="/marketplace" className="hover:text-white">Book online</Link></li>
             </ul>
