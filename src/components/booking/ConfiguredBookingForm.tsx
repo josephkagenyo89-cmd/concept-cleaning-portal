@@ -14,7 +14,7 @@ import { AlertTriangle, CheckCircle2, ShieldCheck, Minus, Plus, CalendarDays, Cl
 import { formatKes } from '@/lib/marketplace';
 import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpload';
 import { groupBookingOffers, isBookingOfferCurrent, bookingOfferSelectionKey, toggleBookingOfferSelection } from '@/lib/bookingEngineOffers';
-import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone } from '@/lib/bookingEngineGuestRequest';
+import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone, pickVisibleGuestAnswers, buildVisibleGuestMeasurements, createGuestSubmissionFingerprint } from '@/lib/bookingEngineGuestRequest';
 
 type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean; initialOfferId?: string };
@@ -71,6 +71,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [guestName,setGuestName] = useState(''), [guestPhone,setGuestPhone] = useState('');
   const [guestSubmitted,setGuestSubmitted] = useState<{reference:string;estimatedAmount:number;needsOfferReview:boolean}|null>(null);
   const [guestSubmissionKey,setGuestSubmissionKey] = useState('');
+  const [guestSubmissionFingerprint,setGuestSubmissionFingerprint] = useState('');
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
   const [requestItemId,setRequestItemId] = useState(''), [photoCount,setPhotoCount] = useState(0);
   const [loadedDraftKey,setLoadedDraftKey] = useState('');
@@ -90,6 +91,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       setPrice(null);
       setGuestSubmitted(null);
       setGuestSubmissionKey('');
+      setGuestSubmissionFingerprint('');
       setQuantity('1');
       setDate('');
       setTime('');
@@ -186,13 +188,14 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             const restoredPackageId=eligibleInitialPackage?.id || (restoredOffer?.offer_type==='package'?restoredOffer.id:'');
             setSelectedOfferId(restoredPackageId);
             setAnswers(parsed.answers || {});
-            setGuestName(parsed.guestName || '');
-            setGuestPhone(parsed.guestPhone || '');
+            setGuestName('');
+            setGuestPhone('');
+            setGuestSubmissionKey(parsed.submissionKey || '');
+            setGuestSubmissionFingerprint(parsed.submissionFingerprint || '');
             const restoredExtras = Array.isArray(parsed.extras) ? parsed.extras : [];
-            const safeRestoredExtras=restoredPackageId?restoredExtras.filter((value:string)=>!value.startsWith('offer:')):restoredExtras;
-            setExtras(restoredOffer&&restoredOffer.offer_type!=='package'&&!restoredPackageId
-              ? Array.from(new Set([...safeRestoredExtras,bookingOfferSelectionKey(restoredOffer.id)]))
-              : safeRestoredExtras);
+            setExtras(restoredOffer&&restoredOffer.offer_type!=='package'
+              ? Array.from(new Set([...restoredExtras,bookingOfferSelectionKey(restoredOffer.id)]))
+              : restoredExtras);
             setQuantity(String(parsed.quantity ?? '1'));
             setDate(parsed.date || '');
             setTime(parsed.time || '');
@@ -223,10 +226,9 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 const savedExtras=Array.isArray(item.data.selected_extras)?item.data.selected_extras:[];
-                const safeSavedExtras=restoredPackageId?savedExtras.filter((value:string)=>!value.startsWith('offer:')):savedExtras;
-                setExtras(currentSavedOffer&&currentSavedOffer.offer_type!=='package'&&!restoredPackageId
-                  ?Array.from(new Set([...safeSavedExtras,bookingOfferSelectionKey(savedOfferId)]))
-                  :safeSavedExtras);
+                setExtras(currentSavedOffer&&currentSavedOffer.offer_type!=='package'
+                  ?Array.from(new Set([...savedExtras,bookingOfferSelectionKey(savedOfferId)]))
+                  :savedExtras);
               }
             } else {
               setDraftId('');
@@ -251,10 +253,28 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     if (loadedDraftKey !== draftKey) return;
     window.sessionStorage.setItem(draftKey, JSON.stringify({
       id: draftId, savedAt: Date.now(), answers, extras, selectedOfferId, quantity, date, time, location, notes,
+      submissionKey: guestSubmissionKey, submissionFingerprint: guestSubmissionFingerprint,
     }));
-  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes]);
+  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes, guestSubmissionKey, guestSubmissionFingerprint]);
 
   const { packages: packageOffers, addons: addonOffers } = useMemo(() => groupBookingOffers(offerOptions), [offerOptions]);
+  const selectedPackageServiceIds = useMemo(
+    () => new Set(packageItems.filter((item:any)=>item.offer_id===selectedOfferId).map((item:any)=>item.service_id)),
+    [packageItems, selectedOfferId],
+  );
+  const selectPackageOffer = (offerId:string) => {
+    const nextOfferId = selectedOfferId === offerId ? '' : offerId;
+    if (nextOfferId) {
+      const packageServiceIds = new Set(packageItems.filter((item:any)=>item.offer_id===nextOfferId).map((item:any)=>item.service_id));
+      const conflictingAddonKeys = new Set(addonOffers.filter((offer:any)=>offerServices.some((link:any)=>
+        link.offer_id===offer.id && link.relationship==='included' && packageServiceIds.has(link.service?.id)
+      )).map((offer:any)=>bookingOfferSelectionKey(offer.id)));
+      setExtras(old=>old.filter(value=>!conflictingAddonKeys.has(value)));
+    }
+    setSelectedOfferId(nextOfferId);
+    setPrice(null);
+    setAck(false);
+  };
   const visibility = useMemo(() => {
     const out: Record<string,{visible:boolean;required:boolean}> = {};
     for(const q of questions) {
@@ -332,15 +352,13 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     const selectedOfferVersions:Record<string,string>={};
     if(selectedPackage?.updated_at)selectedOfferVersions[selectedPackage.id]=selectedPackage.updated_at;
     selectedAddons.forEach((offer:any)=>{if(offer.updated_at)selectedOfferVersions[offer.id]=offer.updated_at;});
-    const submissionKey=guestSubmissionKey||crypto.randomUUID();
-    setGuestSubmissionKey(submissionKey);
-    const measurementAnswers:Record<string,number>={};
-    questions.filter(q=>q.input_type==='measurement').forEach(q=>{const value=Number(answers[q.question_key]);if(Number.isFinite(value)&&value>0)measurementAnswers[q.question_key]=value;});
+    const visibleAnswers=pickVisibleGuestAnswers(questions,answers,visibility);
+    const measurementAnswers=buildVisibleGuestMeasurements(questions,answers,visibility);
     const bookingDetails=buildGuestBookingDetails({
       quantity:quantityEnabled?Number(quantity):null,
       quantityUnit,
       measurements:measurementAnswers,
-      answers,
+      answers:visibleAnswers,
       selectedExtras:extras,
       selectedOfferId:selectedOfferId||null,
       selectedOfferVersions,
@@ -376,28 +394,38 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     setSaving(true);
     try{
       const squareMetreUnit=/^(m²|m2|sqm|sq\.?\s*m|square metres?|square meters?)$/i.test(quantityUnit.trim());
+      const payload={
+        request_type:quoteMode?'quotation':'booking',
+        booking_details:bookingDetails,
+        service_id:serviceId,
+        customer_name:cleanName,
+        customer_phone:normalizedPhone,
+        customer_notes:requestNotes,
+        location:location.trim(),
+        preferred_date:date,
+        preferred_time:time,
+        size_sqm:quantityEnabled&&squareMetreUnit?Number(quantity):null,
+      };
+      const fingerprint=await createGuestSubmissionFingerprint(payload);
+      const submissionKey=guestSubmissionFingerprint===fingerprint&&guestSubmissionKey
+        ?guestSubmissionKey:crypto.randomUUID();
+      setGuestSubmissionKey(submissionKey);
+      setGuestSubmissionFingerprint(fingerprint);
+      window.sessionStorage.setItem(draftKey,JSON.stringify({
+        id:draftId,savedAt:Date.now(),answers,extras,selectedOfferId,quantity,date,time,location,notes,
+        submissionKey,submissionFingerprint:fingerprint,
+      }));
       const {data,error}=await supabase.functions.invoke('submit-guest-service-request',{
-        body:{
-          request_type:quoteMode?'quotation':'booking',
-          submission_key:submissionKey,
-          booking_details:bookingDetails,
-          service_id:serviceId,
-          customer_name:cleanName,
-          customer_phone:normalizedPhone,
-          customer_notes:requestNotes,
-          location:location.trim(),
-          preferred_date:date,
-          preferred_time:time,
-          size_sqm:quantityEnabled&&squareMetreUnit?Number(quantity):null,
-        },
+        body:{...payload,submission_key:submissionKey},
       });
       if(error)throw error;
       if(!data?.success||!data?.request_reference)throw new Error(data?.error||'The request could not be confirmed as saved. Please retry.');
       const estimatedAmount=Number(data.estimated_amount)||0;
-      const needsOfferReview=!!selectedPackage||selectedAddons.length>0;
+      const needsOfferReview=!!selectedPackage||selectedAddons.length>0||selectedScopeExtras.length>0;
       window.sessionStorage.removeItem(draftKey);
       setLoadedDraftKey('');
       setGuestSubmissionKey('');
+      setGuestSubmissionFingerprint('');
       setGuestSubmitted({reference:String(data.request_reference),estimatedAmount,needsOfferReview});
       toast({title:'Guest request saved',description:'Your reference is '+data.request_reference+'. Our team will review and contact you.'});
     }catch(error:any){
@@ -443,8 +471,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       const found=await supabase.from('booking_engine_request_items').select('id').eq('request_id',id).eq('service_id',serviceId).maybeSingle();
       if(found.error) throw found.error;
       const measurements:Record<string,number>={};
-      questions.filter(q=>q.input_type==='measurement').forEach(q=>{const n=Number(answers[q.question_key]);if(Number.isFinite(n)&&n>0)measurements[q.question_key]=n;});
-      const args={_quantity:quantityEnabled?Number(quantity):1,_measurements:measurements,_answers:answers,_selected_extras:extras};
+      Object.assign(measurements,buildVisibleGuestMeasurements(questions,answers,visibility));
+      const args={_quantity:quantityEnabled?Number(quantity):1,_measurements:measurements,_answers:pickVisibleGuestAnswers(questions,answers,visibility),_selected_extras:extras};
       let itemId=found.data?.id;
       if(itemId) {
         const updated=await supabase.rpc('update_booking_engine_request_item',{_item_id:itemId,...args} as any);
@@ -513,7 +541,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
 
   if(loading) return <div className="flex items-center gap-2 rounded-xl border p-4 text-sm text-muted-foreground"><span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"/><span>Preparing your booking options…</span></div>;
   if(error || !config) return <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm"><AlertTriangle className="mb-2 h-5 w-5 text-amber-600"/><p className="font-medium">This guided booking is not available right now.</p><p className="mt-1">{error}</p><p className="mt-2 text-xs text-muted-foreground">Your existing bookings are not affected. Please contact our team for assistance.</p></div>;
-  if(guestSubmitted) return <Card className="border-emerald-600/30"><CardContent className="space-y-3 p-5 sm:p-6"><div className="flex items-center gap-3"><div className="rounded-full bg-emerald-600/10 p-2"><CheckCircle2 className="h-6 w-6 text-emerald-700"/></div><div><h2 className="font-semibold">Your request has been received</h2><p className="text-sm text-muted-foreground">Thank you. Our team will review your details and contact you.</p></div></div><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Request reference</p><p className="text-xl font-bold tracking-wide">{guestSubmitted.reference}</p></div>{guestSubmitted.estimatedAmount>0&&<p className="text-sm">Indicative catalogue estimate: <b>{formatKes(guestSubmitted.estimatedAmount)}</b>{guestSubmitted.needsOfferReview?' (does not include or validate your selected package/add-ons).':' (not a confirmed quotation).'}</p>}<p className="text-xs text-muted-foreground">This is a request, not a confirmed appointment. The team will confirm the final scope, package/add-on pricing and availability before proceeding.</p></CardContent></Card>;
+  if(guestSubmitted) return <Card className="border-emerald-600/30"><CardContent className="space-y-3 p-5 sm:p-6"><div className="flex items-center gap-3"><div className="rounded-full bg-emerald-600/10 p-2"><CheckCircle2 className="h-6 w-6 text-emerald-700"/></div><div><h2 className="font-semibold">Your request has been received</h2><p className="text-sm text-muted-foreground">Thank you. Our team will review your details and contact you.</p></div></div><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Request reference</p><p className="text-xl font-bold tracking-wide">{guestSubmitted.reference}</p></div>{guestSubmitted.estimatedAmount>0&&<p className="text-sm">Indicative catalogue estimate: <b>{formatKes(guestSubmitted.estimatedAmount)}</b>{guestSubmitted.needsOfferReview?' (base-service estimate only; selected package, add-ons and additional scope will be priced in the staff Smart Booking review).':' (not a confirmed quotation).'}</p>}<p className="text-xs text-muted-foreground">This is a request, not a confirmed appointment. The team will confirm the final scope, package/add-on pricing and availability before proceeding.</p></CardContent></Card>;
 
   return <div className="flex flex-col gap-4">
     <div className="order-1 rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background p-4 sm:p-5">
@@ -576,7 +604,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           const included=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
            const contents=packageItems.filter((item:any)=>item.offer_id===offer.id);
           const recommended=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended');
-          return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>{setSelectedOfferId(selected?'':offer.id);if(!selected)setExtras(old=>old.filter(value=>!value.startsWith('offer:')));setPrice(null);setAck(false);}} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
+          return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>selectPackageOffer(offer.id)} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
             <span className="flex w-full flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{offer.title}</span>
               <span className="flex items-center gap-1.5">{offer.featured&&<Badge variant="secondary">Featured</Badge>}<Badge variant={selected?'default':'outline'}>{selected?'Selected':'Choose'}</Badge></span>
@@ -591,7 +619,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       </div>
       <button type="button" onClick={()=>{setSelectedOfferId('');setPrice(null);setAck(false);}} className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground">Continue with {serviceName} only</button>
     </section>}
-    {addonOffers.length>0&&!selectedOfferId&&<div className="order-5 space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Optional extras and upgrades</h3><p className="text-xs text-muted-foreground">Choose any additions you want. Their configured prices or discounts are included in the server-calculated estimate.</p><div className="space-y-2">{addonOffers.map((offer:any)=>{const key=bookingOfferSelectionKey(offer.id);const selected=extras.includes(key);const priceLabel=offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?Number(offer.price_value||0)+'% off':'included in quotation';return <label key={offer.id} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm"><Checkbox checked={selected} onCheckedChange={v=>{setExtras(old=>toggleBookingOfferSelection(old,offer.id,!!v));setPrice(null);}}/><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><b>{offer.title}</b><Badge variant="secondary">{priceLabel}</Badge></span>{offer.description&&<span className="mt-1 block text-xs text-muted-foreground">{offer.description}</span>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<span className="mt-1 block text-xs text-muted-foreground">Includes: {offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any)=>link.service?.name||'Service').join(', ')}</span>}</span></label>;})}</div></div>}
+    {addonOffers.length>0&&<div className="order-5 space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Optional extras and upgrades</h3><p className="text-xs text-muted-foreground">Choose additions alongside your service or selected package. Extras already included in a package cannot be added again.</p><div className="space-y-2">{addonOffers.map((offer:any)=>{const key=bookingOfferSelectionKey(offer.id);const selected=extras.includes(key);const overlapsPackage=offerServices.some((link:any)=>link.offer_id===offer.id&&link.relationship==='included'&&selectedPackageServiceIds.has(link.service?.id));const priceLabel=offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?Number(offer.price_value||0)+'% off':'included in quotation';return <label key={offer.id} className={'flex items-start gap-3 rounded-lg border p-3 text-sm '+(overlapsPackage?'opacity-70':'cursor-pointer')}><Checkbox checked={selected} disabled={overlapsPackage&&!selected} onCheckedChange={v=>{if(overlapsPackage&&v)return;setExtras(old=>toggleBookingOfferSelection(old,offer.id,!!v));setPrice(null);}}/><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><b>{offer.title}</b><Badge variant="secondary">{priceLabel}</Badge></span>{offer.description&&<span className="mt-1 block text-xs text-muted-foreground">{offer.description}</span>}{overlapsPackage&&<span className="mt-1 block text-xs font-medium text-amber-700">Already included in your selected package. {selected?'Unselect this extra to continue.':''}</span>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<span className="mt-1 block text-xs text-muted-foreground">Includes: {offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any)=>link.service?.name||'Service').join(', ')}</span>}</span></label>;})}</div></div>}
     <div className="order-6 space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service scope</h3>
       {groups.included.map(x=><p key={x.id} className="flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600"/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></p>)}
       {groups.excluded.map(x=><p key={x.id} className="text-sm text-muted-foreground">Not included: {x.title}{x.description?' — '+x.description:''}</p>)}
@@ -609,8 +637,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <Button type="button" className="w-full" onClick={()=>void submitGuestRequest()} disabled={saving}>{saving?'Saving your request…':quoteMode?'Submit quotation request':'Submit booking request'}</Button>
       <p className="text-[11px] text-muted-foreground">Your request is saved securely for our team to review. Any package or add-on pricing is checked by staff before a quotation or appointment is confirmed. {config.photo_mode==='required'?'Our team may contact you for the required service photos.':''}</p>
     </section>}
-    {price&&<Card className="order-last overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Package price':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
-      {price.status==='priced'?<div><p className="text-xs text-muted-foreground">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Final package price':'Estimated total'}</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will review the service scope and prepare the next steps.</p>}
+    {price&&<Card className="order-last overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{selectedOfferId&&extras.some(value=>value.startsWith('offer:'))?'Package + extras':selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Package price':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
+      {price.status==='priced'?<div><p className="text-xs text-muted-foreground">{selectedOfferId&&extras.some(value=>value.startsWith('offer:'))?'Package and selected extras':selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Final package price':'Estimated total'}</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will review the service scope and prepare the next steps.</p>}
       <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium">Your selections</p><div className="mt-2 flex flex-wrap gap-1.5">{quantityEnabled&&<Badge variant="secondary">{quantity} {quantityUnit}</Badge>}{selectedOfferId&&packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><Badge key={offer.id} variant="secondary">Package: {offer.title}</Badge>)}{addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id))).map((offer:any)=><Badge key={offer.id} variant="secondary">Extra: {offer.title}</Badge>)}{questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!=='' ).map(q=><Badge key={q.id} variant="secondary">{q.label}: {Array.isArray(answers[q.question_key])?answers[q.question_key].join(', '):String(answers[q.question_key])}</Badge>)}</div>{Array.isArray(price.selected_addons)&&price.selected_addons.length>0&&<div className="mt-3 border-t pt-3"><p className="text-xs font-semibold">Optional extras included in this estimate</p><ul className="mt-2 space-y-1.5">{price.selected_addons.map((addon:any)=><li key={addon.id} className="flex items-start justify-between gap-3 text-xs"><span>{addon.title}</span><span className="shrink-0 font-medium tabular-nums">{addon.price_mode==='fixed'?'+'+formatKes(Number(addon.price_value)||0):addon.price_mode==='fixed_discount'?'-'+formatKes(Number(addon.calculated_amount??addon.price_value)||0):addon.price_mode==='percentage_discount'?Number(addon.price_value||0)+'% discount':'Included in quotation'}</span></li>)}</ul></div>}</div>
       <p className="text-xs text-muted-foreground">This is an estimate, not a confirmed appointment. Our team will review your request and confirm availability.</p>
       <label className="flex items-start gap-2 text-sm"><Checkbox checked={ack} onCheckedChange={v=>setAck(!!v)}/><span>I have reviewed and acknowledge the included and excluded service scope.</span></label>

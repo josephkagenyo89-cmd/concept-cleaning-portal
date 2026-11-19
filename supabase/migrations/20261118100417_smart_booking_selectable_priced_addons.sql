@@ -2,6 +2,134 @@
 -- Add-on selections reuse the existing selected_extras JSON array with an "offer:<uuid>" key.
 -- Existing scope-extra IDs and existing package snapshots remain compatible.
 
+-- Validate the measurement object against the visible, published question answers.
+CREATE OR REPLACE FUNCTION public.assert_booking_engine_item_measurements(
+  p_service_config_id uuid,
+  p_answers jsonb,
+  p_measurements jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  v_question record;
+  v_condition record;
+  v_answer jsonb;
+  v_dependency_answer jsonb;
+  v_actual text;
+  v_expected text;
+  v_match boolean;
+  v_visible boolean;
+  v_answer_text text;
+  v_measurement jsonb;
+BEGIN
+  IF p_answers IS NULL OR jsonb_typeof(p_answers) <> 'object' THEN
+    RAISE EXCEPTION 'The service answers are invalid. Refresh the form and try again.';
+  END IF;
+  IF p_measurements IS NULL OR jsonb_typeof(p_measurements) <> 'object' THEN
+    RAISE EXCEPTION 'The service measurements are invalid. Refresh the form and try again.';
+  END IF;
+  IF p_service_config_id IS NULL THEN
+    IF p_measurements <> '{}'::jsonb THEN
+      RAISE EXCEPTION 'Measurements are not supported for this service configuration.';
+    END IF;
+    RETURN;
+  END IF;
+
+  FOR v_question IN
+    SELECT q.id, q.question_key
+    FROM public.booking_engine_questions q
+    WHERE q.service_config_id = p_service_config_id
+      AND q.active IS TRUE
+      AND q.input_type = 'measurement'
+  LOOP
+    v_answer := p_answers -> v_question.question_key;
+    v_visible := true;
+    FOR v_condition IN
+      SELECT c.*, dq.question_key AS depends_on_question_key
+      FROM public.booking_engine_question_conditions c
+      JOIN public.booking_engine_questions dq
+        ON dq.id = c.depends_on_question_id AND dq.active IS TRUE
+      WHERE c.question_id = v_question.id
+      ORDER BY c.created_at, c.id
+    LOOP
+      v_dependency_answer := p_answers -> v_condition.depends_on_question_key;
+      v_actual := CASE
+        WHEN v_dependency_answer IS NULL OR v_dependency_answer = 'null'::jsonb THEN ''
+        WHEN jsonb_typeof(v_dependency_answer) = 'string' THEN v_dependency_answer #>> '{}'
+        ELSE v_dependency_answer::text
+      END;
+      v_expected := COALESCE(
+        v_condition.expected_value #>> '{}',
+        trim(both '"' from v_condition.expected_value::text)
+      );
+      v_match := CASE v_condition.operator
+        WHEN 'equals' THEN v_actual = v_expected
+        WHEN 'not_equals' THEN v_actual <> v_expected
+        WHEN 'greater_than' THEN
+          CASE WHEN v_actual ~ '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)$'
+                 AND v_expected ~ '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)$'
+            THEN v_actual::numeric > v_expected::numeric ELSE false END
+        WHEN 'less_than' THEN
+          CASE WHEN v_actual ~ '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)$'
+                 AND v_expected ~ '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)$'
+            THEN v_actual::numeric < v_expected::numeric ELSE false END
+        WHEN 'contains' THEN
+          CASE WHEN jsonb_typeof(v_dependency_answer) = 'array'
+            THEN v_dependency_answer ? v_expected
+            ELSE position(v_expected in v_actual) > 0 END
+        ELSE false
+      END;
+      IF v_condition.action = 'show' THEN v_visible := v_match; END IF;
+      IF v_condition.action = 'hide' AND v_match THEN v_visible := false; END IF;
+    END LOOP;
+
+    IF NOT v_visible OR v_answer IS NULL OR v_answer = 'null'::jsonb OR v_answer = '""'::jsonb THEN
+      IF p_measurements ? v_question.question_key THEN
+        RAISE EXCEPTION 'A hidden or unanswered measurement was included in the price calculation.';
+      END IF;
+      CONTINUE;
+    END IF;
+
+    v_answer_text := CASE
+      WHEN jsonb_typeof(v_answer) = 'string' THEN v_answer #>> '{}'
+      ELSE v_answer::text
+    END;
+    IF v_answer_text !~ '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)$' THEN
+      RAISE EXCEPTION 'Enter a valid number for the measurement question.';
+    END IF;
+    IF NOT (p_measurements ? v_question.question_key) THEN
+      RAISE EXCEPTION 'A required measurement is missing from the pricing input.';
+    END IF;
+    v_measurement := p_measurements -> v_question.question_key;
+    IF jsonb_typeof(v_measurement) <> 'number'
+       OR (v_measurement #>> '{}')::numeric IS DISTINCT FROM v_answer_text::numeric THEN
+      RAISE EXCEPTION 'The measurement used for pricing does not match the customer answer. Refresh and review the form.';
+    END IF;
+  END LOOP;
+
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_object_keys(p_measurements) AS measurement_key(key)
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.booking_engine_questions q
+      WHERE q.service_config_id = p_service_config_id
+        AND q.active IS TRUE
+        AND q.input_type = 'measurement'
+        AND q.question_key = measurement_key.key
+    )
+  ) THEN
+    RAISE EXCEPTION 'The pricing input contains an unrecognised measurement.';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.assert_booking_engine_item_measurements(uuid, jsonb, jsonb)
+  FROM PUBLIC, anon, authenticated;
+
 DO $$
 BEGIN
   IF to_regprocedure('public.calculate_booking_engine_item_price_addons_base(uuid)') IS NULL THEN
@@ -15,7 +143,7 @@ CREATE OR REPLACE FUNCTION public.calculate_booking_engine_item_price(p_request_
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   v_base jsonb;
@@ -37,17 +165,62 @@ DECLARE
   v_addons_discount numeric := 0;
   v_bad_links integer := 0;
   v_has_quotation_addon boolean := false;
+  v_customer_user_id uuid;
+  v_customer_id uuid;
+  v_request_id uuid;
+  v_package_included jsonb := '[]'::jsonb;
 BEGIN
-  v_base := public.calculate_booking_engine_item_price_addons_base(p_request_item_id);
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication is required.';
+  END IF;
 
-  SELECT *
-  INTO v_item
+  SELECT ri.request_id, r.customer_user_id, r.customer_id
+  INTO v_request_id, v_customer_user_id, v_customer_id
+  FROM public.booking_engine_request_items ri
+  JOIN public.booking_engine_requests r ON r.id = ri.request_id
+  WHERE ri.id = p_request_item_id
+  FOR SHARE OF r;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Booking Engine request not found.';
+  END IF;
+
+  IF NOT (
+    public.is_staff(auth.uid())
+    OR (
+      v_customer_user_id IS NOT NULL
+      AND v_customer_user_id = auth.uid()
+      AND public.owns_client(v_customer_id, auth.uid())
+    )
+  ) THEN
+    RAISE EXCEPTION 'You are not authorized to calculate this request item.';
+  END IF;
+
+  -- Keep lock order consistent with package selection: request, selected offer, then item.
+  SELECT ro.offer_snapshot->'included_services'
+  INTO v_package_included
+  FROM public.booking_engine_request_offers ro
+  WHERE ro.request_item_id = p_request_item_id
+    AND ro.offer_snapshot->>'offer_type' = 'package'
+  FOR SHARE;
+
+  SELECT * INTO v_item
   FROM public.booking_engine_request_items
-  WHERE id = p_request_item_id;
-
+  WHERE id = p_request_item_id
+  FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Booking Engine request item not found.';
   END IF;
+
+  IF v_item.service_config_id IS NOT NULL THEN
+    PERFORM public.assert_guest_booking_engine_answers(
+      v_item.service_config_id, v_item.answers, v_item.quantity
+    );
+  END IF;
+  PERFORM public.assert_booking_engine_item_measurements(
+    v_item.service_config_id, v_item.answers, v_item.measurements
+  );
+
+  v_base := public.calculate_booking_engine_item_price_addons_base(p_request_item_id);
 
   FOR v_selected IN
     SELECT DISTINCT value #>> '{}'
@@ -129,6 +302,32 @@ BEGIN
     WHERE l.offer_id = v_offer.id
       AND l.relationship = 'included';
 
+    IF EXISTS (
+      SELECT 1 FROM jsonb_array_elements(COALESCE(v_included, '[]'::jsonb)) AS included(value)
+      WHERE included.value->>'service_id' = v_item.service_id::text
+    ) THEN
+      RAISE EXCEPTION 'An optional add-on duplicates the primary service. Ask an administrator to correct the offer contents.';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(COALESCE(v_package_included, '[]'::jsonb)) AS package_service(value)
+      CROSS JOIN LATERAL jsonb_array_elements(COALESCE(v_included, '[]'::jsonb)) AS addon_service(value)
+      WHERE package_service.value->>'service_id' = addon_service.value->>'service_id'
+    ) THEN
+      RAISE EXCEPTION 'An optional add-on duplicates a service already included in the selected package.';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(v_addons) AS previous_addon(value)
+      CROSS JOIN LATERAL jsonb_array_elements(COALESCE(previous_addon.value->'included_services', '[]'::jsonb)) AS previous_service(value)
+      CROSS JOIN LATERAL jsonb_array_elements(COALESCE(v_included, '[]'::jsonb)) AS current_service(value)
+      WHERE previous_service.value->>'service_id' = current_service.value->>'service_id'
+    ) THEN
+      RAISE EXCEPTION 'Two selected add-ons include the same service. Remove one of the duplicate extras.';
+    END IF;
+
     v_addons := v_addons || jsonb_build_array(jsonb_build_object(
       'id', v_offer.id,
       'offer_key', v_offer.offer_key,
@@ -180,7 +379,10 @@ BEGIN
         v_discount := v_discount + v_discount_amount;
         v_addons_discount := v_addons_discount + v_discount_amount;
       END IF;
-      v_addon := v_addon || jsonb_build_object('calculated_amount', v_discount_amount, 'priced', true);
+      v_addon := v_addon || jsonb_build_object(
+        'calculated_amount', CASE WHEN v_addon->>'price_mode' = 'fixed' THEN v_amount ELSE v_discount_amount END,
+        'priced', true
+      );
     ELSE
       v_addon := v_addon || jsonb_build_object('calculated_amount', NULL, 'priced', false);
     END IF;
@@ -236,7 +438,7 @@ CREATE OR REPLACE FUNCTION public.booking_engine_expand_offer_line_items(_reques
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   v_lines jsonb;
@@ -379,7 +581,7 @@ CREATE OR REPLACE FUNCTION public.prepare_booking_engine_quotation(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   v_result jsonb;
@@ -488,7 +690,7 @@ CREATE OR REPLACE FUNCTION public.booking_engine_validate_selected_addons_before
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   v_item record;
@@ -496,6 +698,26 @@ DECLARE
   v_offer public.booking_engine_value_offers%ROWTYPE;
 BEGIN
   IF NEW.status = 'submitted' AND OLD.status = 'draft' THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.booking_engine_request_items ri
+      CROSS JOIN LATERAL jsonb_array_elements_text(
+        CASE WHEN jsonb_typeof(ri.selected_extras) = 'array' THEN ri.selected_extras ELSE '[]'::jsonb END
+      ) AS selected(value)
+      WHERE ri.request_id = NEW.id
+        AND selected.value LIKE 'offer:%'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(
+            CASE WHEN jsonb_typeof(ri.pricing_snapshot->'selected_addons') = 'array'
+              THEN ri.pricing_snapshot->'selected_addons' ELSE '[]'::jsonb END
+          ) AS snapshot(value)
+          WHERE snapshot.value->>'id' = substring(selected.value FROM 7)
+        )
+    ) THEN
+      RAISE EXCEPTION 'One or more selected add-ons have not been priced. Recalculate the estimate before submitting.';
+    END IF;
+
     FOR v_item IN
       SELECT id, service_id, pricing_snapshot
       FROM public.booking_engine_request_items
@@ -512,13 +734,14 @@ BEGIN
           AND active IS TRUE
           AND (starts_at IS NULL OR starts_at <= now())
           AND (ends_at IS NULL OR ends_at > now())
-          AND updated_at IS NOT DISTINCT FROM NULLIF(v_addon->>'offer_updated_at', '')::timestamptz;
+          AND updated_at IS NOT DISTINCT FROM NULLIF(v_addon->>'offer_updated_at', '')::timestamptz
+        FOR SHARE;
 
         IF NOT FOUND THEN
           RAISE EXCEPTION 'An optional add-on has changed or expired. Review your selections and calculate the estimate again.';
         END IF;
 
-        IF NOT EXISTS (
+        IF v_offer.offer_type NOT IN ('add_on', 'upgrade') OR NOT EXISTS (
           SELECT 1
           FROM public.booking_engine_value_offer_services l
           WHERE l.offer_id = v_offer.id
@@ -530,10 +753,11 @@ BEGIN
       END LOOP;
     END LOOP;
   END IF;
-
   RETURN NEW;
 END;
 $$;
+REVOKE ALL ON FUNCTION public.booking_engine_validate_selected_addons_before_submit()
+  FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS booking_engine_validate_selected_addons_before_submit
   ON public.booking_engine_requests;

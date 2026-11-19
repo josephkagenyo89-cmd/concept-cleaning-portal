@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone } from './bookingEngineGuestRequest';
+import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone, pickVisibleGuestAnswers, buildVisibleGuestMeasurements, createGuestSubmissionFingerprint } from './bookingEngineGuestRequest';
 describe('guest booking contact normalization', () => {
   it('normalizes common Kenyan mobile formats', () => {
     expect(normalizeGuestPhone('0712 345 678')).toBe('+254712345678');
@@ -61,5 +61,37 @@ describe('guest booking request notes', () => {
   it('rejects details that would be silently truncated by the guest intake endpoint', () => {
     expect(() => buildGuestRequestNotes({ serviceName: 'Sofa Cleaning', notes: 'x'.repeat(1100) }))
       .toThrow(/exceed the guest request limit/);
+  });
+});
+
+describe('visible guided booking answers', () => {
+  const questions = [
+    { id: 'q1', question_key: 'rooms', input_type: 'measurement' },
+    { id: 'q2', question_key: 'fabric', input_type: 'select' },
+    { id: 'q3', question_key: 'hidden_area', input_type: 'measurement' },
+  ];
+  const answers = { rooms: '3', fabric: 'Cotton', hidden_area: '99' };
+  const visibility = { q1: { visible: true }, q2: { visible: true }, q3: { visible: false } };
+
+  it('excludes hidden answers from the guest snapshot', () => {
+    expect(pickVisibleGuestAnswers(questions, answers, visibility)).toEqual({
+      rooms: '3',
+      fabric: 'Cotton',
+    });
+  });
+
+  it('only sends visible positive measurement answers to pricing', () => {
+    expect(buildVisibleGuestMeasurements(questions, answers, visibility)).toEqual({ rooms: 3 });
+  });
+});
+
+describe('guest submission retry fingerprint', () => {
+  it('is stable for the same payload and changes when the request changes', async () => {
+    const first = await createGuestSubmissionFingerprint({ service: 'sofa', date: '2026-12-01' });
+    const repeated = await createGuestSubmissionFingerprint({ service: 'sofa', date: '2026-12-01' });
+    const changed = await createGuestSubmissionFingerprint({ service: 'sofa', date: '2026-12-02' });
+    expect(first).toBe(repeated);
+    expect(first).not.toBe(changed);
+    expect(first).toMatch(/^[0-9a-f]{64}$/);
   });
 });

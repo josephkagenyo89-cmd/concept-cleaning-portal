@@ -230,3 +230,21 @@ Requires separate owner approval before any Supabase work:
 - Required guest photos are flagged for staff follow-up; authorized staff can attach the collected photos in the native Smart Booking request, and the ERP conversion function blocks booking creation until the configured photo minimum is met.
 - Remaining release verification: apply the migration and Edge Function in a controlled non-production environment, test the complete guest → Smart Booking → quotation/confirmation → ERP booking path, run Supabase security/performance advisors, and then obtain explicit production approval.
 - Production deployment, merge to `main`, live database changes and unrelated ERP/HR work remain outside this implementation step.
+
+
+## Final quality hardening (source-only, 2026-11-19)
+
+- Guest submission is intentionally public at the Edge Function gateway; `supabase/config.toml` sets `verify_jwt = false` for `submit-guest-service-request`. The function itself fails closed unless it can resolve the Supabase secret/service-role key and a 32+ character `GUEST_REQUEST_RATE_LIMIT_SECRET`.
+- Configure `GUEST_REQUEST_RATE_LIMIT_SECRET` in Supabase Edge Function secrets before enabling the public guest endpoint. Do not commit the value. The function resolves `SUPABASE_SECRET_KEYS.default` with a legacy `SUPABASE_SERVICE_ROLE_KEY` fallback and strips the SDK's automatic `Authorization` header so the secret API key is sent only through `apikey`.
+- Package and paid add-on selections are calculated together. The shared item-pricing function validates measurements against visible question answers, rejects duplicate included services across the package and add-ons, and snapshots fixed add-on amounts correctly for ERP line items.
+- Before a request can be submitted, every selected add-on ID must have a current server-calculated snapshot matching the live offer version and trigger service. Guest conversion also checks the submitted offer-version map.
+- Guest retry keys are persisted with a SHA-256 payload fingerprint, not with contact details. The same unchanged payload reuses its key after a retry; editing the request produces a new key.
+- The guest-to-ERP flow remains staff-controlled: staff review Smart Booking pricing, prepare a formal quotation when required, record the guest's confirmation channel, and then create the existing ERP booking. No guest account or direct guest ERP booking creation is introduced.
+- SQL contract checks are included in CI in addition to unit tests and the production bundle build. Live migrations, Edge Function deployment, and production deployment remain separate release actions.
+
+
+## Guest intake compatibility note
+
+- The public guest endpoint continues to accept the older non-guided booking forms as legacy enquiries. Those requests are rate-limited and server-priced, but they do not claim to contain a guided booking snapshot.
+- Only requests carrying a complete guided snapshot can be converted into the Smart Booking workflow. Standard legacy enquiries remain eligible for CRM lead conversion; the admin UI and database function both prevent an invalid Smart Booking conversion.
+- The guided booking form supplies a client-generated idempotency key and payload fingerprint. Older fallback forms may omit the key and retain their existing enquiry behavior.

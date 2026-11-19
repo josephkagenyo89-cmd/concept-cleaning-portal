@@ -103,3 +103,42 @@ export function buildGuestRequestNotes(input: GuestBookingNotesInput): string {
   if (result.length > 1000) throw new Error('The captured service details exceed the guest request limit. Shorten optional notes or remove some selections.');
   return result;
 }
+
+export type VisibleBookingQuestion = { id: string; question_key: string; input_type: string };
+export type QuestionVisibility = Record<string, { visible?: boolean }>;
+
+export function pickVisibleGuestAnswers(
+  questions: VisibleBookingQuestion[],
+  answers: Record<string, unknown>,
+  visibility: QuestionVisibility,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    questions
+      .filter((question) => visibility[question.id]?.visible === true
+        && Object.prototype.hasOwnProperty.call(answers, question.question_key)
+        && answers[question.question_key] !== undefined)
+      .map((question) => [question.question_key, answers[question.question_key]]),
+  );
+}
+
+export function buildVisibleGuestMeasurements(
+  questions: VisibleBookingQuestion[],
+  answers: Record<string, unknown>,
+  visibility: QuestionVisibility,
+): Record<string, number> {
+  const measurements: Record<string, number> = {};
+  for (const question of questions) {
+    if (question.input_type !== 'measurement' || visibility[question.id]?.visible !== true) continue;
+    const value = Number(answers[question.question_key]);
+    if (answers[question.question_key] !== '' && Number.isFinite(value) && value > 0) {
+      measurements[question.question_key] = value;
+    }
+  }
+  return measurements;
+}
+
+export async function createGuestSubmissionFingerprint(payload: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
+}

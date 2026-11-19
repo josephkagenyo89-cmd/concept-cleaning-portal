@@ -88,46 +88,96 @@ END;
 $function$;
 
 CREATE OR REPLACE FUNCTION public.calculate_booking_engine_request_price(_request_id uuid)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
 AS $function$
 DECLARE
-  v_request RECORD; v_item RECORD; v_result JSONB; v_offer_snapshot JSONB; v_item_count INTEGER:=0;
-  v_priced_count INTEGER:=0; v_quote_required_count INTEGER:=0; v_subtotal NUMERIC:=0;
-  v_discount NUMERIC:=0; v_total NUMERIC:=0; v_overall_status TEXT:='priced'; v_package_price NUMERIC;
+  v_request public.booking_engine_requests%ROWTYPE;
+  v_item record;
+  v_result jsonb;
+  v_item_count integer := 0;
+  v_priced_count integer := 0;
+  v_quote_required_count integer := 0;
+  v_subtotal numeric := 0;
+  v_discount numeric := 0;
+  v_total numeric := 0;
+  v_selected_addons jsonb := '[]'::jsonb;
+  v_overall_status text := 'priced';
 BEGIN
-  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication is required.'; END IF;
-  SELECT * INTO v_request FROM public.booking_engine_requests WHERE id=_request_id FOR UPDATE;
-  IF v_request.id IS NULL THEN RAISE EXCEPTION 'Booking Engine request not found.'; END IF;
-  IF NOT(public.is_admin_or_super(auth.uid()) OR v_request.customer_user_id=auth.uid()) THEN RAISE EXCEPTION 'You are not authorized to price this request.'; END IF;
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication is required.';
+  END IF;
 
-  FOR v_item IN SELECT id FROM public.booking_engine_request_items WHERE request_id=_request_id ORDER BY display_order,created_at LOOP
-    v_item_count:=v_item_count+1;
-    SELECT offer_snapshot INTO v_offer_snapshot FROM public.booking_engine_request_offers WHERE request_id=_request_id AND request_item_id=v_item.id;
-    IF COALESCE(v_offer_snapshot->>'offer_type','')='package' THEN
-      v_package_price:=NULLIF(v_offer_snapshot->>'price_value','')::numeric;
-      IF COALESCE(v_offer_snapshot->>'price_mode','')<>'fixed' OR COALESCE(v_package_price,0)<=0 THEN RAISE EXCEPTION 'The selected package has no approved fixed price. Refresh and choose another package.'; END IF;
-      v_result:=jsonb_build_object('status','priced','subtotal',v_package_price,'discount_amount',0,'total',v_package_price,'package_price',v_package_price,'package',v_offer_snapshot,'selected_addons','[]'::jsonb);
-      UPDATE public.booking_engine_request_items SET pricing_snapshot=v_result,updated_at=now() WHERE id=v_item.id;
-    ELSE
-      v_result:=public.calculate_booking_engine_item_price(v_item.id);
+  SELECT * INTO v_request
+  FROM public.booking_engine_requests
+  WHERE id = _request_id
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Booking Engine request not found.';
+  END IF;
+
+  IF NOT (
+    public.is_admin_or_super(auth.uid())
+    OR (
+      v_request.customer_user_id IS NOT NULL
+      AND v_request.customer_user_id = auth.uid()
+      AND public.owns_client(v_request.customer_id, auth.uid())
+    )
+  ) THEN
+    RAISE EXCEPTION 'You are not authorized to price this request.';
+  END IF;
+
+  FOR v_item IN
+    SELECT id
+    FROM public.booking_engine_request_items
+    WHERE request_id = _request_id
+    ORDER BY display_order, created_at
+  LOOP
+    v_item_count := v_item_count + 1;
+    v_result := public.calculate_booking_engine_item_price(v_item.id);
+    IF jsonb_typeof(v_result->'selected_addons') = 'array' THEN
+      v_selected_addons := v_selected_addons || (v_result->'selected_addons');
     END IF;
-    IF COALESCE(v_result->>'status','')='priced' THEN
-      v_priced_count:=v_priced_count+1;
-      v_subtotal:=v_subtotal+COALESCE((v_result->>'subtotal')::numeric,0);
-      v_discount:=v_discount+COALESCE((v_result->>'discount_amount')::numeric,0);
-      v_total:=v_total+COALESCE((v_result->>'total')::numeric,0);
-    ELSIF COALESCE(v_result->>'status','')='quotation_required' THEN v_quote_required_count:=v_quote_required_count+1;
-    ELSE RAISE EXCEPTION 'Unable to price Booking Engine item %.',v_item.id;
+
+    IF COALESCE(v_result->>'status', '') = 'priced' THEN
+      v_priced_count := v_priced_count + 1;
+      v_subtotal := v_subtotal + COALESCE((v_result->>'subtotal')::numeric, 0);
+      v_discount := v_discount + COALESCE((v_result->>'discount_amount')::numeric, 0);
+      v_total := v_total + COALESCE((v_result->>'total')::numeric, 0);
+    ELSIF COALESCE(v_result->>'status', '') = 'quotation_required' THEN
+      v_quote_required_count := v_quote_required_count + 1;
+    ELSE
+      RAISE EXCEPTION 'Unable to price Booking Engine item %.', v_item.id;
     END IF;
   END LOOP;
-  IF v_item_count=0 THEN RAISE EXCEPTION 'Booking Engine request contains no services.'; END IF;
-  IF v_quote_required_count>0 THEN v_overall_status:='quotation_required'; END IF;
-  RETURN jsonb_build_object('status',v_overall_status,'request_id',_request_id,'item_count',v_item_count,'priced_count',v_priced_count,
-    'quote_required_count',v_quote_required_count,'subtotal',v_subtotal,'discount_amount',v_discount,'total',v_total);
+
+  IF v_item_count = 0 THEN
+    RAISE EXCEPTION 'Booking Engine request contains no services.';
+  END IF;
+  IF v_quote_required_count > 0 THEN
+    v_overall_status := 'quotation_required';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'status', v_overall_status,
+    'request_id', _request_id,
+    'item_count', v_item_count,
+    'priced_count', v_priced_count,
+    'quote_required_count', v_quote_required_count,
+    'subtotal', v_subtotal,
+    'discount_amount', v_discount,
+    'total', v_total,
+    'selected_addons', v_selected_addons
+  );
 END;
 $function$;
+
+REVOKE ALL ON FUNCTION public.calculate_booking_engine_request_price(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.calculate_booking_engine_request_price(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.set_booking_engine_request_offer(uuid,uuid,uuid)
 IS 'Stores request-scoped offer snapshots including package service sizes, quantities, package item prices and complimentary flags.';
 COMMENT ON FUNCTION public.calculate_booking_engine_request_price(uuid)
-IS 'Calculates ordinary Booking Engine service pricing and applies the approved final package price for package selections.';
+IS 'Calculates service, package and selected add-on pricing through the shared item-level server calculator.';

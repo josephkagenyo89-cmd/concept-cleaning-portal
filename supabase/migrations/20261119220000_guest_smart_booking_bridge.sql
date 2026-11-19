@@ -113,7 +113,7 @@ CREATE OR REPLACE FUNCTION public.assert_guest_booking_engine_answers(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY INVOKER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_config public.booking_engine_service_config%ROWTYPE;
@@ -313,7 +313,7 @@ CREATE OR REPLACE FUNCTION public.convert_guest_service_request_to_booking_engin
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_guest public.guest_service_requests%ROWTYPE;
@@ -331,6 +331,9 @@ DECLARE
   v_selected_offer_id uuid;
   v_offer_type text;
   v_offer_updated_at timestamptz;
+  v_addon_offer_id uuid;
+  v_addon_offer_type text;
+  v_addon_offer_updated_at timestamptz;
   v_quantity numeric;
   v_price jsonb;
   v_scope_snapshot jsonb;
@@ -376,6 +379,10 @@ BEGIN
   END IF;
 
   v_details := COALESCE(v_guest.booking_details_snapshot, '{}'::jsonb);
+  IF COALESCE(v_details->>'legacy_request', 'false') = 'true'
+     OR NULLIF(v_details->>'service_config_version', '') IS NULL THEN
+    RAISE EXCEPTION 'This guest request was submitted through the standard guest form and has no guided Smart Booking snapshot. Convert it to a CRM lead or enable guided booking for this service before Smart Booking conversion.';
+  END IF;
   IF jsonb_typeof(v_details) <> 'object'
      OR jsonb_typeof(v_details->'answers') <> 'object'
      OR jsonb_typeof(v_details->'measurements') <> 'object'
@@ -424,7 +431,34 @@ BEGIN
   FOR v_extra IN SELECT value FROM jsonb_array_elements_text(v_selected_extras)
   LOOP
     IF left(v_extra, 6) = 'offer:' THEN
-      IF substring(v_extra FROM 7) !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+      IF substring(v_extra FROM 7) !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+        RAISE EXCEPTION 'One of the selected add-ons is invalid. Refresh the booking form and try again.';
+      END IF;
+      v_addon_offer_id := substring(v_extra FROM 7)::uuid;
+      SELECT o.offer_type, o.updated_at
+      INTO v_addon_offer_type, v_addon_offer_updated_at
+      FROM public.booking_engine_value_offers o
+      WHERE o.id = v_addon_offer_id
+        AND o.active IS TRUE
+        AND (o.starts_at IS NULL OR o.starts_at <= now())
+        AND (o.ends_at IS NULL OR o.ends_at > now())
+      FOR SHARE;
+      IF v_addon_offer_type IS DISTINCT FROM 'add_on'
+         AND v_addon_offer_type IS DISTINCT FROM 'upgrade' THEN
+        RAISE EXCEPTION 'A selected optional extra is no longer an active add-on or upgrade.';
+      END IF;
+      IF v_addon_offer_updated_at IS DISTINCT FROM
+        NULLIF(v_details->'selected_offer_versions'->>v_addon_offer_id::text, '')::timestamptz THEN
+        RAISE EXCEPTION 'A selected add-on has changed since the guest submitted the request. Ask the guest to review it again.';
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM public.booking_engine_value_offer_services l
+        WHERE l.offer_id = v_addon_offer_id
+          AND l.service_id = v_service.id
+          AND l.relationship = 'trigger'
+      ) THEN
+        RAISE EXCEPTION 'A selected add-on no longer applies to the requested service.';
+      END IF;
     ELSE
       IF v_extra !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
          OR NOT EXISTS (
@@ -614,7 +648,7 @@ CREATE OR REPLACE FUNCTION public.prepare_guest_service_request_quotation(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_guest public.guest_service_requests%ROWTYPE;
@@ -642,6 +676,9 @@ BEGIN
 
   IF NOT FOUND OR v_guest.request_type <> 'quotation' THEN
     RAISE EXCEPTION 'A linked guest quotation request could not be found.';
+  END IF;
+  IF v_guest.status IN ('rejected', 'closed') THEN
+    RAISE EXCEPTION 'Rejected or closed guest requests cannot be quoted.';
   END IF;
 
   IF v_guest.quotation_id IS NOT NULL THEN
@@ -788,7 +825,7 @@ CREATE OR REPLACE FUNCTION public.confirm_guest_service_request_customer_respons
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_guest public.guest_service_requests%ROWTYPE;
@@ -799,7 +836,7 @@ BEGIN
   IF auth.uid() IS NULL OR NOT public.is_admin_or_super(auth.uid()) THEN
     RAISE EXCEPTION 'Only admins and super admins may record guest confirmation.';
   END IF;
-  IF p_channel NOT IN ('whatsapp', 'phone', 'email', 'in_person') THEN
+  IF p_channel IS NULL OR p_channel NOT IN ('whatsapp', 'phone', 'email', 'in_person') THEN
     RAISE EXCEPTION 'Choose a valid customer confirmation channel.';
   END IF;
 
@@ -807,6 +844,9 @@ BEGIN
   WHERE id = p_request_id FOR UPDATE;
   IF NOT FOUND OR v_guest.booking_engine_request_id IS NULL THEN
     RAISE EXCEPTION 'The linked Smart Booking request could not be found.';
+  END IF;
+  IF v_guest.status IN ('rejected', 'closed') THEN
+    RAISE EXCEPTION 'Rejected or closed guest requests cannot be confirmed.';
   END IF;
 
   SELECT * INTO v_request FROM public.booking_engine_requests
@@ -934,7 +974,7 @@ CREATE OR REPLACE FUNCTION public.prevent_guest_quotation_ready_without_quote()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 BEGIN
   IF NEW.status = 'ready_for_booking'
@@ -969,7 +1009,7 @@ CREATE OR REPLACE FUNCTION public.sync_guest_service_request_booking_engine_stat
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 BEGIN
   UPDATE public.guest_service_requests g
@@ -1012,7 +1052,7 @@ CREATE OR REPLACE FUNCTION public.convert_guest_service_request_to_erp_booking(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_guest public.guest_service_requests%ROWTYPE;
@@ -1032,6 +1072,9 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND OR v_guest.booking_engine_request_id IS NULL THEN
     RAISE EXCEPTION 'The guest request has not been converted into Smart Booking.';
+  END IF;
+  IF v_guest.status IN ('rejected', 'closed') THEN
+    RAISE EXCEPTION 'Rejected or closed guest requests cannot become ERP bookings.';
   END IF;
 
   IF v_guest.converted_booking_id IS NOT NULL THEN

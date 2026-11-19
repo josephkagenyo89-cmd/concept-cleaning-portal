@@ -144,6 +144,30 @@ async function hashClientIp(ip: string, secret: string): Promise<string> {
     .join('');
 }
 
+function getSupabaseServiceKey(): string {
+  const rawSecretKeys = Deno.env.get('SUPABASE_SECRET_KEYS');
+  if (rawSecretKeys) {
+    try {
+      const secretKeys = JSON.parse(rawSecretKeys) as Record<string, unknown>;
+      if (typeof secretKeys.default === 'string' && secretKeys.default.length > 0) {
+        return secretKeys.default;
+      }
+    } catch {
+      // Use the legacy environment variable only when the current key map is unavailable.
+    }
+  }
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+}
+
+// Supabase secret API keys are not JWTs. Keep the key in `apikey` and strip
+// supabase-js's automatic Authorization: Bearer header before the request leaves.
+const apiKeyOnlyFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(input instanceof Request ? input.headers : undefined);
+  new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+  headers.delete('Authorization');
+  return fetch(input, { ...init, headers });
+};
+
 function getClientIp(req: Request, supabaseUrl: string): string | null {
   const cfIp = req.headers.get('cf-connecting-ip')?.trim();
 
@@ -242,7 +266,7 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = getSupabaseServiceKey();
   const rateLimitSecret = Deno.env.get('GUEST_REQUEST_RATE_LIMIT_SECRET');
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -262,6 +286,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: apiKeyOnlyFetch },
     });
 
     // HMAC prevents the rate-limit table from storing raw IP addresses.
@@ -307,49 +332,57 @@ Deno.serve(async (req) => {
 
     const requestType = cleanText(body.request_type, 20);
     const serviceId = cleanText(body.service_id, 100);
-    const submissionKey = cleanText(body.submission_key, 36);
-    if (submissionKey && !UUID_PATTERN.test(submissionKey)) return reply({ error: 'Invalid submission reference. Please retry.' }, 400);
+    const suppliedSubmissionKey = cleanText(body.submission_key, 36);
+    if (suppliedSubmissionKey && !UUID_PATTERN.test(suppliedSubmissionKey)) return reply({ error: 'Invalid submission reference. Please refresh and retry.' }, 400);
+    const submissionKey = suppliedSubmissionKey || null;
     const rawDetails = body.booking_details;
-    if (!rawDetails || typeof rawDetails !== 'object' || Array.isArray(rawDetails)) return reply({ error: 'Booking details are missing. Refresh the form and try again.' }, 400);
-    const detailObject = rawDetails as Record<string, unknown>;
-    const answers = detailObject.answers && typeof detailObject.answers === 'object' && !Array.isArray(detailObject.answers) ? detailObject.answers as Record<string, unknown> : null;
-    const measurements = detailObject.measurements && typeof detailObject.measurements === 'object' && !Array.isArray(detailObject.measurements) ? detailObject.measurements as Record<string, unknown> : null;
-    const selectedExtras = Array.isArray(detailObject.selected_extras) ? detailObject.selected_extras : null;
-    const selectedOfferId = detailObject.selected_offer_id == null || detailObject.selected_offer_id === '' ? null : cleanText(detailObject.selected_offer_id, 36);
-    const rawOfferVersions = detailObject.selected_offer_versions && typeof detailObject.selected_offer_versions === 'object' && !Array.isArray(detailObject.selected_offer_versions)
-      ? detailObject.selected_offer_versions as Record<string, unknown> : null;
-    const configVersion = Number(detailObject.service_config_version);
-    const quantity = detailObject.quantity == null ? null : Number(detailObject.quantity);
+    const hasGuidedDetails = rawDetails !== undefined && rawDetails !== null;
+    if (hasGuidedDetails && (typeof rawDetails !== 'object' || Array.isArray(rawDetails))) return reply({ error: 'Guided booking details are invalid. Refresh the form and try again.' }, 400);
+    const detailObject = hasGuidedDetails ? rawDetails as Record<string, unknown> : {};
+    const answers = hasGuidedDetails
+      ? detailObject.answers && typeof detailObject.answers === 'object' && !Array.isArray(detailObject.answers) ? detailObject.answers as Record<string, unknown> : null
+      : {};
+    const measurements = hasGuidedDetails
+      ? detailObject.measurements && typeof detailObject.measurements === 'object' && !Array.isArray(detailObject.measurements) ? detailObject.measurements as Record<string, unknown> : null
+      : {};
+    const selectedExtras = hasGuidedDetails ? (Array.isArray(detailObject.selected_extras) ? detailObject.selected_extras : null) : [];
+    const selectedOfferId = !hasGuidedDetails || detailObject.selected_offer_id == null || detailObject.selected_offer_id === '' ? null : cleanText(detailObject.selected_offer_id, 36);
+    const rawOfferVersions = hasGuidedDetails
+      ? detailObject.selected_offer_versions && typeof detailObject.selected_offer_versions === 'object' && !Array.isArray(detailObject.selected_offer_versions)
+        ? detailObject.selected_offer_versions as Record<string, unknown> : null
+      : {};
+    const configVersion = hasGuidedDetails ? Number(detailObject.service_config_version) : null;
+    const quantity = !hasGuidedDetails || detailObject.quantity == null ? null : Number(detailObject.quantity);
     const quantityUnit = cleanText(detailObject.quantity_unit, 30) || 'units';
     const expectedOfferIds = Array.from(new Set([
       ...(selectedOfferId ? [selectedOfferId] : []),
       ...(selectedExtras || []).filter((value): value is string => typeof value === 'string' && value.startsWith('offer:')).map(value => value.slice(6)),
     ]));
-    const offerVersionsValid = !!rawOfferVersions
+    const offerVersionsValid = !hasGuidedDetails || (!!rawOfferVersions
       && Object.keys(rawOfferVersions).length === expectedOfferIds.length
       && expectedOfferIds.every((id) => UUID_PATTERN.test(id)
         && typeof rawOfferVersions[id] === 'string'
         && Number.isFinite(Date.parse(rawOfferVersions[id] as string)))
-      && Object.keys(rawOfferVersions).every((id) => expectedOfferIds.includes(id));
-    if (!answers || !measurements || !selectedExtras || selectedExtras.length > 40 ||
+      && Object.keys(rawOfferVersions).every((id) => expectedOfferIds.includes(id)));
+    if (hasGuidedDetails && (!answers || !measurements || !selectedExtras || selectedExtras.length > 40 ||
         (selectedOfferId !== null && !UUID_PATTERN.test(selectedOfferId)) ||
         !Number.isInteger(configVersion) || configVersion < 1 ||
         (quantity !== null && (!Number.isFinite(quantity) || quantity <= 0)) ||
         selectedExtras.some((value) => typeof value !== 'string' || value.length > 80 ||
           !(UUID_PATTERN.test(value) || (value.startsWith('offer:') && UUID_PATTERN.test(value.slice(6))))) ||
         !offerVersionsValid ||
-        JSON.stringify(answers).length > 3500 || JSON.stringify(measurements).length > 1000) {
+        JSON.stringify(answers).length > 3500 || JSON.stringify(measurements).length > 1000)) {
       return reply({ error: 'Some service selections are invalid. Refresh the form and review your answers.' }, 400);
     }
     const normalizedOfferVersions = Object.fromEntries(expectedOfferIds.map((id) => [
       id, new Date(rawOfferVersions![id] as string).toISOString(),
     ]));
-    const bookingDetailsSnapshot = {
+    const bookingDetailsSnapshot = hasGuidedDetails ? {
       quantity, quantity_unit: quantityUnit, measurements, answers,
       selected_extras: Array.from(new Set(selectedExtras as string[])),
       selected_offer_id: selectedOfferId, selected_offer_versions: normalizedOfferVersions,
       service_config_version: configVersion,
-    };
+    } : { legacy_request: true };
     if (submissionKey) {
       const { data: existing } = await supabase.from('guest_service_requests')
         .select('id,request_reference,service_name,estimated_amount,discount_amount')
@@ -375,6 +408,10 @@ Deno.serve(async (req) => {
 
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serviceId)) {
       return reply({ error: 'Please select a valid service.' }, 400);
+    }
+
+    if (customerName.length < 2) {
+      return reply({ error: 'Enter your name so our team can identify the request.' }, 400);
     }
 
     if (!/^\+[1-9]\d{7,14}$/.test(customerPhone)) {

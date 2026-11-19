@@ -73,6 +73,7 @@ export default function AdminGuestRequests() {
   const [savingId, setSavingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [confirmationChannels, setConfirmationChannels] = useState<Record<string,string>>({});
 
   const loadRequests = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -82,7 +83,7 @@ export default function AdminGuestRequests() {
     const { data, error: queryError } = await supabase
       .from('guest_service_requests')
       .select(
-        'id, request_reference, request_type, service_id, service_name, service_category, customer_name, customer_phone, customer_notes, location, preferred_date, preferred_time, size_sqm, estimated_amount, discount_amount, status, lead_id, converted_at, converted_by, internal_notes, booking_engine_request_id, booking_engine_request_number, booking_engine_status, quotation_id, converted_booking_id, customer_confirmed_at, customer_confirmation_channel, created_at, updated_at, lead:leads(lead_code), quotation:quotations!guest_service_requests_quotation_fkey(quotation_number,price)'
+        'id, request_reference, request_type, service_id, service_name, service_category, customer_name, customer_phone, customer_notes, booking_details_snapshot, location, preferred_date, preferred_time, size_sqm, estimated_amount, discount_amount, status, lead_id, converted_at, converted_by, internal_notes, booking_engine_request_id, booking_engine_request_number, booking_engine_status, quotation_id, converted_booking_id, customer_confirmed_at, customer_confirmation_channel, created_at, updated_at, lead:leads(lead_code), quotation:quotations!guest_service_requests_quotation_fkey(quotation_number,price)'
       )
       .order('created_at', { ascending: false })
       .limit(300);
@@ -130,6 +131,11 @@ export default function AdminGuestRequests() {
   }, [requests, search, statusFilter]);
 
   const updateRequest = async (id, updates, successMessage) => {
+    const existing = requests.find((request) => request.id === id);
+    if (existing?.booking_engine_request_id && Object.prototype.hasOwnProperty.call(updates, 'status')) {
+      setError('This request is linked to Smart Booking. Manage its workflow status in the Smart Booking queue.');
+      return;
+    }
     setSavingId(id);
     setError('');
     setNotice('');
@@ -228,6 +234,12 @@ export default function AdminGuestRequests() {
   };
 
   const convertToSmartBooking = async (item: any) => {
+    const details = item.booking_details_snapshot;
+    if (!details?.service_config_version || !details.answers || !details.measurements
+      || !Array.isArray(details.selected_extras) || !details.selected_offer_versions) {
+      setError('This is a standard guest enquiry without a guided booking snapshot. Convert it to a CRM lead or enable guided booking for this service before sending it to Smart Booking.');
+      return;
+    }
     if (item.booking_engine_request_id) {
       navigate('/admin/booking-engine');
       return;
@@ -276,15 +288,15 @@ export default function AdminGuestRequests() {
     }
   };
 
-  const recordGuestConfirmation = async (item: any) => {
-    if (!window.confirm("Have you received the guest's confirmation of the scope and price for " + item.request_reference + " through WhatsApp?")) return;
+  const recordGuestConfirmation = async (item: any, channel: string = 'whatsapp') => {
+    if (!window.confirm("Have you received the guest's confirmation of the reviewed scope and price for " + item.request_reference + " through " + channel.replace('_', ' ') + "?")) return;
     setSavingId(item.id);
     setError('');
     setNotice('');
     try {
       const { error: actionError } = await supabase.rpc(
         'confirm_guest_service_request_customer_response',
-        { p_request_id: item.id, p_channel: 'whatsapp' }
+        { p_request_id: item.id, p_channel: channel }
       );
       if (actionError) throw actionError;
       setNotice('Guest confirmation recorded. You can now proceed with the existing ERP booking approval.');
@@ -434,7 +446,7 @@ export default function AdminGuestRequests() {
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={item.status}
-                      disabled={savingId === item.id || item.status === "converted_to_lead"}
+                      disabled={savingId === item.id || item.status === "converted_to_lead" || !!item.booking_engine_request_id}
                       onChange={(event) =>
                         updateRequest(item.id, { status: event.target.value }, 'Request status updated.')
                       }
@@ -547,14 +559,20 @@ export default function AdminGuestRequests() {
                         <p className="mt-1 text-xs text-muted-foreground">Convert this enquiry into the native Smart Booking review and pricing workflow.</p>
                       )}
                     </div>
+                    {item.booking_engine_request_id && <span className="text-[11px] text-muted-foreground">Status is managed in Smart Booking</span>}
                     {item.booking_engine_request_id && <Button size="sm" variant="outline" onClick={() => navigate('/admin/booking-engine')}>
                       <ArrowRight className="mr-2 h-4 w-4" />Open Smart Booking
                     </Button>}
                   </div>
-                  {!item.booking_engine_request_id ? (
+                  {!item.booking_engine_request_id && item.booking_details_snapshot?.service_config_version
+                    && item.booking_details_snapshot?.answers && item.booking_details_snapshot?.measurements
+                    && Array.isArray(item.booking_details_snapshot?.selected_extras)
+                    && item.booking_details_snapshot?.selected_offer_versions ? (
                     <Button className="mt-3 w-full sm:w-auto" size="sm" onClick={() => convertToSmartBooking(item)} disabled={savingId === item.id || ['rejected','closed'].includes(item.status)}>
                       <ArrowRight className="mr-2 h-4 w-4" />{savingId === item.id ? 'Converting…' : 'Send to Smart Booking'}
                     </Button>
+                  ) : !item.booking_engine_request_id ? (
+                    <p className="mt-3 text-xs text-muted-foreground">Standard guest enquiry: use CRM lead conversion, or enable guided booking for this service before Smart Booking review.</p>
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.request_type === 'quotation' && !item.quotation_id && ['submitted','under_review','approved'].includes(item.booking_engine_status) && (
@@ -563,9 +581,14 @@ export default function AdminGuestRequests() {
                         </Button>
                       )}
                       {!item.customer_confirmed_at && ((item.request_type === 'booking' && ['approved','ready_for_booking'].includes(item.booking_engine_status)) || (item.quotation_id && ['quote_prepared','customer_accepted','ready_for_booking'].includes(item.booking_engine_status))) && (
-                        <Button size="sm" variant="outline" onClick={() => recordGuestConfirmation(item)} disabled={savingId === item.id}>
-                          <CheckCircle2 className="mr-2 h-4 w-4" />Record WhatsApp confirmation
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select value={confirmationChannels[item.id] || 'whatsapp'} onChange={(event) => setConfirmationChannels((current) => ({ ...current, [item.id]: event.target.value }))} className="h-9 rounded-md border border-input bg-background px-2 text-xs" aria-label={`Confirmation channel for ${item.request_reference}`}>
+                            <option value="whatsapp">WhatsApp</option><option value="phone">Phone call</option><option value="email">Email</option><option value="in_person">In person</option>
+                          </select>
+                          <Button size="sm" variant="outline" onClick={() => recordGuestConfirmation(item, confirmationChannels[item.id] || 'whatsapp')} disabled={savingId === item.id}>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />Record confirmation
+                          </Button>
+                        </div>
                       )}
                       {item.customer_confirmed_at && !item.converted_booking_id && ['approved','customer_accepted','ready_for_booking'].includes(item.booking_engine_status) && (
                         <Button size="sm" onClick={() => convertGuestToErpBooking(item)} disabled={savingId === item.id}>

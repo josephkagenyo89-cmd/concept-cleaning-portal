@@ -1,6 +1,6 @@
 -- A package can only be booked through a service whose guided Booking Engine is enabled.
 CREATE OR REPLACE FUNCTION public.set_booking_engine_request_offer(_request_id uuid,_request_item_id uuid,_offer_id uuid DEFAULT NULL)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $function$
 DECLARE
   v_request public.booking_engine_requests%ROWTYPE; v_item public.booking_engine_request_items%ROWTYPE;
