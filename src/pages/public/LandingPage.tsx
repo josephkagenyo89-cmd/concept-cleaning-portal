@@ -116,6 +116,12 @@ export default function LandingPage() {
         .ccs-jumia-home .ccs-orange { background:#f68b1e; }
         .ccs-jumia-home .ccs-promo-track { display:flex; width:max-content; min-width:200%; animation:ccs-promo-marquee 24s linear infinite; }
         .ccs-jumia-home .ccs-promo-track:hover { animation-play-state:paused; }
+        .ccs-jumia-home .ccs-background-marquee { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; gap:18px; overflow:hidden; }
+        .ccs-jumia-home .ccs-background-track { display:flex; width:max-content; min-width:200%; flex:0 0 34vh; animation:ccs-background-scroll 58s linear infinite; }
+        .ccs-jumia-home .ccs-background-track:nth-child(2) { animation-duration:72s; animation-direction:reverse; }
+        .ccs-jumia-home .ccs-background-track img { width:clamp(190px,24vw,340px); height:100%; flex:0 0 auto; object-fit:cover; filter:saturate(.72); }
+        .ccs-jumia-home .ccs-background-track:hover { animation-play-state:paused; }
+        @keyframes ccs-background-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
         @keyframes ccs-promo-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
         .ccs-jumia-home .ccs-pulse { animation:ccs-pulse 2.2s ease-in-out infinite; }
         .ccs-jumia-home .ccs-hover-info { opacity:0; visibility:hidden; transform:translateY(7px); transition:opacity .18s ease,transform .18s ease,visibility .18s; }
@@ -136,14 +142,15 @@ export default function LandingPage() {
         }
       `}</style>
 
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 grid grid-cols-2 grid-rows-3 gap-1 overflow-hidden p-1 sm:grid-cols-3 sm:grid-rows-2">
-        {landingBackgroundImages.map((item) => (
-          <div key={item.key} className="relative min-h-0 overflow-hidden rounded-sm">
-            <img src={item.src} alt="" className="h-full w-full object-cover opacity-70" />
-            <div className="absolute inset-0 bg-white/75" />
+      <div aria-hidden="true" className="ccs-background-marquee pointer-events-none fixed inset-0 z-0 opacity-[0.22]">
+        {[0, 1].map((row) => (
+          <div key={row} className="ccs-background-track">
+            {[...landingBackgroundImages, ...landingBackgroundImages].map((item, index) => (
+              <img key={row + '-' + item.key + '-' + index} src={item.src} alt="" loading="lazy" />
+            ))}
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-white/55 to-white/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/75 to-white/85" />
       </div>
 
       <div className="relative z-20 bg-[#f68b1e] text-white">
