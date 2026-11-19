@@ -21,7 +21,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { waLink } from '@/components/public/PublicShell';
 import {
   MarketService,
-  fetchBookingEngineCategories,
   fetchBookingEngineServices,
   formatKes,
   groupByCategory,
@@ -204,7 +203,6 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const [showDateInput, setShowDateInput] = useState(false);
   const [time, setTime] = useState('');
   const [size, setSize] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategory] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -260,17 +258,6 @@ export default function BookingEngine({ phone }: { phone: string }) {
     const onDown = (e: MouseEvent) => { if (!wrapRef.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
-  }, []);
-
-  useEffect(() => {
-    let live = true;
-    fetchBookingEngineCategories()
-      .then((rows) => {
-        if (!live) return;
-        setCategories([...rows].sort((a, b) => a.localeCompare(b)));
-      })
-      .catch(() => { /* chips are optional; search still works */ });
-    return () => { live = false; };
   }, []);
 
   useEffect(() => {
@@ -364,9 +351,30 @@ export default function BookingEngine({ phone }: { phone: string }) {
         : validCustomerPhone
   );
 
-  const choose = (s: MarketService) => {
+  const choose = async (s: MarketService) => {
+    setSubmitError('');
     setSelected(s); setInterestedOfferIds([]); setOpen(false); setQuery(s.name);
     trackPixel('ViewContent', { content_name: s.name, content_category: s.category, value: startingPrice(s), currency: 'KES' });
+
+    // Guided services own their questions, packages, scope and server-side pricing.
+    // Send both guests and signed-in customers directly to that complete workflow.
+    const guidedConfig = await supabase
+      .from('booking_engine_service_config')
+      .select('id')
+      .eq('service_id', s.id)
+      .eq('enabled', true)
+      .maybeSingle();
+
+    if (guidedConfig.error) {
+      setSubmitError('We could not verify this service booking setup. Please try again.');
+      return;
+    }
+
+    if (guidedConfig.data) {
+      navigate(`/service/${encodeURIComponent(s.id)}`, {
+        state: { bookingNotes: customerNotes.trim() },
+      });
+    }
   };
 
   const change = () => {

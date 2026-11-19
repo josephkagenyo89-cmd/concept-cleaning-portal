@@ -745,13 +745,12 @@ export default function MarketServiceDetail() {
               ) : bookingEngineCheckError ? (
                 <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">We could not verify this service’s booking setup. Please contact our team before continuing.</p>
               ) : bookingEngineEnabled ? (
-                user && isCustomer && customerClient ? (
-                  <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} initialOfferId={params.get("offer") || ""} />
+                user && !isCustomer ? (
+                  <div className="rounded-lg border p-4 text-sm">This guided booking is available to customer accounts and guests. Please use the appropriate staff or agent portal.</div>
+                ) : user && !customerClient ? (
+                  <div className="rounded-lg border p-4 text-sm">Your customer profile is still being linked. Please wait and try again.</div>
                 ) : (
-                  <div className="space-y-3 rounded-lg border p-4">
-                    <p className="text-sm">{!user ? 'Sign in or create a customer account to complete this guided booking.' : isCustomer ? 'Your customer profile is still being linked. Please wait and try again.' : 'This guided booking is available to customer accounts only.'}</p>
-                    {!user && <Button type="button" className="w-full" onClick={requireLogin}>Sign in or create account</Button>}
-                  </div>
+                  <ConfiguredBookingForm serviceId={service.id} serviceName={service.name} initialNotes={routeState?.bookingNotes || form.notes} quoteMode={quoteMode} initialOfferId={params.get("offer") || ""} />
                 )
               ) : (
                 <>
