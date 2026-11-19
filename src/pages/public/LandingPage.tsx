@@ -283,6 +283,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="mt-2 flex justify-center sm:hidden"><Link to="/packages" className="text-xs font-extrabold text-[#d97706]">VIEW ALL PACKAGES <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link></div>
+          </div>
         </section>
 
         <div className="market-catalogue mt-3"><ServicesCatalogueContent /></div>
