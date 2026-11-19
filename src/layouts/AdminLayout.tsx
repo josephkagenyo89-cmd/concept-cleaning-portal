@@ -33,6 +33,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
     { to: '/admin/book-service', icon: CalendarDays, label: 'Create Booking' },
     { to: '/admin/booking-engine', icon: Settings2, label: 'Smart Booking Engine' },
+    { to: '/admin/sponsored-campaigns', icon: Megaphone, label: 'Sponsored Campaigns' },
     { to: '/admin/pest', icon: Bug, label: 'Pest Control' },
     { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
     { to: '/admin/certificates', icon: Award, label: 'Certificates' },
