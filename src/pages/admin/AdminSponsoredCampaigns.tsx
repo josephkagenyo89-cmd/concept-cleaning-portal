@@ -23,6 +23,7 @@ export default function AdminSponsoredCampaigns(){
  const [selected,setSelected]=useState(''),[draft,setDraft]=useState(blank),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [slot,setSlot]=useState('homepage_featured'),[category,setCategory]=useState(''),[service,setService]=useState(''),[label,setLabel]=useState('Sponsored');
  const [categories,setCategories]=useState<any[]>([]),[services,setServices]=useState<any[]>([]);
+ const [packageLinks,setPackageLinks]=useState<{key:string;label:string;url:string}[]>([]);
  const [billType,setBillType]=useState('invoice'),[billRef,setBillRef]=useState(''),[billAmount,setBillAmount]=useState(''),[billDue,setBillDue]=useState('');
  const current=rows.find(x=>x.id===selected)||null;
  const set=(k:string,v:string)=>setDraft(old=>({...old,[k]:v}));
@@ -39,6 +40,47 @@ export default function AdminSponsoredCampaigns(){
   const err=c.error||p.error||e.error||cat.error||s.error||b.error;
   if(err)toast({title:'Could not load sponsored campaigns',description:err.message,variant:'destructive'});
   else{setRows(c.data||[]);setPlacements(p.data||[]);setEvents(e.data||[]);setCategories(cat.data||[]);setServices(s.data||[]);setBillingRows(b.data||[]);setSelected(old=>old&&(c.data||[]).some((x:any)=>x.id===old)?old:(c.data?.[0]?.id||''));}
+  // Build direct package booking links from the same published offer records used by the customer package page.
+  try {
+   const now=Date.now();
+   const offerResult=await db.from('booking_engine_value_offers')
+    .select('id,title,starts_at,ends_at,price_value')
+    .eq('active',true).eq('offer_type','package').eq('price_mode','fixed')
+    .not('price_value','is',null).order('display_order').order('title');
+   if(offerResult.error) throw offerResult.error;
+   const currentOffers=(offerResult.data||[]).filter((o:any)=>
+    (!o.starts_at||new Date(o.starts_at).getTime()<=now)&&(!o.ends_at||new Date(o.ends_at).getTime()>now)
+   );
+   const offerIds=currentOffers.map((o:any)=>o.id);
+   const itemResult=offerIds.length?await db.from('booking_engine_package_items')
+    .select('offer_id,service_id,size_label,quantity,individual_price,complimentary,display_order,service:services!inner(is_active)')
+    .in('offer_id',offerIds).eq('active',true).order('display_order').order('created_at'):{data:[],error:null};
+   if(itemResult.error) throw itemResult.error;
+   const itemsByOffer=new Map<string,any[]>();
+   for(const item of itemResult.data||[]) itemsByOffer.set(item.offer_id,[...(itemsByOffer.get(item.offer_id)||[]),item]);
+   const firstServiceIds=[...new Set(currentOffers.map((o:any)=>(itemsByOffer.get(o.id)||[])[0]?.service_id).filter(Boolean))];
+   const configResult=firstServiceIds.length?await db.from('booking_engine_service_config').select('service_id').in('service_id',firstServiceIds).eq('enabled',true):{data:[],error:null};
+   if(configResult.error) throw configResult.error;
+   const configuredTriggers=new Set((configResult.data||[]).map((row:any)=>row.service_id));
+   const completeOffers=currentOffers.filter((o:any)=>{
+    const items=itemsByOffer.get(o.id)||[];
+    const total=items.reduce((sum:number,item:any)=>sum+(item.complimentary?0:Number(item.individual_price)*Number(item.quantity)),0);
+    return items.length>0&&configuredTriggers.has(items[0].service_id)&&items.every((item:any)=>
+     !!item.size_label?.trim()&&Number(item.quantity)>0&&item.service?.is_active===true&&
+     (item.complimentary||(item.individual_price!=null&&Number(item.individual_price)>0))
+    )&&Math.abs(total-Number(o.price_value))<=0.01;
+   });
+   const requested=[{key:'gold',label:'Gold Package'},{key:'platinum',label:'Platinum Package'},{key:'ultimate',label:'Ultimate Package'}];
+   const links=requested.flatMap(p=>{
+    const offer=completeOffers.find((o:any)=>new RegExp('\\b'+p.key+'\\b','i').test(o.title||''));
+    const serviceId=offer?(itemsByOffer.get(offer.id)||[])[0]?.service_id:null;
+    return offer&&serviceId?[{...p,url:'https://conceptcleaningservices.co.ke/service/'+encodeURIComponent(serviceId)+'?offer='+encodeURIComponent(offer.id)}]:[];
+   });
+   setPackageLinks(links);
+  } catch(error:any) {
+   console.error('Could not prepare sponsored package destinations:',error);
+   setPackageLinks([]);
+  }
   setLoading(false);
  },[]);
  useEffect(()=>{void reload();},[reload]);
@@ -93,7 +135,7 @@ export default function AdminSponsoredCampaigns(){
     <div className="grid gap-3 sm:grid-cols-2"><div><Label>Campaign reference code *</Label><Input value={draft.campaign_code} onChange={e=>set('campaign_code',e.target.value.toUpperCase())} placeholder="e.g. NOV26-CONCEPT-01"/><p className="mt-1 text-xs text-muted-foreground">A unique internal code to identify this campaign. Use letters, numbers and hyphens.</p></div><div><Label>Who is running this campaign?</Label><Select value={draft.owner_type} onValueChange={v=>{set('owner_type',v);if(v==='third_party'&&draft.billing_model==='none')set('billing_model','fixed');}}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="concept">Concept-owned</SelectItem><SelectItem value="third_party">Third-party paid</SelectItem></SelectContent></Select></div></div>
     {draft.owner_type==='third_party'&&<div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3"><div><Label>Business / advertiser name *</Label><Input value={draft.provider_name} onChange={e=>set('provider_name',e.target.value)} placeholder="e.g. ABC Home Supplies"/><p className="mt-1 text-xs text-muted-foreground">Name of the business paying for the advert.</p></div><div><Label>Advertiser email address</Label><Input type="email" value={draft.provider_email} onChange={e=>set('provider_email',e.target.value)} placeholder="name@business.co.ke"/></div><div><Label>Advertiser phone number</Label><Input value={draft.provider_phone} onChange={e=>set('provider_phone',e.target.value)} placeholder="e.g. 0712 345 678"/></div></div>}
     <div><Label>Advert headline / campaign title *</Label><Input value={draft.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. Trusted home cleaning products"/><p className="mt-1 text-xs text-muted-foreground">The short heading customers will see on the sponsored card.</p></div><div><Label>Short advert description</Label><Textarea value={draft.description} onChange={e=>set('description',e.target.value)} placeholder="Briefly explain what is being promoted and why a customer should click. Keep it clear and customer-friendly."/><p className="mt-1 text-xs text-muted-foreground">Write 1–2 short sentences. Avoid internal notes or billing information here.</p></div>
-    <div className="grid gap-3 sm:grid-cols-2"><div><Label>Where should the customer go? (Destination link)</Label><Input value={draft.destination_url} onChange={e=>set('destination_url',e.target.value)} placeholder="https://example.co.ke/product-or-page"/><p className="mt-1 text-xs text-muted-foreground">Paste the full website page or booking link opened when the advert is clicked.</p></div><div><Label>Campaign image / banner</Label><SponsoredMediaPicker value={draft.creative_image_url} onChange={url=>set('creative_image_url',url)}/></div></div>
+    <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>Where should the customer go? (Destination link)</Label><Input value={draft.destination_url} onChange={e=>set('destination_url',e.target.value)} placeholder="https://conceptcleaningservices.co.ke/..."/><Select value="" onValueChange={value=>{const preset=packageLinks.find(x=>x.key===value);if(preset)set('destination_url',preset.url);}}><SelectTrigger><SelectValue placeholder="Prefill a package booking link"/></SelectTrigger><SelectContent>{['gold','platinum','ultimate'].map(key=>{const preset=packageLinks.find(x=>x.key===key);const label=key.charAt(0).toUpperCase()+key.slice(1)+' Package';return <SelectItem key={key} value={key} disabled={!preset}>{label}{!preset?' — no active published package':''}</SelectItem>;})}</SelectContent></Select><p className="text-xs text-muted-foreground">Choose Gold, Platinum or Ultimate to fill its direct booking link. You can still edit the URL manually. Links are built from currently published package offers.</p></div><div><Label>Campaign image / banner</Label><SponsoredMediaPicker value={draft.creative_image_url} onChange={url=>set('creative_image_url',url)}/></div></div>
     <div className="grid gap-3 sm:grid-cols-2"><div><Label>Campaign start date and time</Label><Input type="datetime-local" value={draft.starts_at} onChange={e=>set('starts_at',e.target.value)}/><p className="mt-1 text-xs text-muted-foreground">When the advert is allowed to start showing. Uses Kenya local time.</p></div><div><Label>Campaign end date and time</Label><Input type="datetime-local" value={draft.ends_at} onChange={e=>set('ends_at',e.target.value)}/><p className="mt-1 text-xs text-muted-foreground">When the advert should stop showing. Leave blank for no scheduled end.</p></div></div>
     {draft.owner_type==='third_party'&&<div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-semibold">Provider commercial terms</p><div className="grid gap-3 sm:grid-cols-2"><div><Label>How will the advertiser be charged?</Label><Select value={draft.billing_model} onValueChange={v=>set('billing_model',v)}><SelectTrigger><SelectValue placeholder="Choose a charging method"/></SelectTrigger><SelectContent>{billingModels.map(x=><SelectItem key={x.value} value={x.value}>{x.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Fixed fee = one agreed price. CPC = charged per click. CPM = charged per 1,000 advert views.</p></div><div><Label>Payment status</Label><Select value={draft.billing_status} onValueChange={v=>set('billing_status',v)}><SelectTrigger><SelectValue placeholder="Choose payment status"/></SelectTrigger><SelectContent>{billingStatuses.map(x=><SelectItem key={x.value} value={x.value}>{x.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Select the current invoice/payment position. A third-party campaign must be paid or waived before approval.</p></div><div><Label>Campaign budget (KES)</Label><Input type="number" min="0" value={draft.budget_amount} onChange={e=>set('budget_amount',e.target.value)} placeholder="e.g. 15000"/><p className="mt-1 text-xs text-muted-foreground">Optional planned amount allocated to this campaign.</p></div><div><Label>Agreed advertising fee (KES)</Label><Input type="number" min="0" value={draft.agreed_amount} onChange={e=>set('agreed_amount',e.target.value)} placeholder="e.g. 10000"/><p className="mt-1 text-xs text-muted-foreground">The amount Concept agreed to charge the advertiser.</p></div></div></div>}
     <div><Label>Internal admin notes (not shown to customers)</Label><Textarea value={draft.internal_notes} onChange={e=>set('internal_notes',e.target.value)} placeholder="Add follow-up reminders, special instructions or approval context for the Concept team."/></div>
