@@ -89,7 +89,7 @@ export default function AdminOverview() {
   }
 
   return (
-    <div className="w-full space-y-4 border-t-4 border-t-[#0B3D91] pb-6 sm:space-y-5 sm:pb-8">
+    <div className="erp-page w-full space-y-4 pb-6 sm:space-y-5 sm:pb-8">
       <ProfileHeader />
 
       <div className="flex flex-col gap-3 border-b pb-4 sm:gap-4 sm:pb-5 lg:flex-row lg:items-center lg:justify-between">
@@ -98,7 +98,7 @@ export default function AdminOverview() {
             <span>Home</span><ChevronRight className="h-3.5 w-3.5" /><span className="text-foreground">Overview</span>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="text-xl font-semibold tracking-tight text-[#0B3D91] sm:text-2xl">Business Overview</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Business Overview</h1>
             <Badge variant="secondary" className="font-normal">{roleLabel}</Badge>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground sm:text-sm">
@@ -113,7 +113,7 @@ export default function AdminOverview() {
         </div>
       </div>
 
-      <div className="flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
+      <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition-colors hover:border-slate-300">
         <Search className="h-4 w-4 text-muted-foreground" />
         <Link to="/admin/clients" className="flex-1 text-sm text-muted-foreground hover:text-foreground">
           Search customers, leads, bookings and services…
@@ -121,7 +121,7 @@ export default function AdminOverview() {
         <kbd className="hidden rounded border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">Ctrl K</kbd>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['Bookings Today', stats.todayBookings, 'New activity today', CalendarDays, '/admin/bookings', 'text-[#0B3D91]'],
           ['New Quotations', stats.newQuotations, 'Created today', FileText, '/admin/quotations', 'text-[#C9A227]'],
@@ -143,7 +143,7 @@ export default function AdminOverview() {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3 sm:gap-5">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-3 sm:gap-5">
         <Card className="xl:col-span-2 min-w-0">
           <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
             <div>

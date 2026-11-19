@@ -148,3 +148,43 @@
 #root.ccs-modern-theme .bg-brand-sand { background-color: var(--ccs-page-bg) !important; }
 #root.ccs-modern-theme .bg-brand-panel { background-color: var(--ccs-primary-dark) !important; }
 #root.ccs-modern-theme .text-brand-cream { color: #FFFFFF !important; }
+
+
+/* Enterprise ERP workspace: scoped so marketplace/customer screens remain unchanged. */
+.erp-workspace {
+  --erp-ink: #172033;
+  --erp-muted: #64748b;
+  --erp-border: #e2e8f0;
+  --erp-surface: #fff;
+  --erp-canvas: #f6f8fb;
+  --erp-accent: #0b3d91;
+  min-width: 0;
+  color: var(--erp-ink);
+}
+.erp-workspace, .erp-workspace * { box-sizing: border-box; }
+.erp-workspace .erp-main { min-width: 0; width: 0; }
+.erp-workspace main > div { min-width: 0; }
+.erp-workspace button, .erp-workspace a, .erp-workspace input,
+.erp-workspace select, .erp-workspace textarea { -webkit-tap-highlight-color: transparent; }
+.erp-workspace button { transition-property: color, background-color, border-color, box-shadow, transform; transition-duration: 150ms; }
+.erp-workspace button:focus-visible, .erp-workspace a:focus-visible,
+.erp-workspace input:focus-visible, .erp-workspace select:focus-visible,
+.erp-workspace textarea:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.erp-workspace input, .erp-workspace select, .erp-workspace textarea { max-width: 100%; }
+.erp-workspace .erp-sidebar-nav { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+.erp-workspace .erp-sidebar-nav::-webkit-scrollbar { width: 5px; }
+.erp-workspace .erp-sidebar-nav::-webkit-scrollbar-thumb { border-radius: 999px; background: #cbd5e1; }
+.erp-workspace .erp-page { min-width: 0; width: 100%; }
+.erp-workspace .erp-page table { max-width: 100%; }
+.erp-workspace .erp-page .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+@media (max-width: 767px) {
+  .erp-workspace .erp-page { overflow-wrap: anywhere; }
+  .erp-workspace .erp-page [class*="grid-cols-"] { min-width: 0; }
+  .erp-workspace .erp-page button, .erp-workspace .erp-page a[role="button"] { touch-action: manipulation; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .erp-workspace *, .erp-workspace *::before, .erp-workspace *::after {
+    scroll-behavior: auto !important; transition-duration: .01ms !important;
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+  }
+}

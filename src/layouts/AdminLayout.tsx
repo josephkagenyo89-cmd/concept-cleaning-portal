@@ -1,53 +1,66 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
-  Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator, ChevronDown,
+  FileText, PieChart, FolderOpen, UserCheck, Settings2, Award, Star, Bug,
+  Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator,
+  ChevronDown, PanelLeftClose, PanelLeftOpen, Search, Bell, Handshake,
+  CalendarDays, ReceiptText, UserRound,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
 import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
 import { loadAllSettings } from '@/lib/settings';
 import { setPdfSettings } from '@/lib/documentPdf';
 import { requestBrowserNotificationPermission } from '@/lib/customerNotifications';
 
-const navItems = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
-  { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
-  { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
-  { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
-  { to: '/admin/booking-engine', icon: Settings2, label: 'Smart Booking Engine' },
-  { to: '/admin/clients', icon: UserCheck, label: 'Clients (CRM)' },
-  { to: '/admin/contracts', icon: Building2, label: 'Commercial Contracts' },
-  { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
-  { to: '/admin/book-service', icon: Plus, label: 'Book Service' },
-  { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },
-  { to: '/admin/discount-reports', icon: PieChart, label: 'Discount Report' },
-  { to: '/admin/quotations', icon: ClipboardList, label: 'Quotations' },
-  { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
-  { to: '/admin/certificates', icon: Award, label: 'Certificates' },
-  { to: '/admin/pest', icon: Bug, label: 'Pest Control' },
-  { to: '/admin/feedback', icon: Star, label: 'Feedback' },
-  { to: '/admin/agents', icon: Users, label: 'Agents' },
-  { to: '/admin/commissions', icon: Wallet, label: 'Commissions' },
-  { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
-  { to: '/admin/services', icon: Settings, label: 'Services' },
-  { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
-  { to: '/admin/blog', icon: Newspaper, label: 'Blog' },
-  { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
-  { to: '/admin/settings', icon: Settings2, label: 'Settings' },
-];
-const hrNavItems = [
-  { to: '/admin/hr', icon: Briefcase, label: 'HR Dashboard', end: true },
-  { to: '/admin/hr/employees', icon: Users, label: 'Employees' },
-  { to: '/admin/hr/departments', icon: Building2, label: 'Departments' },
-  { to: '/admin/hr/positions', icon: IdCard, label: 'Positions' },
-  { to: '/admin/hr/payroll', icon: Wallet, label: 'Payroll' },
+type NavItem = { to: string; icon: React.ComponentType<{ className?: string }>; label: string; end?: boolean };
+const navGroups: { label: string; items: NavItem[] }[] = [
+  { label: 'Workspace', items: [
+    { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
+    { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
+  ]},
+  { label: 'Sales & CRM', items: [
+    { to: '/admin/leads', icon: UserCheck, label: 'Leads' },
+    { to: '/admin/guest-requests', icon: Inbox, label: 'Guest Requests' },
+    { to: '/admin/clients', icon: Users, label: 'Clients' },
+    { to: '/admin/quotations', icon: FileText, label: 'Quotations' },
+    { to: '/admin/contracts', icon: Handshake, label: 'Commercial Contracts' },
+  ]},
+  { label: 'Operations', items: [
+    { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
+    { to: '/admin/book-service', icon: CalendarDays, label: 'Create Booking' },
+    { to: '/admin/booking-engine', icon: Settings2, label: 'Smart Booking Engine' },
+    { to: '/admin/pest', icon: Bug, label: 'Pest Control' },
+    { to: '/admin/documents', icon: FolderOpen, label: 'Documents' },
+    { to: '/admin/certificates', icon: Award, label: 'Certificates' },
+    { to: '/admin/feedback', icon: Star, label: 'Feedback' },
+  ]},
+  { label: 'Finance', items: [
+    { to: '/admin/accounting/overview', icon: Calculator, label: 'Accounting & Finance' },
+    { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },
+    { to: '/admin/discount-reports', icon: PieChart, label: 'Discount Reports' },
+    { to: '/admin/commissions', icon: ReceiptText, label: 'Commissions' },
+    { to: '/admin/payouts', icon: CreditCard, label: 'Payouts' },
+  ]},
+  { label: 'People', items: [
+    { to: '/admin/agents', icon: Users, label: 'Agents' },
+    { to: '/admin/hr', icon: Briefcase, label: 'HR Dashboard' },
+    { to: '/admin/hr/employees', icon: UserRound, label: 'Employees' },
+    { to: '/admin/hr/departments', icon: Building2, label: 'Departments' },
+    { to: '/admin/hr/positions', icon: IdCard, label: 'Positions' },
+    { to: '/admin/hr/payroll', icon: Wallet, label: 'Payroll' },
+  ]},
+  { label: 'Insights & Setup', items: [
+    { to: '/admin/services', icon: Settings, label: 'Services' },
+    { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+    { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
+    { to: '/admin/blog', icon: Newspaper, label: 'Blog' },
+    { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { to: '/admin/settings', icon: Settings2, label: 'Settings' },
+  ]},
 ];
 const accountingNavItems = [
   ['overview', 'Financial Overview'], ['general-ledger', 'General Ledger'],
@@ -58,154 +71,140 @@ const accountingNavItems = [
   ['tax-compliance', 'Tax & Compliance'], ['accounting-periods', 'Accounting Periods'],
   ['accounting-settings', 'Accounting Settings'], ['approvals', 'Accounting Approvals'],
 ] as const;
+const allNavItems = navGroups.flatMap((group) => group.items);
+const pageTitleFor = (pathname: string) => {
+  const finance = accountingNavItems.find(([section]) => pathname === `/admin/accounting/${section}`);
+  if (finance) return finance[1];
+  const item = [...allNavItems].sort((a, b) => b.to.length - a.to.length)
+    .find((entry) => entry.end ? pathname === entry.to : pathname === entry.to || pathname.startsWith(`${entry.to}/`));
+  return item?.label || 'Business Workspace';
+};
 
 export default function AdminLayout() {
-  const { signOut, isAdmin, isSuperAdmin } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin, profile } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountingExpanded, setAccountingExpanded] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
-  useEffect(() => { if (location.pathname.startsWith('/admin/accounting')) setAccountingExpanded(true); }, [location.pathname]);
   const { blockingNotices, refresh } = useBlockingNotices();
 
-  // Preload system settings into PDF generator + cache on admin entry
   useEffect(() => {
-    loadAllSettings(true).then(setPdfSettings).catch(() => {});
-  }, []);
+    if (location.pathname.startsWith('/admin/accounting')) setAccountingExpanded(true);
+    const activeGroup = navGroups.find((group) => group.items.some((item) =>
+      location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)));
+    if (activeGroup) setExpandedGroups((current) => ({ ...current, [activeGroup.label]: true }));
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
+  useEffect(() => { loadAllSettings(true).then(setPdfSettings).catch(() => {}); }, []);
   useEffect(() => {
-    if (!isAdmin) return;
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      requestBrowserNotificationPermission();
-    }
+    if (!isAdmin || typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'default') requestBrowserNotificationPermission();
   }, [isAdmin]);
 
-  return (
-    <div className="min-h-screen flex bg-background">
-      <BlockingNoticeModal notices={blockingNotices} onAcknowledged={refresh} />
-      {/* Mobile header */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b bg-sidebar text-sidebar-foreground px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-primary/15 ring-1 ring-primary/40 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-bold tracking-wide">CONCEPT</div>
-            <div className="text-[10px] uppercase tracking-[0.15em] opacity-80">Cleaning Services</div>
-          </div>
-        </div>
-        <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+  const pageTitle = useMemo(() => pageTitleFor(location.pathname), [location.pathname]);
+  const initials = profile?.full_name?.trim()?.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U';
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    return <NavLink key={item.to} to={item.to} end={item.end} title={sidebarCollapsed ? item.label : undefined}
+      onClick={() => setSidebarOpen(false)}
+      className={({ isActive }) => cn('group flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+        isActive ? 'bg-[#EAF1FC] text-[#0B3D91] shadow-[inset_3px_0_0_#0B3D91]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+        sidebarCollapsed && 'justify-center px-2')}>
+      <Icon className="h-[17px] w-[17px] shrink-0" />
+      {!sidebarCollapsed && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+    </NavLink>;
+  };
+
+  return <div className={cn('erp-workspace flex min-h-screen w-full bg-[#F6F8FB] text-slate-800', sidebarCollapsed && 'erp-sidebar-collapsed')}>
+    <BlockingNoticeModal notices={blockingNotices} onAcknowledged={refresh} />
+    {sidebarOpen && <button type="button" aria-label="Close navigation" className="fixed inset-0 z-40 bg-slate-950/40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
+    <aside className={cn('erp-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(84vw,300px)] flex-col border-r border-slate-200 bg-white transition-[transform,width] duration-200 md:sticky md:top-0 md:h-screen md:w-64 md:translate-x-0',
+      sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed && 'md:w-[76px]')}>
+      <div className={cn('flex h-[68px] shrink-0 items-center gap-3 border-b border-slate-200 px-4', sidebarCollapsed && 'md:justify-center md:px-2')}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0B3D91] text-white shadow-sm"><Sparkles className="h-[18px] w-[18px]" /></div>
+        {!sidebarCollapsed && <div className="min-w-0 leading-tight"><div className="truncate text-sm font-bold tracking-[0.08em] text-slate-900">CONCEPT</div><div className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.13em] text-slate-500">Business workspace</div></div>}
+        <button type="button" aria-label="Close navigation" className="ml-auto rounded-md p-2 text-slate-500 hover:bg-slate-100 md:hidden" onClick={() => setSidebarOpen(false)}><X className="h-4 w-4" /></button>
       </div>
 
-      {/* Sidebar */}
-      <aside className={cn(
-        'fixed inset-y-0 left-0 z-40 w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:translate-x-0 md:static flex flex-col',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      )}>
-        {/* Brand */}
-        <div className="hidden md:flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
-          <div className="h-10 w-10 rounded-lg bg-primary/15 ring-1 ring-primary/40 flex items-center justify-center shrink-0">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-base font-extrabold tracking-wide">CONCEPT</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/70">Cleaning Services</div>
-            <div className="text-[10px] italic text-sidebar-foreground/60 mt-0.5">Professional. Reliable. Sparkling.</div>
-          </div>
-        </div>
+      <div className={cn('border-b border-slate-100 px-3 py-3', sidebarCollapsed && 'md:px-2')}>
+        <NavLink to="/admin" end title={sidebarCollapsed ? 'Business Overview' : undefined} onClick={() => setSidebarOpen(false)}
+          className={({ isActive }) => cn('flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+            isActive ? 'bg-[#0B3D91] text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100', sidebarCollapsed && 'md:justify-center md:px-2')}>
+          <LayoutDashboard className="h-[17px] w-[17px] shrink-0" />{!sidebarCollapsed && <span>Business Overview</span>}
+        </NavLink>
+      </div>
 
-        <nav className="flex-1 flex flex-col gap-0.5 px-3 py-3 mt-14 md:mt-0 overflow-y-auto">
-          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Main</p>
-          {navItems.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{label}</span>
-            </NavLink>
-          ))}
+      <nav aria-label="ERP modules" className="erp-sidebar-nav min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        {navGroups.map((group) => {
+          const expanded = expandedGroups[group.label] !== false;
+          const hasActive = group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
+          return <section key={group.label}>
+            {!sidebarCollapsed
+              ? <button type="button" aria-expanded={expanded} onClick={() => setExpandedGroups((current) => ({ ...current, [group.label]: !expanded }))}
+                  className={cn('mb-1 flex w-full items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.13em] transition-colors',
+                    hasActive ? 'text-[#0B3D91]' : 'text-slate-400 hover:text-slate-700')}>
+                  {group.label}<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
+                </button>
+              : <div className="mx-auto mb-2 h-px w-8 bg-slate-200" title={group.label} />}
+            {(expanded || sidebarCollapsed) && <div className="space-y-1">{group.items.map(renderNavItem)}</div>}
+          </section>;
+        })}
+        {isSuperAdmin && <section>{!sidebarCollapsed && <p className="mb-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-slate-400">System</p>}
+          {renderNavItem({ to: '/admin/system-monitoring', icon: Activity, label: 'System Monitoring' })}</section>}
+        <section>
+          {!sidebarCollapsed
+            ? <button type="button" aria-expanded={accountingExpanded} onClick={() => setAccountingExpanded((value) => !value)}
+                className={cn('mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors',
+                  location.pathname.startsWith('/admin/accounting') ? 'bg-[#EAF1FC] text-[#0B3D91]' : 'text-slate-600 hover:bg-slate-100')}>
+                <Calculator className="h-[17px] w-[17px] shrink-0" /><span className="flex-1 text-left">Finance workspace</span>
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', accountingExpanded && 'rotate-180')} />
+              </button>
+            : <NavLink to="/admin/accounting/overview" title="Finance workspace" className="flex min-h-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"><Calculator className="h-[17px] w-[17px]" /></NavLink>}
+          {accountingExpanded && !sidebarCollapsed && <div className="ml-4 mt-1 space-y-0.5 border-l border-slate-200 pl-3">
+            {accountingNavItems.map(([section, label]) => <NavLink key={section} to={`/admin/accounting/${section}`} onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => cn('block rounded-md px-3 py-2 text-xs transition-colors',
+                isActive ? 'bg-[#EAF1FC] font-semibold text-[#0B3D91]' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900')}>{label}</NavLink>)}
+          </div>}
+        </section>
+      </nav>
 
-          {isSuperAdmin && (
-            <NavLink
-              to="/admin/system-monitoring"
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                    : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
-              }
-            >
-              <Activity className="h-4 w-4 shrink-0" />
-              <span className="truncate">System Monitoring</span>
-            </NavLink>
-          )}
+      <div className="shrink-0 border-t border-slate-200 p-3">
+        {!sidebarCollapsed && <div className="mb-3 rounded-xl bg-slate-50 p-3">
+          <div className="text-[11px] font-semibold text-slate-700">Need support?</div>
+          <a href="tel:+254796563741" className="mt-1 block text-xs text-slate-600 hover:text-[#0B3D91]">+254 796 563 741</a>
+          <a href="mailto:support@conceptcs.co.ke" className="mt-1 block truncate text-[11px] text-slate-500 hover:text-[#0B3D91]">support@conceptcs.co.ke</a>
+        </div>}
+        <button type="button" onClick={signOut} title={sidebarCollapsed ? 'Sign out' : undefined}
+          className={cn('flex min-h-10 w-full items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-semibold text-slate-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700',
+            sidebarCollapsed && 'justify-center px-2')}>
+          <LogOut className="h-4 w-4 shrink-0" />{!sidebarCollapsed && <span>Sign out</span>}
+        </button>
+      </div>
+    </aside>
 
-          <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-sidebar-foreground/60 uppercase tracking-[0.15em]">Human Resources</p>
-          {hrNavItems.map(({ to, icon: Icon, label, end }) => (
-            <NavLink key={to} to={to} end={end} onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive ? 'bg-primary text-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}>
-              <Icon className="h-4 w-4 shrink-0" /><span className="truncate">{label}</span>
-            </NavLink>
-          ))}
-          <div className="pt-3">
-            <button type="button" onClick={() => setAccountingExpanded((value) => !value)} aria-expanded={accountingExpanded}
-              className={cn('flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors',
-                location.pathname.startsWith('/admin/accounting') ? 'text-primary' : 'text-sidebar-foreground/85 hover:bg-sidebar-accent')}>
-              <Calculator className="h-4 w-4 shrink-0" /><span className="flex-1 text-left">Accounting & Finance</span>
-              <ChevronDown className={cn('h-4 w-4 transition-transform', accountingExpanded ? 'rotate-180' : '')} />
-            </button>
-            {accountingExpanded && <div className="ml-3 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
-              {accountingNavItems.map(([section, label]) => (
-                <NavLink key={section} to={`/admin/accounting/${section}`} onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) => cn('rounded-md px-3 py-2 text-xs transition-colors',
-                    isActive ? 'bg-primary text-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')}>
-                  <span className="block truncate">{label}</span>
-                </NavLink>
-              ))}
-            </div>}
-          </div>
-        </nav>
-
-        {/* Support card */}
-        <div className="px-3 pb-3 mt-auto">
-          <div className="rounded-lg bg-sidebar-accent/60 ring-1 ring-sidebar-border p-3 text-center">
-            <div className="text-[11px] font-semibold text-sidebar-foreground">Need Support?</div>
-            <a href="tel:+254796563741" className="block text-xs text-sidebar-foreground/85 hover:text-sidebar-foreground mt-1">+254 796 563 741</a>
-            <a href="mailto:support@conceptcs.co.ke" className="block text-[11px] text-sidebar-foreground/70 hover:text-sidebar-foreground truncate">support@conceptcs.co.ke</a>
-          </div>
-          <button
-            onClick={signOut}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground border border-sidebar-border"
-          >
-            <LogOut className="h-4 w-4" /> Sign Out
+    <main className="erp-main min-w-0 flex-1">
+      <header className="sticky top-0 z-30 flex h-[64px] items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-3 backdrop-blur sm:px-5 lg:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <button type="button" aria-label="Open navigation" className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 md:hidden" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></button>
+          <button type="button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} className="hidden rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 md:inline-flex" onClick={() => setSidebarCollapsed((value) => !value)}>
+            {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
+          <div className="min-w-0"><div className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:block">Concept Cleaning Services</div><h1 className="truncate text-sm font-semibold text-slate-900 sm:mt-0.5 sm:text-base">{pageTitle}</h1></div>
         </div>
-      </aside>
-
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto mt-14 md:mt-0">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          <Outlet />
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <NavLink to="/admin/clients" aria-label="Search clients" title="Search clients" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"><Search className="h-4 w-4" /></NavLink>
+          <NavLink to="/admin/approval-centre" aria-label="Approval centre" title="Approval centre" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"><Bell className="h-4 w-4" /></NavLink>
+          <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EAF1FC] text-xs font-bold text-[#0B3D91]">{initials}</div>
+            <div className="hidden max-w-[150px] sm:block"><p className="truncate text-xs font-semibold text-slate-800">{profile?.full_name || 'Workspace user'}</p><p className="text-[10px] text-slate-500">{isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrator' : 'Staff'}</p></div>
+          </div>
         </div>
-      </main>
-    </div>
-  );
+      </header>
+      <div className="mx-auto w-full max-w-[1680px] px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6"><Outlet /></div>
+    </main>
+  </div>;
 }
