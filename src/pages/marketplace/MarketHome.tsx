@@ -10,12 +10,12 @@ const normalizeSearch = (value: string) =>
   value
     .toLocaleLowerCase('en')
     .normalize('NFD')
-    .replace(/[\\u0300-\\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
 function matchesServiceSearch(service: MarketService, query: string): boolean {
-  const terms = normalizeSearch(query).split(/\\s+/).filter(Boolean);
+  const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
   if (!terms.length) return true;
 
   const searchable = normalizeSearch([
