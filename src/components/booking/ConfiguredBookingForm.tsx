@@ -67,6 +67,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [answers,setAnswers] = useState<Record<string,any>>({}), [extras,setExtras] = useState<string[]>([]), [selectedOfferId,setSelectedOfferId] = useState('');
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
+  const [guestName,setGuestName] = useState(''), [guestPhone,setGuestPhone] = useState('');
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
   const [requestItemId,setRequestItemId] = useState(''), [photoCount,setPhotoCount] = useState(0);
   const [loadedDraftKey,setLoadedDraftKey] = useState('');
@@ -206,9 +207,9 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   useEffect(() => {
     if (loadedDraftKey !== draftKey) return;
     window.sessionStorage.setItem(draftKey, JSON.stringify({
-      id: draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes,
+      id: draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes, guestName, guestPhone,
     }));
-  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes]);
+  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes, guestName, guestPhone]);
 
   const { packages: packageOffers, addons: addonOffers } = useMemo(() => groupBookingOffers(offerOptions), [offerOptions]);
   const visibility = useMemo(() => {
@@ -271,6 +272,40 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       if(state?.visible){const validation=answerValidationError(q,v);if(validation)return q.label+': '+validation;}
     }
     return '';
+  };
+
+  const sendGuestWhatsApp = () => {
+    const cleanName = guestName.trim();
+    const cleanPhone = guestPhone.trim().replace(/[()\\s-]/g, '');
+    const normalizedPhone = /^0[17]\\d{8}$/.test(cleanPhone) ? '+254' + cleanPhone.slice(1) : /^254[17]\\d{8}$/.test(cleanPhone) ? '+' + cleanPhone : /^\\+[1-9]\\d{7,14}$/.test(cleanPhone) ? cleanPhone : '';
+    if (!cleanName) { toast({title:'Enter your name',description:'We need your name for the booking request.',variant:'destructive'}); return; }
+    if (!normalizedPhone) { toast({title:'Enter a valid WhatsApp number',description:'Use 07XXXXXXXX or +2547XXXXXXXX.',variant:'destructive'}); return; }
+    if (!date || date < today()) { toast({title:'Choose a valid preferred date',variant:'destructive'}); return; }
+    if (!time) { toast({title:'Choose a preferred time',variant:'destructive'}); return; }
+    if (!location.trim()) { toast({title:'Enter the service location',description:'Add your estate, building or nearby landmark.',variant:'destructive'}); return; }
+    for (const q of questions) {
+      const state = visibility[q.id], value = answers[q.question_key];
+      if (state?.visible && state.required && (value===undefined || value===null || value==='' || (Array.isArray(value)&&!value.length))) { toast({title:'Complete the required details',description:'Please answer: '+q.label,variant:'destructive'}); return; }
+      if (state?.visible) { const validation = answerValidationError(q,value); if (validation) { toast({title:'Check your answers',description:q.label+': '+validation,variant:'destructive'}); return; } }
+    }
+    if (!groups.included.length) { toast({title:'Service scope is incomplete',description:'Please contact our team for assistance.',variant:'destructive'}); return; }
+    const lines = ['Hello Concept Cleaning Services, I would like to request a booking.', '', 'GUEST BOOKING REQUEST', 'Name: '+cleanName, 'WhatsApp: '+normalizedPhone, 'Service: '+serviceName, 'Preferred date: '+date, 'Preferred time: '+time, 'Service location: '+location.trim()];
+    if (quantityEnabled) lines.push('Quantity: '+quantity+' '+quantityUnit);
+    const selectedPackage = packageOffers.find((offer:any)=>offer.id===selectedOfferId);
+    if (selectedPackage) lines.push('Package: '+selectedPackage.title);
+    const selectedAddons = addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id)));
+    if (selectedAddons.length) lines.push('Optional extras: '+selectedAddons.map((offer:any)=>offer.title).join(', '));
+    const selectedScopeExtras = groups.extra.filter((item:any)=>extras.includes(item.id));
+    if (selectedScopeExtras.length) lines.push('Additional scope requested: '+selectedScopeExtras.map((item:any)=>item.title).join(', '));
+    const answerLines = questions.filter(q=>visibility[q.id]?.visible && answers[q.question_key]!==undefined && answers[q.question_key]!=='' && (!Array.isArray(answers[q.question_key])||answers[q.question_key].length)).map(q=>{ const value=answers[q.question_key]; return q.label+': '+(Array.isArray(value)?value.join(', '):String(value)); });
+    if (answerLines.length) lines.push('', 'SERVICE DETAILS', ...answerLines);
+    if (notes.trim()) lines.push('', 'Additional notes: '+notes.trim());
+    if (price?.status==='priced') lines.push('', 'Indicative estimate: '+formatKes(Number(price.total)||0));
+    else if (price?.status==='quotation_required') lines.push('', 'Pricing: Please prepare a formal quotation.');
+    else lines.push('', 'Pricing: Please confirm the applicable price and any quotation requirements.');
+    lines.push('', 'I understand this is a booking request, not a confirmed appointment. Please confirm availability and next steps.');
+    if (config.photo_mode !== 'none') lines.push('I can attach the requested service photos in this WhatsApp chat.');
+    window.open('https://wa.me/254796563741?text='+encodeURIComponent(lines.join('\\n')), '_blank', 'noopener,noreferrer');
   };
 
   const review = async () => {
@@ -469,6 +504,12 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="text-sm font-semibold">Ready to see your estimate?</p><p className="mt-1 text-xs text-muted-foreground">We’ll check your selected options against the approved service pricing. No price is guessed in the browser.</p></div></div>
       <Button className="mt-3 w-full" onClick={()=>void review()} disabled={saving}>{saving?'Calculating your estimate…':'Calculate my estimate'}</Button>
     </div>
+    {!user&&<section className="space-y-3 rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-4">
+      <div><h3 className="text-sm font-semibold">Prefer booking through WhatsApp?</h3><p className="mt-1 text-xs text-muted-foreground">No account or sign-up is needed. Your selected service and booking details will be sent to our team for confirmation.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label htmlFor="guest-booking-name">Your name</Label><Input id="guest-booking-name" autoComplete="name" maxLength={120} value={guestName} onChange={e=>setGuestName(e.target.value)} placeholder="Full name"/></div><div className="space-y-1"><Label htmlFor="guest-booking-phone">Your WhatsApp number</Label><Input id="guest-booking-phone" type="tel" autoComplete="tel" maxLength={20} value={guestPhone} onChange={e=>setGuestPhone(e.target.value)} placeholder="07XXXXXXXX or +2547XXXXXXXX"/></div></div>
+      <Button type="button" className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]" onClick={sendGuestWhatsApp}>Send booking request via WhatsApp</Button>
+      <p className="text-[11px] text-muted-foreground">WhatsApp opens with your details prefilled. Review and press Send in WhatsApp. Attach any requested photos in the chat. Your appointment is not confirmed until our team replies.</p>
+    </section>}
     {price&&<Card className="overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{price.status==='quotation_required'?'Quotation required':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
       {price.status==='priced'?<div><p className="text-xs text-muted-foreground">Estimated total</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will prepare a formal quotation. No price has been assumed.</p>}
       <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium">Your selections</p><div className="mt-2 flex flex-wrap gap-1.5">{quantityEnabled&&<Badge variant="secondary">{quantity} {quantityUnit}</Badge>}{selectedOfferId&&packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><Badge key={offer.id} variant="secondary">Package: {offer.title}</Badge>)}{addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id))).map((offer:any)=><Badge key={offer.id} variant="secondary">Extra: {offer.title}</Badge>)}{questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!=='' ).map(q=><Badge key={q.id} variant="secondary">{q.label}: {Array.isArray(answers[q.question_key])?answers[q.question_key].join(', '):String(answers[q.question_key])}</Badge>)}</div>{Array.isArray(price.selected_addons)&&price.selected_addons.length>0&&<div className="mt-3 border-t pt-3"><p className="text-xs font-semibold">Optional extras included in this estimate</p><ul className="mt-2 space-y-1.5">{price.selected_addons.map((addon:any)=><li key={addon.id} className="flex items-start justify-between gap-3 text-xs"><span>{addon.title}</span><span className="shrink-0 font-medium tabular-nums">{addon.price_mode==='fixed'?'+'+formatKes(Number(addon.price_value)||0):addon.price_mode==='fixed_discount'?'-'+formatKes(Number(addon.calculated_amount??addon.price_value)||0):addon.price_mode==='percentage_discount'?Number(addon.price_value||0)+'% discount':'Included in quotation'}</span></li>)}</ul></div>}</div>
