@@ -21,6 +21,26 @@ export type GuestBookingNotesInput = {
   notes?: string;
   photosRequired?: boolean;
 };
+export type GuestBookingDetailsInput = {
+  quantity: number | null;
+  quantityUnit: string;
+  measurements: Record<string, unknown>;
+  answers: Record<string, unknown>;
+  selectedExtras: string[];
+  selectedOfferId: string | null;
+  selectedOfferVersions: Record<string, string>;
+  serviceConfigVersion: number;
+};
+export type GuestBookingDetailsSnapshot = {
+  quantity: number | null;
+  quantity_unit: string;
+  measurements: Record<string, unknown>;
+  answers: Record<string, unknown>;
+  selected_extras: string[];
+  selected_offer_id: string | null;
+  selected_offer_versions: Record<string, string>;
+  service_config_version: number;
+};
 const money = (value: unknown) =>
   value === null || value === undefined || value === ''
     ? 'price to confirm'
@@ -32,6 +52,19 @@ export function normalizeGuestPhone(value: string): string {
   if (/^0[17]\d{8}$/.test(clean)) return '+254' + clean.slice(1);
   if (/^254[17]\d{8}$/.test(clean)) return '+' + clean;
   return /^\+[1-9]\d{7,14}$/.test(clean) ? clean : '';
+}
+/** Send catalogue IDs and customer answers only. Prices are always resolved again by trusted server code. */
+export function buildGuestBookingDetails(input: GuestBookingDetailsInput): GuestBookingDetailsSnapshot {
+  return {
+    quantity: input.quantity,
+    quantity_unit: String(input.quantityUnit || 'units').trim().slice(0, 30),
+    measurements: input.measurements && typeof input.measurements === 'object' && !Array.isArray(input.measurements) ? input.measurements : {},
+    answers: input.answers && typeof input.answers === 'object' && !Array.isArray(input.answers) ? input.answers : {},
+    selected_extras: Array.from(new Set((input.selectedExtras || []).filter((value) => typeof value === 'string'))),
+    selected_offer_id: input.selectedOfferId || null,
+    selected_offer_versions: Object.fromEntries(Object.entries(input.selectedOfferVersions || {}).filter(([id, updatedAt]) => !!id && typeof updatedAt === 'string')),
+    service_config_version: input.serviceConfigVersion,
+  };
 }
 export function buildGuestRequestNotes(input: GuestBookingNotesInput): string {
   const lines = ['[GUIDED BOOKING DETAILS]', 'Primary service: ' + input.serviceName];

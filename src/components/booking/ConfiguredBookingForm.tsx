@@ -14,7 +14,7 @@ import { AlertTriangle, CheckCircle2, ShieldCheck, Minus, Plus, CalendarDays, Cl
 import { formatKes } from '@/lib/marketplace';
 import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpload';
 import { groupBookingOffers, isBookingOfferCurrent, bookingOfferSelectionKey, toggleBookingOfferSelection } from '@/lib/bookingEngineOffers';
-import { buildGuestRequestNotes, normalizeGuestPhone } from '@/lib/bookingEngineGuestRequest';
+import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone } from '@/lib/bookingEngineGuestRequest';
 
 type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean; initialOfferId?: string };
@@ -70,6 +70,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
   const [guestName,setGuestName] = useState(''), [guestPhone,setGuestPhone] = useState('');
   const [guestSubmitted,setGuestSubmitted] = useState<{reference:string;estimatedAmount:number;needsOfferReview:boolean}|null>(null);
+  const [guestSubmissionKey,setGuestSubmissionKey] = useState('');
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
   const [requestItemId,setRequestItemId] = useState(''), [photoCount,setPhotoCount] = useState(0);
   const [loadedDraftKey,setLoadedDraftKey] = useState('');
@@ -88,6 +89,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       setSelectedOfferId('');
       setPrice(null);
       setGuestSubmitted(null);
+      setGuestSubmissionKey('');
       setQuantity('1');
       setDate('');
       setTime('');
@@ -327,6 +329,23 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     const selectedPackage=packageOffers.find((offer:any)=>offer.id===selectedOfferId);
     const selectedAddons=addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id)));
     const selectedScopeExtras=groups.extra.filter((item:any)=>extras.includes(item.id));
+    const selectedOfferVersions:Record<string,string>={};
+    if(selectedPackage?.updated_at)selectedOfferVersions[selectedPackage.id]=selectedPackage.updated_at;
+    selectedAddons.forEach((offer:any)=>{if(offer.updated_at)selectedOfferVersions[offer.id]=offer.updated_at;});
+    const submissionKey=guestSubmissionKey||crypto.randomUUID();
+    setGuestSubmissionKey(submissionKey);
+    const measurementAnswers:Record<string,number>={};
+    questions.filter(q=>q.input_type==='measurement').forEach(q=>{const value=Number(answers[q.question_key]);if(Number.isFinite(value)&&value>0)measurementAnswers[q.question_key]=value;});
+    const bookingDetails=buildGuestBookingDetails({
+      quantity:quantityEnabled?Number(quantity):null,
+      quantityUnit,
+      measurements:measurementAnswers,
+      answers,
+      selectedExtras:extras,
+      selectedOfferId:selectedOfferId||null,
+      selectedOfferVersions,
+      serviceConfigVersion:Number(config.config_version),
+    });
     let requestNotes='';
     try{
       requestNotes=buildGuestRequestNotes({
@@ -360,6 +379,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       const {data,error}=await supabase.functions.invoke('submit-guest-service-request',{
         body:{
           request_type:quoteMode?'quotation':'booking',
+          submission_key:submissionKey,
+          booking_details:bookingDetails,
           service_id:serviceId,
           customer_name:cleanName,
           customer_phone:normalizedPhone,
@@ -376,6 +397,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       const needsOfferReview=!!selectedPackage||selectedAddons.length>0;
       window.sessionStorage.removeItem(draftKey);
       setLoadedDraftKey('');
+      setGuestSubmissionKey('');
       setGuestSubmitted({reference:String(data.request_reference),estimatedAmount,needsOfferReview});
       toast({title:'Guest request saved',description:'Your reference is '+data.request_reference+'. Our team will review and contact you.'});
     }catch(error:any){

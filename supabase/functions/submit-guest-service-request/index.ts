@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 const MAX_BODY_BYTES = 8192;
 const MAX_REQUESTS = 5;
 const WINDOW_SECONDS = 900;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const BASE_ALLOWED_ORIGINS = [
   'https://conceptcleaningservices.co.ke',
@@ -306,6 +307,57 @@ Deno.serve(async (req) => {
 
     const requestType = cleanText(body.request_type, 20);
     const serviceId = cleanText(body.service_id, 100);
+    const submissionKey = cleanText(body.submission_key, 36);
+    if (submissionKey && !UUID_PATTERN.test(submissionKey)) return reply({ error: 'Invalid submission reference. Please retry.' }, 400);
+    const rawDetails = body.booking_details;
+    if (!rawDetails || typeof rawDetails !== 'object' || Array.isArray(rawDetails)) return reply({ error: 'Booking details are missing. Refresh the form and try again.' }, 400);
+    const detailObject = rawDetails as Record<string, unknown>;
+    const answers = detailObject.answers && typeof detailObject.answers === 'object' && !Array.isArray(detailObject.answers) ? detailObject.answers as Record<string, unknown> : null;
+    const measurements = detailObject.measurements && typeof detailObject.measurements === 'object' && !Array.isArray(detailObject.measurements) ? detailObject.measurements as Record<string, unknown> : null;
+    const selectedExtras = Array.isArray(detailObject.selected_extras) ? detailObject.selected_extras : null;
+    const selectedOfferId = detailObject.selected_offer_id == null || detailObject.selected_offer_id === '' ? null : cleanText(detailObject.selected_offer_id, 36);
+    const rawOfferVersions = detailObject.selected_offer_versions && typeof detailObject.selected_offer_versions === 'object' && !Array.isArray(detailObject.selected_offer_versions)
+      ? detailObject.selected_offer_versions as Record<string, unknown> : null;
+    const configVersion = Number(detailObject.service_config_version);
+    const quantity = detailObject.quantity == null ? null : Number(detailObject.quantity);
+    const quantityUnit = cleanText(detailObject.quantity_unit, 30) || 'units';
+    const expectedOfferIds = Array.from(new Set([
+      ...(selectedOfferId ? [selectedOfferId] : []),
+      ...(selectedExtras || []).filter((value): value is string => typeof value === 'string' && value.startsWith('offer:')).map(value => value.slice(6)),
+    ]));
+    const offerVersionsValid = !!rawOfferVersions
+      && Object.keys(rawOfferVersions).length === expectedOfferIds.length
+      && expectedOfferIds.every((id) => UUID_PATTERN.test(id)
+        && typeof rawOfferVersions[id] === 'string'
+        && Number.isFinite(Date.parse(rawOfferVersions[id] as string)))
+      && Object.keys(rawOfferVersions).every((id) => expectedOfferIds.includes(id));
+    if (!answers || !measurements || !selectedExtras || selectedExtras.length > 40 ||
+        (selectedOfferId !== null && !UUID_PATTERN.test(selectedOfferId)) ||
+        !Number.isInteger(configVersion) || configVersion < 1 ||
+        (quantity !== null && (!Number.isFinite(quantity) || quantity <= 0)) ||
+        selectedExtras.some((value) => typeof value !== 'string' || value.length > 80 ||
+          !(UUID_PATTERN.test(value) || (value.startsWith('offer:') && UUID_PATTERN.test(value.slice(6))))) ||
+        !offerVersionsValid ||
+        JSON.stringify(answers).length > 3500 || JSON.stringify(measurements).length > 1000) {
+      return reply({ error: 'Some service selections are invalid. Refresh the form and review your answers.' }, 400);
+    }
+    const normalizedOfferVersions = Object.fromEntries(expectedOfferIds.map((id) => [
+      id, new Date(rawOfferVersions![id] as string).toISOString(),
+    ]));
+    const bookingDetailsSnapshot = {
+      quantity, quantity_unit: quantityUnit, measurements, answers,
+      selected_extras: Array.from(new Set(selectedExtras as string[])),
+      selected_offer_id: selectedOfferId, selected_offer_versions: normalizedOfferVersions,
+      service_config_version: configVersion,
+    };
+    if (submissionKey) {
+      const { data: existing } = await supabase.from('guest_service_requests')
+        .select('id,request_reference,service_name,estimated_amount,discount_amount')
+        .eq('submission_key', submissionKey).maybeSingle();
+      if (existing) return reply({ success: true, id: existing.id, request_reference: existing.request_reference,
+        service_name: existing.service_name, estimated_amount: existing.estimated_amount,
+        discount_amount: existing.discount_amount, duplicate: true });
+    }
     const customerName = cleanText(body.customer_name, 120);
     const customerPhone = cleanText(body.customer_phone, 20);
     const customerNotes = cleanText(body.customer_notes, 1000);
@@ -343,7 +395,7 @@ Deno.serve(async (req) => {
     // Resolve the service and its prices on the server.
     const { data: service, error: serviceError } = await supabase
       .from('services')
-      .select('id, name, category, is_active, base_price, price_per_sqm')
+      .select('id, name, category_id, service_category:service_categories!services_category_id_fkey(name), is_active, base_price, price_per_sqm')
       .eq('id', serviceId)
       .maybeSingle();
 
@@ -394,7 +446,9 @@ Deno.serve(async (req) => {
         request_type: requestType,
         service_id: String(service.id),
         service_name: service.name,
-        service_category: service.category ?? null,
+        service_category: service.service_category?.name ?? null,
+        booking_details_snapshot: bookingDetailsSnapshot,
+        submission_key: submissionKey || null,
         customer_name: customerName || null,
         customer_phone: customerPhone,
         customer_notes: customerNotes || null,
@@ -409,6 +463,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError || !saved) {
+      if (submissionKey && insertError?.code === '23505') {
+        const { data: existing } = await supabase.from('guest_service_requests')
+          .select('id,request_reference,service_name,estimated_amount,discount_amount')
+          .eq('submission_key', submissionKey).maybeSingle();
+        if (existing) return reply({ success: true, id: existing.id, request_reference: existing.request_reference,
+          service_name: existing.service_name, estimated_amount: existing.estimated_amount,
+          discount_amount: existing.discount_amount, duplicate: true });
+      }
       return reply({ error: 'We could not save your request. Please try again.' }, 500);
     }
 

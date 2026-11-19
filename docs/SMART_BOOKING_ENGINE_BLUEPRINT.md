@@ -220,7 +220,13 @@ Requires separate owner approval before any Supabase work:
 
 ## 12. Current implementation status
 
-- Working branch created: `smart-booking`.
-- Initial customer-facing change: service images added to Booking Engine search results and selected-service view, reusing existing service image resolution.
-- No database changes, Supabase operations, production deployment or changes to existing booking submission workflow have been made for this initiative.
-- A local build/test has not yet been run against this branch; validate in the project workspace before treating the UI change as release-ready.
+- Working branch: `smart-booking`; continue on this branch and do not create a parallel branch.
+- Customer-facing work includes guided service discovery, selected-service details, package and add-on selection, guest submission, privacy-conscious local progress, and request confirmation.
+- Guest submission now carries structured answers, quantity/measurement inputs, selected catalogue IDs, service configuration version and selected package/add-on update timestamps. If a package, add-on or service setup changes before staff conversion, the server rejects the stale selection rather than silently applying a new price. It does not send client-calculated prices as authoritative data.
+- Guest submissions are designed to enter the existing native Smart Booking request tables through an admin-controlled conversion. The migration validates the current service configuration, conditional questions, scope selections, package/add-on eligibility and trusted server-side pricing before creating the native request.
+- Staff then use the existing Smart Booking review, pricing, quotation and ERP booking workflow. Guest confirmation is recorded by authorized staff after WhatsApp/phone/email/in-person confirmation; the guest does not receive an ERP account or document-download access.
+- The guest-to-ERP bridge, request/quotation linkage and staff confirmation actions are implemented as repository migration/Edge Function/frontend changes only. They have not been applied to live Supabase, and no Edge Function has been deployed.
+- Package and add-on prices are always recalculated from the current trusted configuration during staff conversion. The initial guest catalogue estimate remains indicative until that review.
+- Required guest photos are flagged for staff follow-up; authorized staff can attach the collected photos in the native Smart Booking request, and the ERP conversion function blocks booking creation until the configured photo minimum is met.
+- Remaining release verification: apply the migration and Edge Function in a controlled non-production environment, test the complete guest → Smart Booking → quotation/confirmation → ERP booking path, run Supabase security/performance advisors, and then obtain explicit production approval.
+- Production deployment, merge to `main`, live database changes and unrelated ERP/HR work remain outside this implementation step.

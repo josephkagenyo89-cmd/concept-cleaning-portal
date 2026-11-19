@@ -21,6 +21,10 @@ import {
   ClipboardList,
   Save,
   UserCheck,
+  ArrowRight,
+  FileText,
+  CalendarCheck,
+  CheckCircle2,
 } from 'lucide-react';
 
 const STATUS_OPTIONS = [
@@ -78,7 +82,7 @@ export default function AdminGuestRequests() {
     const { data, error: queryError } = await supabase
       .from('guest_service_requests')
       .select(
-        'id, request_reference, request_type, service_id, service_name, service_category, customer_name, customer_phone, customer_notes, location, preferred_date, preferred_time, size_sqm, estimated_amount, discount_amount, status, lead_id, converted_at, converted_by, internal_notes, created_at, updated_at, lead:leads(lead_code)'
+        'id, request_reference, request_type, service_id, service_name, service_category, customer_name, customer_phone, customer_notes, location, preferred_date, preferred_time, size_sqm, estimated_amount, discount_amount, status, lead_id, converted_at, converted_by, internal_notes, booking_engine_request_id, booking_engine_request_number, booking_engine_status, quotation_id, converted_booking_id, customer_confirmed_at, customer_confirmation_channel, created_at, updated_at, lead:leads(lead_code), quotation:quotations!guest_service_requests_quotation_fkey(quotation_number,price)'
       )
       .order('created_at', { ascending: false })
       .limit(300);
@@ -223,6 +227,96 @@ export default function AdminGuestRequests() {
     }
   };
 
+  const convertToSmartBooking = async (item: any) => {
+    if (item.booking_engine_request_id) {
+      navigate('/admin/booking-engine');
+      return;
+    }
+    if (['rejected', 'closed'].includes(item.status)) {
+      setError('Rejected or closed requests cannot enter Smart Booking.');
+      return;
+    }
+    setSavingId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const { data, error: actionError } = await supabase.rpc(
+        'convert_guest_service_request_to_booking_engine_request',
+        { p_request_id: item.id }
+      );
+      if (actionError) throw actionError;
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result?.booking_engine_request_id) throw new Error('The native Smart Booking request was not returned.');
+      setNotice('Guest request linked to Smart Booking ' + (result.request_number || '') + '. Review it in the Smart Booking queue.');
+      await loadRequests(true);
+    } catch (actionError: any) {
+      setError(actionError?.message || 'Unable to convert this guest request into Smart Booking.');
+    } finally {
+      setSavingId('');
+    }
+  };
+
+  const prepareGuestQuotation = async (item: any) => {
+    setSavingId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const { data, error: actionError } = await supabase.rpc(
+        'prepare_guest_service_request_quotation',
+        { p_request_id: item.id }
+      );
+      if (actionError) throw actionError;
+      const result = Array.isArray(data) ? data[0] : data;
+      setNotice('Quotation ' + (result?.quotation_number || '') + ' prepared and linked to the native Smart Booking request.');
+      await loadRequests(true);
+    } catch (actionError: any) {
+      setError(actionError?.message || 'Unable to prepare this guest quotation. Requests requiring manual pricing must be completed in Smart Booking.');
+    } finally {
+      setSavingId('');
+    }
+  };
+
+  const recordGuestConfirmation = async (item: any) => {
+    if (!window.confirm("Have you received the guest's confirmation of the scope and price for " + item.request_reference + " through WhatsApp?")) return;
+    setSavingId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const { error: actionError } = await supabase.rpc(
+        'confirm_guest_service_request_customer_response',
+        { p_request_id: item.id, p_channel: 'whatsapp' }
+      );
+      if (actionError) throw actionError;
+      setNotice('Guest confirmation recorded. You can now proceed with the existing ERP booking approval.');
+      await loadRequests(true);
+    } catch (actionError: any) {
+      setError(actionError?.message || 'Unable to record guest confirmation.');
+    } finally {
+      setSavingId('');
+    }
+  };
+
+  const convertGuestToErpBooking = async (item: any) => {
+    if (!window.confirm('Create an ERP booking for ' + item.request_reference + '? Confirm that the guest has accepted the reviewed scope, price and preferred schedule.')) return;
+    setSavingId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const { data, error: actionError } = await supabase.rpc(
+        'convert_guest_service_request_to_erp_booking',
+        { p_guest_request_id: item.id }
+      );
+      if (actionError) throw actionError;
+      const result = Array.isArray(data) ? data[0] : data;
+      setNotice('ERP booking ' + (result?.booking_code || result?.booking_id || '') + ' created through the existing booking workflow.');
+      await loadRequests(true);
+    } catch (actionError: any) {
+      setError(actionError?.message || 'Unable to create the ERP booking. Check Smart Booking approval and pricing first.');
+    } finally {
+      setSavingId('');
+    }
+  };
+
   const counts = useMemo(
     () =>
       STATUS_OPTIONS.reduce((result, [key]) => {
@@ -360,7 +454,7 @@ export default function AdminGuestRequests() {
                         <UserCheck className="mr-2 h-4 w-4" />
                         View CRM lead {item.lead?.lead_code ? `(${item.lead.lead_code})` : ''}
                       </Button>
-                    ) : !['rejected', 'closed'].includes(item.status) ? (
+                    ) : !item.booking_engine_request_id && !['rejected', 'closed'].includes(item.status) ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -440,6 +534,55 @@ export default function AdminGuestRequests() {
                     <p className="whitespace-pre-wrap text-sm">{item.customer_notes}</p>
                   </div>
                 )}
+
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">Smart Booking & ERP hand-off</p>
+                      {item.booking_engine_request_id ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {item.booking_engine_request_number || item.booking_engine_request_id} · {String(item.booking_engine_status || 'linked').replaceAll('_', ' ')}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">Convert this enquiry into the native Smart Booking review and pricing workflow.</p>
+                      )}
+                    </div>
+                    {item.booking_engine_request_id && <Button size="sm" variant="outline" onClick={() => navigate('/admin/booking-engine')}>
+                      <ArrowRight className="mr-2 h-4 w-4" />Open Smart Booking
+                    </Button>}
+                  </div>
+                  {!item.booking_engine_request_id ? (
+                    <Button className="mt-3 w-full sm:w-auto" size="sm" onClick={() => convertToSmartBooking(item)} disabled={savingId === item.id || ['rejected','closed'].includes(item.status)}>
+                      <ArrowRight className="mr-2 h-4 w-4" />{savingId === item.id ? 'Converting…' : 'Send to Smart Booking'}
+                    </Button>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {item.request_type === 'quotation' && !item.quotation_id && ['submitted','under_review','approved'].includes(item.booking_engine_status) && (
+                        <Button size="sm" variant="outline" onClick={() => prepareGuestQuotation(item)} disabled={savingId === item.id}>
+                          <FileText className="mr-2 h-4 w-4" />{savingId === item.id ? 'Preparing…' : 'Prepare quotation'}
+                        </Button>
+                      )}
+                      {!item.customer_confirmed_at && ((item.request_type === 'booking' && ['approved','ready_for_booking'].includes(item.booking_engine_status)) || (item.quotation_id && ['quote_prepared','customer_accepted','ready_for_booking'].includes(item.booking_engine_status))) && (
+                        <Button size="sm" variant="outline" onClick={() => recordGuestConfirmation(item)} disabled={savingId === item.id}>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />Record WhatsApp confirmation
+                        </Button>
+                      )}
+                      {item.customer_confirmed_at && !item.converted_booking_id && ['approved','customer_accepted','ready_for_booking'].includes(item.booking_engine_status) && (
+                        <Button size="sm" onClick={() => convertGuestToErpBooking(item)} disabled={savingId === item.id}>
+                          <CalendarCheck className="mr-2 h-4 w-4" />{savingId === item.id ? 'Creating booking…' : 'Approve & create ERP booking'}
+                        </Button>
+                      )}
+                      {item.converted_booking_id && (
+                        <Button size="sm" variant="outline" onClick={() => navigate('/admin/bookings/' + item.converted_booking_id)}>
+                          <CalendarCheck className="mr-2 h-4 w-4" />View ERP booking
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {item.quotation_id && <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>Quotation {item.quotation?.quotation_number || item.quotation_id}{item.quotation?.price != null ? ' · ' + money(item.quotation.price) : ''}</span><Button size="sm" variant="link" className="h-auto p-0" onClick={() => navigate('/admin/quotations')}>Open quotations</Button></div>}
+                  {item.customer_confirmed_at && <p className="mt-1 text-xs text-muted-foreground">Guest confirmation recorded {dateTime(item.customer_confirmed_at)} via {item.customer_confirmation_channel || 'staff follow-up'}.</p>}
+                  <p className="mt-2 text-[11px] text-muted-foreground">Prices are recalculated by Smart Booking. Staff must review the request and record the guest’s confirmation before an ERP booking is created. Required photos may still need staff follow-up.</p>
+                </div>
 
                 <div className="border-t pt-4">
                   <label className="mb-2 block text-sm font-semibold" htmlFor={`notes-${item.id}`}>

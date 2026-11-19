@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGuestRequestNotes, normalizeGuestPhone } from './bookingEngineGuestRequest';
+import { buildGuestBookingDetails, buildGuestRequestNotes, normalizeGuestPhone } from './bookingEngineGuestRequest';
 describe('guest booking contact normalization', () => {
   it('normalizes common Kenyan mobile formats', () => {
     expect(normalizeGuestPhone('0712 345 678')).toBe('+254712345678');
@@ -9,6 +9,32 @@ describe('guest booking contact normalization', () => {
   it('rejects incomplete or malformed numbers', () => {
     expect(normalizeGuestPhone('071234')).toBe('');
     expect(normalizeGuestPhone('hello')).toBe('');
+  });
+});
+describe('guest booking details snapshot', () => {
+  it('sends IDs and answers but never client-calculated prices', () => {
+    const snapshot = buildGuestBookingDetails({
+      quantity: 5, quantityUnit: 'seats', measurements: { rooms: 2 },
+      answers: { fabric: 'Cotton' }, selectedExtras: ['scope-id', 'offer:offer-id'],
+      selectedOfferId: '11111111-1111-4111-8111-111111111111', selectedOfferVersions: { '11111111-1111-4111-8111-111111111111': '2026-11-19T10:00:00.000Z', '22222222-2222-4222-8222-222222222222': '2026-11-19T10:01:00.000Z' }, serviceConfigVersion: 4,
+    });
+    expect(snapshot).toEqual({
+      quantity: 5, quantity_unit: 'seats', measurements: { rooms: 2 },
+      answers: { fabric: 'Cotton' }, selected_extras: ['scope-id', 'offer:offer-id'],
+      selected_offer_id: '11111111-1111-4111-8111-111111111111', selected_offer_versions: { '11111111-1111-4111-8111-111111111111': '2026-11-19T10:00:00.000Z', '22222222-2222-4222-8222-222222222222': '2026-11-19T10:01:00.000Z' }, service_config_version: 4,
+    });
+    expect(snapshot).not.toHaveProperty('price');
+    expect(snapshot).not.toHaveProperty('total');
+  });
+  it('deduplicates selected extras and strips malformed object inputs', () => {
+    const snapshot = buildGuestBookingDetails({
+      quantity: null, quantityUnit: 'units', measurements: [] as any, answers: null as any,
+      selectedExtras: ['x', 'x'], selectedOfferId: '', selectedOfferVersions: {}, serviceConfigVersion: 1,
+    });
+    expect(snapshot.measurements).toEqual({});
+    expect(snapshot.answers).toEqual({});
+    expect(snapshot.selected_extras).toEqual(['x']);
+    expect(snapshot.selected_offer_id).toBeNull();
   });
 });
 describe('guest booking request notes', () => {
@@ -22,9 +48,7 @@ describe('guest booking request notes', () => {
         { label: 'Mattress Cleaning', size: '6x6', quantity: 1, complimentary: true, individualPrice: 0 },
       ] },
       addons: [{ title: 'Carpet Protection', priceMode: 'fixed', priceValue: 1500 }],
-      scopeExtras: ['Move furniture'],
-      notes: 'Call before arrival',
-      photosRequired: true,
+      scopeExtras: ['Move furniture'], notes: 'Call before arrival', photosRequired: true,
     });
     expect(notes).toContain('Selected package: Gold Package');
     expect(notes).toContain('Mattress Cleaning · 6x6 · Qty 1 · COMPLIMENTARY');
