@@ -392,11 +392,12 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
  const saveOffer=async()=>{
   const key=makeKey(offerDraft.offer_key||offerDraft.title);
   if(!key||!offerDraft.title.trim()||(offerDraft.offer_type!=='package'&&!offerServiceLinks.trigger.length)){toast({title:'Add a title and the required service links'});return;}
-  if(offerDraft.offer_type==='package'&&!offerServiceLinks.included.length){toast({title:'A package needs at least one included service'});return;}
+  if(offerDraft.offer_type!=='package'&&!offerServiceLinks.included.length&&offerDraft.offer_type==='recurring'){toast({title:'Add at least one included service'});return;}
   if(offerDraft.offer_type==='package'&&offerDraft.price_mode!=='fixed'&&offerDraft.price_mode!=='quotation'){toast({title:'Packages use a calculated fixed bundle price.'});return;}
   if((offerDraft.offer_type==='add_on'||offerDraft.offer_type==='upgrade')&&offerDraft.price_mode==='quotation'){toast({title:'Optional extras and upgrades need a configured amount or discount. Use a fixed price or discount.'});return;}
   if(offerServiceLinks.trigger.some(id=>offerServiceLinks.included.includes(id))){toast({title:'A starting service cannot also be listed as an included service.'});return;}
-  const order=Number(offerDraft.display_order),amount=offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value);
+  const existingOffer=editingOffer?offers.find(x=>x.id===editingOffer):null;
+  const order=Number(offerDraft.display_order),amount=offerDraft.offer_type==='package'?(existingOffer?.price_value??null):(offerDraft.price_mode==='quotation'?null:Number(offerDraft.price_value));
   if(!Number.isInteger(order)||(amount!==null&&(!offerDraft.price_value.trim()||!Number.isFinite(amount)||amount<=0||(offerDraft.price_mode==='percentage_discount'&&amount>100)))||(amount===null&&offerDraft.price_mode!=='quotation')){toast({title:'Enter a valid positive offer amount and display order. Percentage discounts cannot exceed 100%.'});return;}
   const startDate=offerDraft.starts_at?new Date(offerDraft.starts_at):null;
   const endDate=offerDraft.ends_at?new Date(offerDraft.ends_at):null;
@@ -413,7 +414,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
    if(issues.length){toast({title:'Offer is not ready to publish',description:issues.join(' '),variant:'destructive'});return;}
   }
   const user=(await supabase.auth.getUser()).data.user?.id??null;
-  const payload={offer_key:key,offer_type:offerDraft.offer_type,title:offerDraft.title.trim(),description:offerDraft.description.trim()||null,terms:offerDraft.terms.trim()||null,price_mode:offerDraft.price_mode,price_value:amount,currency:'KES',active:offerDraft.active,featured:offerDraft.featured,starts_at:startsAt,ends_at:endsAt,display_order:order,updated_by:user,updated_at:new Date().toISOString()};
+  const payload={offer_key:key,offer_type:offerDraft.offer_type,title:offerDraft.title.trim(),description:offerDraft.description.trim()||null,terms:offerDraft.terms.trim()||null,price_mode:offerDraft.offer_type==='package'?(existingOffer?.price_mode||'quotation'):offerDraft.price_mode,price_value:amount,currency:'KES',active:offerDraft.offer_type==='package'?false:offerDraft.active,featured:offerDraft.featured,starts_at:startsAt,ends_at:endsAt,display_order:order,updated_by:user,updated_at:new Date().toISOString()};
   setSaving(true);
   const result=editingOffer
    ?await db.from('booking_engine_value_offers').update(payload).eq('id',editingOffer).select('*').single()
@@ -503,10 +504,10 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
        {offerDraft.offer_type!=='package'&&<div className="space-y-1"><Label>{offerDraft.price_mode==='percentage_discount'?'Discount percentage (%)':'Amount (KES)'}</Label><Input type="number" min="0" step="0.01" disabled={offerDraft.price_mode==='quotation'} value={offerDraft.price_value} onChange={e=>setO('price_value',e.target.value)}/></div>}
        <div className="space-y-1 sm:col-span-2"><Label>Short description customers will see</Label><Textarea rows={2} value={offerDraft.description} onChange={e=>setO('description',e.target.value)}/></div>
        <div className="flex items-center gap-2"><Switch checked={offerDraft.featured} onCheckedChange={v=>setO('featured',v)}/><Label>Feature this package</Label></div>
-       <div className="flex items-center gap-2"><Switch checked={offerDraft.active} onCheckedChange={v=>setO('active',v)}/><Label>Publish for customers</Label></div>
+       {offerDraft.offer_type!=='package'&&<div className="flex items-center gap-2"><Switch checked={offerDraft.active} onCheckedChange={v=>setO('active',v)}/><Label>Publish for customers</Label></div>}
       </div>
       <div className="space-y-1"><Label>Find services</Label><Input value={serviceSearch} onChange={e=>setServiceSearch(e.target.value)} placeholder="Search services by name…"/></div>
-      <div className="grid gap-2 md:grid-cols-3">{servicePicker('trigger','Which service should customers start with?')}{servicePicker('included','Which service(s) should be complimentary?')}{servicePicker('recommended','Optional additions to suggest')}</div>
+      {offerDraft.offer_type!=='package'&&<div className="grid gap-2 md:grid-cols-3">{servicePicker('trigger','Which service should customers start with?')}{servicePicker('included','Which service(s) should be complimentary?')}{servicePicker('recommended','Optional additions to suggest')}</div>}
       <details className="rounded-lg border p-3">
        <summary className="cursor-pointer text-sm font-semibold">Advanced settings (optional)</summary>
        <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -517,7 +518,7 @@ function BookingEngineLibrary({ services, configs }: { services: Service[]; conf
         <div className="space-y-1"><Label>Stop publishing (optional)</Label><Input type="datetime-local" value={offerDraft.ends_at} onChange={e=>setO('ends_at',e.target.value)}/></div>
        </div>
       </details>
-      <p className="text-xs text-muted-foreground">Before publishing, every starting and complimentary service must be active, enabled in Smart Booking and have an active pricing rule. A package must have at least one complimentary service. Each service selected here is saved as a separate KSh 0 line item in the quotation and booking; the package price is charged separately. Optional recommended services are paid suggestions and do not block publication.</p>
+      <p className="text-xs text-muted-foreground">For packages, configure the exact service sizes, quantities and package-specific prices in the editor above. Saving package details returns the package to draft; use Approve & publish only after its final price and contents are complete.</p>
       <div className="flex flex-wrap gap-2"><Button onClick={()=>void saveOffer()} disabled={saving}>{saving?'Saving…':'Save package / offer'}</Button><Button variant="outline" onClick={()=>{setEditingOffer(null);setOfferDraft(emptyOfferDraft());setOfferServiceLinks({trigger:[],included:[],recommended:[]});}}>New offer</Button></div>
      </CardContent></Card>
     </div>
