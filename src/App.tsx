@@ -307,7 +307,7 @@ function RouteTheme() {
     // Apply the new brand tokens everywhere except the ERP module.
     const root = document.getElementById("root");
     if (!root) return;
-    const isErpRoute = location.pathname.startsWith("/admin/");
+    const isErpRoute = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
     root.classList.toggle("ccs-modern-theme", !isErpRoute);
     return () => root.classList.remove("ccs-modern-theme");
   }, [location.pathname]);
