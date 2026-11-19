@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle2, ShieldCheck, Minus, Plus, CalendarDays, Cl
 import { formatKes } from '@/lib/marketplace';
 import BookingEnginePhotoUpload from '@/components/booking/BookingEnginePhotoUpload';
 import { groupBookingOffers, isBookingOfferCurrent, bookingOfferSelectionKey, toggleBookingOfferSelection } from '@/lib/bookingEngineOffers';
+import { buildGuestRequestNotes, normalizeGuestPhone } from '@/lib/bookingEngineGuestRequest';
 
 type Row = { id: string; [key: string]: any };
 type Props = { serviceId: string; serviceName: string; initialNotes?: string; quoteMode?: boolean; initialOfferId?: string };
@@ -68,6 +69,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
   const [notes,setNotes] = useState(initialNotes), [ack,setAck] = useState(false), [saving,setSaving] = useState(false);
   const [guestName,setGuestName] = useState(''), [guestPhone,setGuestPhone] = useState('');
+  const [guestSubmitted,setGuestSubmitted] = useState<{reference:string;estimatedAmount:number;needsOfferReview:boolean}|null>(null);
   const [price,setPrice] = useState<any>(null), [draftId,setDraftId] = useState('');
   const [requestItemId,setRequestItemId] = useState(''), [photoCount,setPhotoCount] = useState(0);
   const [loadedDraftKey,setLoadedDraftKey] = useState('');
@@ -78,6 +80,21 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     setLoadedDraftKey('');
     (async () => {
       setLoading(true);
+      setError('');
+      setDraftId('');
+      setRequestItemId('');
+      setAnswers({});
+      setExtras([]);
+      setSelectedOfferId('');
+      setPrice(null);
+      setGuestSubmitted(null);
+      setQuantity('1');
+      setDate('');
+      setTime('');
+      setLocation('');
+      setNotes(initialNotes);
+      setGuestName('');
+      setGuestPhone('');
       let loadedOffers: Row[] = [];
       const c = await supabase.from('booking_engine_service_config').select('id,service_id,enabled,customer_instructions,photo_mode,photo_min,photo_max,measurement_config,availability_config,config_version').eq('service_id',serviceId).eq('enabled',true).maybeSingle();
       if (c.error) { if(live) setError(c.error.message); }
@@ -98,7 +115,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             .map((row:any)=>row.offer)
             .filter((offer:any)=>offer&&offer.offer_type!=='recurring'&&isBookingOfferCurrent(offer,now));
           const candidateIds=currentOffers.map((offer:any)=>offer.id);
-          const packageItemsResult=candidateIds.length?await db.from('booking_engine_package_items').select('id,offer_id,service_id,item_label,size_label,quantity,individual_price,complimentary,display_order,service:services!inner(id,name,is_active)').in('offer_id',candidateIds).eq('active',true).order('display_order'):{data:[],error:null};
+          const packageItemsResult=candidateIds.length?await db.from('booking_engine_package_items').select('id,offer_id,service_id,item_label,size_label,quantity,individual_price,complimentary,display_order,created_at,service:services!inner(id,name,is_active)').in('offer_id',candidateIds).eq('active',true).order('display_order').order('created_at'):{data:[],error:null};
           const linksResult=candidateIds.length
             ?await db.from('booking_engine_value_offer_services')
               .select('offer_id,relationship,quantity,service:services!inner(id,name,description,is_active)')
@@ -115,10 +132,20 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
                 link.offer_id===offer.id&&(link.relationship==='included'||link.relationship==='recommended')
               );
               const linkedServicesActive=linkedServices.every((link:any)=>link.service?.is_active===true);
-              const included=linkedServices.filter((link:any)=>link.relationship==='included');
-              // The server rejects an offer snapshot if any included or recommended catalogue service is inactive.
-              // Keep the customer list aligned with that rule so estimate/submit cannot fail unexpectedly.
-              if(offer.offer_type==='package'){const configured=allPackageItems.filter((item:any)=>item.offer_id===offer.id);return offer.price_mode==='fixed'&&Number(offer.price_value)>0&&configured.length>0&&configured.every((item:any)=>item.size_label?.trim()&&Number(item.quantity)>0&&(item.complimentary||Number(item.individual_price)>=0))&&linkedServicesActive;}
+              // Mirror server package rules: first active item is the entry service,
+              // every chargeable line has a positive price, and line values equal the approved bundle price.
+              if(offer.offer_type==='package'){
+                const configured=allPackageItems
+                  .filter((item:any)=>item.offer_id===offer.id)
+                  .sort((a:any,b:any)=>Number(a.display_order)-Number(b.display_order)||String(a.created_at).localeCompare(String(b.created_at)));
+                const calculatedTotal=configured.reduce((sum:number,item:any)=>sum+(item.complimentary?0:Number(item.individual_price)*Number(item.quantity)),0);
+                return offer.price_mode==='fixed'&&Number(offer.price_value)>0&&configured.length>0
+                  &&configured[0].service_id===serviceId
+                  &&configured.every((item:any)=>item.service?.is_active===true&&item.size_label?.trim()&&Number(item.quantity)>0
+                    &&(item.complimentary?Number(item.individual_price||0)===0:Number(item.individual_price)>0))
+                  &&Math.abs(calculatedTotal-Number(offer.price_value))<=0.01
+                  &&linkedServicesActive;
+              }
               return linkedServicesActive;
             }).sort((a:any,b:any)=>
               Number(Boolean(b.featured))-Number(Boolean(a.featured))||
@@ -148,22 +175,28 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
         try {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            const savedAt=Number(parsed.savedAt);
+            if(!Number.isFinite(savedAt)||Date.now()-savedAt>7*24*60*60*1000){window.sessionStorage.removeItem(draftKey);}
+            else {
             setDraftId(parsed.id || '');
             const restoredOffer = loadedOffers.find((offer:any)=>offer.id===parsed.selectedOfferId);
             const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');
-            setSelectedOfferId(eligibleInitialPackage?.id || (restoredOffer?.offer_type==='package'?restoredOffer.id:''));
+            const restoredPackageId=eligibleInitialPackage?.id || (restoredOffer?.offer_type==='package'?restoredOffer.id:'');
+            setSelectedOfferId(restoredPackageId);
             setAnswers(parsed.answers || {});
             setGuestName(parsed.guestName || '');
             setGuestPhone(parsed.guestPhone || '');
             const restoredExtras = Array.isArray(parsed.extras) ? parsed.extras : [];
-            setExtras(restoredOffer&&restoredOffer.offer_type!=='package'
-              ? Array.from(new Set([...restoredExtras,bookingOfferSelectionKey(restoredOffer.id)]))
-              : restoredExtras);
+            const safeRestoredExtras=restoredPackageId?restoredExtras.filter((value:string)=>!value.startsWith('offer:')):restoredExtras;
+            setExtras(restoredOffer&&restoredOffer.offer_type!=='package'&&!restoredPackageId
+              ? Array.from(new Set([...safeRestoredExtras,bookingOfferSelectionKey(restoredOffer.id)]))
+              : safeRestoredExtras);
             setQuantity(String(parsed.quantity ?? '1'));
             setDate(parsed.date || '');
             setTime(parsed.time || '');
             setLocation(parsed.location || '');
             setNotes(parsed.notes ?? initialNotes);
+            }
           } else {
             setDraftId(saved);
             const request = await supabase.from('booking_engine_requests')
@@ -182,13 +215,16 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
                 const savedOffer=await db.from('booking_engine_request_offers').select('offer_id,offer:booking_engine_value_offers!inner(offer_type)').eq('request_id',saved).maybeSingle();
                 const savedOfferId=savedOffer.data?.offer_id||'';
                 const currentSavedOffer=loadedOffers.find((offer:any)=>offer.id===savedOfferId);
-                if(live){const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');setSelectedOfferId(currentSavedOffer?.offer_type==='package'?savedOfferId:(eligibleInitialPackage?.id||''));}
+                const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');
+                const restoredPackageId=eligibleInitialPackage?.id || (currentSavedOffer?.offer_type==='package'?savedOfferId:'');
+                if(live)setSelectedOfferId(restoredPackageId);
                 setQuantity(String(item.data.quantity ?? '1'));
                 setAnswers(item.data.answers || {});
                 const savedExtras=Array.isArray(item.data.selected_extras)?item.data.selected_extras:[];
-                setExtras(currentSavedOffer&&currentSavedOffer.offer_type!=='package'
-                  ?Array.from(new Set([...savedExtras,bookingOfferSelectionKey(savedOfferId)]))
-                  :savedExtras);
+                const safeSavedExtras=restoredPackageId?savedExtras.filter((value:string)=>!value.startsWith('offer:')):savedExtras;
+                setExtras(currentSavedOffer&&currentSavedOffer.offer_type!=='package'&&!restoredPackageId
+                  ?Array.from(new Set([...safeSavedExtras,bookingOfferSelectionKey(savedOfferId)]))
+                  :safeSavedExtras);
               }
             } else {
               setDraftId('');
@@ -207,14 +243,14 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       }
     })();
     return () => { live=false; };
-  },[serviceId,draftKey]);
+  },[serviceId,draftKey,initialNotes,initialOfferId]);
 
   useEffect(() => {
     if (loadedDraftKey !== draftKey) return;
     window.sessionStorage.setItem(draftKey, JSON.stringify({
-      id: draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes, guestName, guestPhone,
+      id: draftId, savedAt: Date.now(), answers, extras, selectedOfferId, quantity, date, time, location, notes,
     }));
-  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes, guestName, guestPhone]);
+  }, [loadedDraftKey, draftKey, draftId, answers, extras, selectedOfferId, quantity, date, time, location, notes]);
 
   const { packages: packageOffers, addons: addonOffers } = useMemo(() => groupBookingOffers(offerOptions), [offerOptions]);
   const visibility = useMemo(() => {
@@ -264,7 +300,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     setAck(false);
   };
   const validate = () => {
-    if(!user || !customerClient) return 'Sign in with your customer account to use guided booking.';
+    if(user && !customerClient) return 'Your customer profile is still being linked. Please try again shortly.';
     if(!date || date<today()) return 'Choose a valid preferred date.';
     if(!time) return 'Choose a preferred time.';
     if(!location.trim()) return 'Enter the service address, estate or nearby landmark.';
@@ -279,38 +315,72 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     return '';
   };
 
-  const sendGuestWhatsApp = () => {
-    const cleanName = guestName.trim();
-    const cleanPhone = guestPhone.trim().replace(/[()\s-]/g, '');
-    const normalizedPhone = /^0[17]\d{8}$/.test(cleanPhone) ? '+254' + cleanPhone.slice(1) : /^254[17]\d{8}$/.test(cleanPhone) ? '+' + cleanPhone : /^\+[1-9]\d{7,14}$/.test(cleanPhone) ? cleanPhone : '';
-    if (!cleanName) { toast({title:'Enter your name',description:'We need your name for the booking request.',variant:'destructive'}); return; }
-    if (!normalizedPhone) { toast({title:'Enter a valid WhatsApp number',description:'Use 07XXXXXXXX or +2547XXXXXXXX.',variant:'destructive'}); return; }
-    if (!date || date < today()) { toast({title:'Choose a valid preferred date',variant:'destructive'}); return; }
-    if (!time) { toast({title:'Choose a preferred time',variant:'destructive'}); return; }
-    if (!location.trim()) { toast({title:'Enter the service location',description:'Add your estate, building or nearby landmark.',variant:'destructive'}); return; }
-    for (const q of questions) {
-      const state = visibility[q.id], value = answers[q.question_key];
-      if (state?.visible && state.required && (value===undefined || value===null || value==='' || (Array.isArray(value)&&!value.length))) { toast({title:'Complete the required details',description:'Please answer: '+q.label,variant:'destructive'}); return; }
-      if (state?.visible) { const validation = answerValidationError(q,value); if (validation) { toast({title:'Check your answers',description:q.label+': '+validation,variant:'destructive'}); return; } }
+  const submitGuestRequest = async () => {
+    const problem=validate();
+    if(problem) { toast({title:'Complete the required details',description:problem,variant:'destructive'}); return; }
+    const cleanName=guestName.trim();
+    const normalizedPhone=normalizeGuestPhone(guestPhone);
+    if(!cleanName){toast({title:'Enter your name',description:'We need your name for the booking request.',variant:'destructive'});return;}
+    if(!normalizedPhone){toast({title:'Enter a valid WhatsApp number',description:'Use 07XXXXXXXX or +2547XXXXXXXX.',variant:'destructive'});return;}
+    if(!groups.included.length){toast({title:'Service scope is incomplete',description:'Please contact our team for assistance.',variant:'destructive'});return;}
+
+    const selectedPackage=packageOffers.find((offer:any)=>offer.id===selectedOfferId);
+    const selectedAddons=addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id)));
+    const selectedScopeExtras=groups.extra.filter((item:any)=>extras.includes(item.id));
+    let requestNotes='';
+    try{
+      requestNotes=buildGuestRequestNotes({
+        serviceName,
+        quantity:quantityEnabled?{value:quantity,unit:quantityUnit}:null,
+        questions:questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!==''&&(!Array.isArray(answers[q.question_key])||answers[q.question_key].length)).map(q=>({label:q.label,value:answers[q.question_key]})),
+        packageOffer:selectedPackage?{
+          title:selectedPackage.title,
+          price:selectedPackage.price_value,
+          items:packageItems.filter((item:any)=>item.offer_id===selectedPackage.id).map((item:any)=>({
+            label:item.item_label||item.service?.name||'Service',
+            size:item.size_label,
+            quantity:item.quantity,
+            complimentary:item.complimentary,
+            individualPrice:item.individual_price,
+          })),
+        }:null,
+        addons:selectedAddons.map((offer:any)=>({title:offer.title,priceMode:offer.price_mode,priceValue:offer.price_value})),
+        scopeExtras:selectedScopeExtras.map((item:any)=>item.title),
+        notes,
+        photosRequired:config.photo_mode==='required',
+      });
+    }catch(error:any){
+      toast({title:'Please shorten your request details',description:error?.message||'Remove some optional notes and try again.',variant:'destructive'});
+      return;
     }
-    if (!groups.included.length) { toast({title:'Service scope is incomplete',description:'Please contact our team for assistance.',variant:'destructive'}); return; }
-    const lines = ['Hello Concept Cleaning Services, I would like to request a '+(quoteMode?'quotation':'booking')+'.', '', 'GUEST '+(quoteMode?'QUOTATION':'BOOKING')+' REQUEST', 'Name: '+cleanName, 'WhatsApp: '+normalizedPhone, 'Service: '+serviceName, 'Preferred date: '+date, 'Preferred time: '+time, 'Service location: '+location.trim()];
-    if (quantityEnabled) lines.push('Quantity: '+quantity+' '+quantityUnit);
-    const selectedPackage = packageOffers.find((offer:any)=>offer.id===selectedOfferId);
-    if (selectedPackage) { lines.push('Package: '+selectedPackage.title, 'Package price: '+formatKes(Number(selectedPackage.price_value)||0)); const items=packageItems.filter((item:any)=>item.offer_id===selectedPackage.id); if(items.length)lines.push('Package contents:',...items.map((item:any)=>'- '+(item.item_label||item.service?.name||'Service')+' | '+item.size_label+' | Qty '+item.quantity+(item.complimentary?' | COMPLIMENTARY':' | Included in package price'))); }
-    const selectedAddons = addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id)));
-    if (selectedAddons.length) lines.push('Optional extras:',...selectedAddons.map((offer:any)=>'- '+offer.title+' ('+(offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?String(offer.price_value)+'% discount':'price to confirm')+')'));
-    const selectedScopeExtras = groups.extra.filter((item:any)=>extras.includes(item.id));
-    if (selectedScopeExtras.length) lines.push('Additional scope requested: '+selectedScopeExtras.map((item:any)=>item.title).join(', '));
-    const answerLines = questions.filter(q=>visibility[q.id]?.visible && answers[q.question_key]!==undefined && answers[q.question_key]!=='' && (!Array.isArray(answers[q.question_key])||answers[q.question_key].length)).map(q=>{ const value=answers[q.question_key]; return q.label+': '+(Array.isArray(value)?value.join(', '):String(value)); });
-    if (answerLines.length) lines.push('', 'SERVICE DETAILS', ...answerLines);
-    if (notes.trim()) lines.push('', 'Additional notes: '+notes.trim());
-    if (price?.status==='priced') lines.push('', 'Indicative estimate: '+formatKes(Number(price.total)||0));
-    else if (price?.status==='quotation_required') lines.push('', 'Pricing: Please prepare a formal quotation.');
-    else lines.push('', 'Pricing: Please confirm the applicable price and any quotation requirements.');
-    lines.push('', 'I understand this is a booking request, not a confirmed appointment. Please confirm availability and next steps.');
-    if (config.photo_mode !== 'none') lines.push('I can attach the requested service photos in this WhatsApp chat.');
-    window.open('https://wa.me/254796563741?text='+encodeURIComponent(lines.join('\n')), '_blank', 'noopener,noreferrer');
+
+    setSaving(true);
+    try{
+      const squareMetreUnit=/^(m²|m2|sqm|sq\.?\s*m|square metres?|square meters?)$/i.test(quantityUnit.trim());
+      const {data,error}=await supabase.functions.invoke('submit-guest-service-request',{
+        body:{
+          request_type:quoteMode?'quotation':'booking',
+          service_id:serviceId,
+          customer_name:cleanName,
+          customer_phone:normalizedPhone,
+          customer_notes:requestNotes,
+          location:location.trim(),
+          preferred_date:date,
+          preferred_time:time,
+          size_sqm:quantityEnabled&&squareMetreUnit?Number(quantity):null,
+        },
+      });
+      if(error)throw error;
+      if(!data?.success||!data?.request_reference)throw new Error(data?.error||'The request could not be confirmed as saved. Please retry.');
+      const estimatedAmount=Number(data.estimated_amount)||0;
+      const needsOfferReview=!!selectedPackage||selectedAddons.length>0;
+      window.sessionStorage.removeItem(draftKey);
+      setLoadedDraftKey('');
+      setGuestSubmitted({reference:String(data.request_reference),estimatedAmount,needsOfferReview});
+      toast({title:'Guest request saved',description:'Your reference is '+data.request_reference+'. Our team will review and contact you.'});
+    }catch(error:any){
+      toast({title:'Request not saved',description:error?.message||'Please retry. If the issue continues, contact our team.',variant:'destructive'});
+    }finally{setSaving(false);}
   };
 
   const review = async () => {
@@ -421,6 +491,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
 
   if(loading) return <div className="flex items-center gap-2 rounded-xl border p-4 text-sm text-muted-foreground"><span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"/><span>Preparing your booking options…</span></div>;
   if(error || !config) return <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm"><AlertTriangle className="mb-2 h-5 w-5 text-amber-600"/><p className="font-medium">This guided booking is not available right now.</p><p className="mt-1">{error}</p><p className="mt-2 text-xs text-muted-foreground">Your existing bookings are not affected. Please contact our team for assistance.</p></div>;
+  if(guestSubmitted) return <Card className="border-emerald-600/30"><CardContent className="space-y-3 p-5 sm:p-6"><div className="flex items-center gap-3"><div className="rounded-full bg-emerald-600/10 p-2"><CheckCircle2 className="h-6 w-6 text-emerald-700"/></div><div><h2 className="font-semibold">Your request has been received</h2><p className="text-sm text-muted-foreground">Thank you. Our team will review your details and contact you.</p></div></div><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Request reference</p><p className="text-xl font-bold tracking-wide">{guestSubmitted.reference}</p></div>{guestSubmitted.estimatedAmount>0&&<p className="text-sm">Indicative catalogue estimate: <b>{formatKes(guestSubmitted.estimatedAmount)}</b>{guestSubmitted.needsOfferReview?' (does not include or validate your selected package/add-ons).':' (not a confirmed quotation).'}</p>}<p className="text-xs text-muted-foreground">This is a request, not a confirmed appointment. The team will confirm the final scope, package/add-on pricing and availability before proceeding.</p></CardContent></Card>;
 
   return <div className="flex flex-col gap-4">
     <div className="order-1 rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background p-4 sm:p-5">
@@ -483,7 +554,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
           const included=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
            const contents=packageItems.filter((item:any)=>item.offer_id===offer.id);
           const recommended=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended');
-          return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>{setSelectedOfferId(selected?'':offer.id);setPrice(null);setAck(false);}} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
+          return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>{setSelectedOfferId(selected?'':offer.id);if(!selected)setExtras(old=>old.filter(value=>!value.startsWith('offer:')));setPrice(null);setAck(false);}} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
             <span className="flex w-full flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{offer.title}</span>
               <span className="flex items-center gap-1.5">{offer.featured&&<Badge variant="secondary">Featured</Badge>}<Badge variant={selected?'default':'outline'}>{selected?'Selected':'Choose'}</Badge></span>
@@ -504,7 +575,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       {groups.excluded.map(x=><p key={x.id} className="text-sm text-muted-foreground">Not included: {x.title}{x.description?' — '+x.description:''}</p>)}
       {groups.extra.length>0&&<div className="space-y-2"><p className="text-xs font-semibold">Other scope requests · our team will confirm these separately</p>{groups.extra.map(x=><label key={x.id} className="flex items-start gap-2 text-sm"><Checkbox checked={extras.includes(x.id)} onCheckedChange={v=>{setExtras(old=>v?[...old,x.id]:old.filter(id=>id!==x.id));setPrice(null);}}/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></label>)}</div>}
     </div>
-    {config.photo_mode !== 'none' && <div className="order-7 border-t pt-4"><h3 className="mb-2 text-sm font-semibold">Service photos {config.photo_mode === 'required' ? '*' : '(optional)'}</h3>{draftId && requestItemId ? <BookingEnginePhotoUpload requestId={draftId} itemId={requestItemId} minPhotos={config.photo_mode === 'required' ? Math.max(1, Number(config.photo_min) || 1) : 0} maxPhotos={Number(config.photo_max) > 0 ? Number(config.photo_max) : undefined} onCountChange={setPhotoCount} /> : <p className="text-xs text-muted-foreground">Review your details first to create a secure draft, then upload clear photos of the service area.</p>}</div>}
+    {config.photo_mode !== 'none' && <div className="order-7 border-t pt-4"><h3 className="mb-2 text-sm font-semibold">Service photos {config.photo_mode === 'required' ? '*' : '(optional)'}</h3>{draftId && requestItemId ? <BookingEnginePhotoUpload requestId={draftId} itemId={requestItemId} minPhotos={config.photo_mode === 'required' ? Math.max(1, Number(config.photo_min) || 1) : 0} maxPhotos={Number(config.photo_max) > 0 ? Number(config.photo_max) : undefined} onCountChange={setPhotoCount} /> : !user ? <p className="text-xs text-muted-foreground">If photos are needed, our team will contact you after receiving your request.</p> : <p className="text-xs text-muted-foreground">Review your details first to create a secure draft, then upload clear photos of the service area.</p>}</div>}
     <div className="order-10 space-y-1"><Label>Additional notes (optional)</Label><Textarea rows={2} value={notes} onChange={e=>{setNotes(e.target.value);setPrice(null);}}/></div>
     {user && customerClient && <div className="order-12 rounded-xl border border-dashed p-3 sm:p-4">
       <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="text-sm font-semibold">Ready to see your estimate?</p><p className="mt-1 text-xs text-muted-foreground">We’ll calculate your service estimate using approved pricing. A selected package uses its approved final package price.</p></div></div>
@@ -513,8 +584,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     {!authLoading&&!user&&<section className="order-11 space-y-3 rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-4">
       <div><h3 className="text-sm font-semibold">{quoteMode?'Request a quotation':'Book as a guest'}</h3><p className="mt-1 text-xs text-muted-foreground">No account is required. Your service answers, selected package, complimentary items and optional extras will be included in the request. Our team will verify the final price and availability.</p></div>
       <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label htmlFor="guest-booking-name">Your name</Label><Input id="guest-booking-name" autoComplete="name" maxLength={120} value={guestName} onChange={e=>setGuestName(e.target.value)} placeholder="Full name"/></div><div className="space-y-1"><Label htmlFor="guest-booking-phone">Your WhatsApp number</Label><Input id="guest-booking-phone" type="tel" autoComplete="tel" maxLength={20} value={guestPhone} onChange={e=>setGuestPhone(e.target.value)} placeholder="07XXXXXXXX or +2547XXXXXXXX"/></div></div>
-      <Button type="button" className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]" onClick={sendGuestWhatsApp}>Send booking request via WhatsApp</Button>
-      <p className="text-[11px] text-muted-foreground">WhatsApp opens with your details prefilled. Review and press Send in WhatsApp. Attach any requested photos in the chat. Your appointment is not confirmed until our team replies.</p>
+      <Button type="button" className="w-full" onClick={()=>void submitGuestRequest()} disabled={saving}>{saving?'Saving your request…':quoteMode?'Submit quotation request':'Submit booking request'}</Button>
+      <p className="text-[11px] text-muted-foreground">Your request is saved securely for our team to review. Any package or add-on pricing is checked by staff before a quotation or appointment is confirmed. {config.photo_mode==='required'?'Our team may contact you for the required service photos.':''}</p>
     </section>}
     {price&&<Card className="order-last overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Package price':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
       {price.status==='priced'?<div><p className="text-xs text-muted-foreground">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Final package price':'Estimated total'}</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will review the service scope and prepare the next steps.</p>}

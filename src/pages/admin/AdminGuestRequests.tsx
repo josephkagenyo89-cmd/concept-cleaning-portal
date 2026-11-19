@@ -415,8 +415,9 @@ export default function AdminGuestRequests() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Estimate</p>
+                    <p className="text-xs text-muted-foreground">{String(item.customer_notes||'').includes('[GUIDED BOOKING DETAILS]')?'Catalogue estimate · staff review required':'Estimate'}</p>
                     <p className="font-semibold">{money(item.estimated_amount)}</p>
+                    {String(item.customer_notes||'').includes('[GUIDED BOOKING DETAILS]')&&<p className="text-[11px] text-muted-foreground">Review the captured package/add-on details in the customer message. This is not the final package or quotation price.</p>}
                     {Number(item.discount_amount) > 0 && (
                       <p className="text-xs text-muted-foreground">
                         Includes discount of {money(item.discount_amount)}
