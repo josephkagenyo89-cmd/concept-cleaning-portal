@@ -164,8 +164,11 @@ REVOKE ALL ON public.sponsored_campaigns FROM anon;
 REVOKE ALL ON public.sponsored_campaign_placements FROM anon;
 REVOKE ALL ON public.sponsored_campaign_billing_records FROM anon, authenticated;
 REVOKE ALL ON public.sponsored_campaign_events FROM anon, authenticated;
-GRANT SELECT ON public.sponsored_campaigns, public.sponsored_campaign_placements TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sponsored_campaigns, public.sponsored_campaign_placements TO authenticated;
+GRANT SELECT (id, title, description, destination_url, creative_image_url, starts_at, ends_at, currency, status)
+  ON public.sponsored_campaigns TO anon;
+GRANT SELECT ON public.sponsored_campaigns, public.sponsored_campaign_placements TO authenticated;
+GRANT SELECT ON public.sponsored_campaign_placements TO anon;
+GRANT INSERT, UPDATE, DELETE ON public.sponsored_campaigns, public.sponsored_campaign_placements TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sponsored_campaign_billing_records TO authenticated;
 GRANT SELECT ON public.sponsored_campaign_events TO authenticated;
 
