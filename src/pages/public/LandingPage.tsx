@@ -15,6 +15,7 @@ import { ServicesCatalogueContent } from './MarketingPages';
 import SocialLinks from '@/components/public/SocialLinks';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/serviceCategories';
 import { categoryImage, CATEGORY_IMAGE_OPTIONS } from '@/lib/marketplace';
+import { isBookingOfferCurrent } from '@/lib/bookingEngineOffers';
 
 const landingBackgroundImages = CATEGORY_IMAGE_OPTIONS.filter((item) => item.key !== 'monthly-offers');
 
@@ -33,8 +34,32 @@ export default function LandingPage() {
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
+  const [featuredPackages, setFeaturedPackages] = useState<Array<{ id: string; title: string; description: string | null; starts_at: string | null; ends_at: string | null }>>([]);
   const title = 'Professional Cleaning Services in Nairobi, Kenya | Concept Cleaning';
   const description = 'Book professional residential, office, upholstery, carpet, mattress and commercial cleaning, plus pest control in Nairobi and nearby areas.';
+
+  useEffect(() => {
+    let alive = true;
+    const loadFeaturedPackages = async () => {
+      const now = Date.now();
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('booking_engine_value_offers')
+        .select('id,title,description,starts_at,ends_at')
+        .eq('active', true)
+        .eq('offer_type', 'package')
+        .eq('featured', true)
+        .order('display_order')
+        .order('title');
+      if (error) throw error;
+      const current = (data || []).filter((offer) => isBookingOfferCurrent(offer, now));
+      if (alive) setFeaturedPackages(current);
+    };
+    void loadFeaturedPackages().catch((error) => {
+      console.error('Could not load published featured packages:', error);
+      if (alive) setFeaturedPackages([]);
+    });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -241,50 +266,35 @@ export default function LandingPage() {
           <BookingEngine phone={phone} />
         </section>
 
-        <section id="featured-packages" className="mt-3 rounded bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#d97706]">Curated cleaning combinations</p>
-              <h2 className="mt-1 text-xl font-black text-[#282828] sm:text-2xl">Featured Packages</h2>
-              <p className="mt-1 text-xs text-[#777]">More value in one booking, with a complimentary service included.</p>
+        {featuredPackages.length > 0 && (
+          <section id="featured-packages" className="mt-3 rounded bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#d97706]">Curated cleaning combinations</p>
+                <h2 className="mt-1 text-xl font-black text-[#282828] sm:text-2xl">Featured Packages</h2>
+                <p className="mt-1 text-xs text-[#777]">Explore published packages and request a quotation.</p>
+              </div>
+              <Link to="/packages" className="text-xs font-extrabold text-[#d97706] hover:underline">VIEW ALL PACKAGES <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
             </div>
-            <Link to="/packages" className="text-xs font-extrabold text-[#d97706] hover:underline">VIEW ALL PACKAGES <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
-          </div>
-          <div className="relative">
-            <button type="button" aria-label="Scroll featured packages left" onClick={() => document.getElementById('ccs-featured-packages-track')?.scrollBy({ left: -320, behavior: 'smooth' })} className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[#ddd] bg-white/95 text-[#333] shadow-lg transition hover:scale-105 hover:border-[#f68b1e] hover:bg-[#fff5eb] hover:text-[#d97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e]"><ChevronRight className="h-5 w-5 rotate-180" /></button>
-            <button type="button" aria-label="Scroll featured packages right" onClick={() => document.getElementById('ccs-featured-packages-track')?.scrollBy({ left: 320, behavior: 'smooth' })} className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[#ddd] bg-white/95 text-[#333] shadow-lg transition hover:scale-105 hover:border-[#f68b1e] hover:bg-[#fff5eb] hover:text-[#d97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e]"><ChevronRight className="h-5 w-5" /></button>
-            <div id="ccs-featured-packages-track" className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-12 pb-2 [scrollbar-width:thin]">
-            {[
-              { name: 'Fresh Home Package', services: 'Sofa, mattress and carpet cleaning', gift: 'FREE CARPET CLEANING', note: 'Complimentary carpet limit applies' },
-              { name: 'Complete Home Reset', services: 'Full house, kitchen and bathroom deep cleaning', gift: 'FREE FUMIGATION', note: 'Final scope confirmed during quotation' },
-              { name: 'Premium Home Refresh', services: 'Sofa, mattress and general house cleaning', gift: 'FREE FUMIGATION', note: 'Quantities and property size determine price' },
-              { name: 'Sofa Revival Package', services: 'Sofa, dining chair and cushion cleaning', gift: 'FREE CARPET CLEANING', note: 'Complimentary carpet limit applies' },
-              { name: 'Sleep Comfort Package', services: 'Mattress, headboard and bedroom deep cleaning', gift: 'FREE CARPET CLEANING', note: 'Complimentary carpet limit applies' },
-              { name: 'Car Interior Revival', services: 'Interior detailing, seats and vacuuming', gift: 'FREE DASHBOARD SHINE', note: 'Vehicle requirements determine price' },
-            ].map((item) => (
-              <article key={item.name} className="group w-[250px] shrink-0 snap-start overflow-hidden rounded-lg border border-[#e9e9e9] bg-white transition duration-200 hover:-translate-y-1 hover:border-[#f3a34d] hover:shadow-lg sm:w-[280px]">
-                <div className="flex min-h-36 items-center justify-center bg-gradient-to-br from-[#fff4e6] via-[#ffe4c2] to-[#ffd29a] px-5 py-6 text-center transition-colors duration-200 group-hover:from-[#ffe7cc] group-hover:to-[#ffc477]">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#9a580e]">Complimentary service</p>
-                    <p className="mt-2 text-2xl font-black uppercase leading-tight tracking-tight text-[#242424] sm:text-[26px]">{item.gift}</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredPackages.map((item) => (
+                <article key={item.id} className="group overflow-hidden rounded-lg border border-[#e9e9e9] bg-white transition duration-200 hover:-translate-y-1 hover:border-[#f3a34d] hover:shadow-lg">
+                  <div className="flex min-h-32 items-center justify-center bg-gradient-to-br from-[#fff4e6] via-[#ffe4c2] to-[#ffd29a] px-5 py-6 text-center">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#9a580e]">Published package</p>
+                      <p className="mt-2 text-xl font-black leading-tight tracking-tight text-[#242424]">{item.title}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="text-sm font-extrabold text-[#292929]">{item.name}</h3>
-                  <p className="mt-1 min-h-10 text-xs leading-5 text-[#666]">{item.services}</p>
-                  <div className="mt-3 rounded-md bg-[#fff7ed] px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#a45b0a]">Included at no extra charge</p>
-                    <p className="mt-0.5 text-xs font-extrabold text-[#333]">{item.gift}</p>
+                  <div className="p-4">
+                    {item.description && <p className="min-h-10 text-xs leading-5 text-[#666]">{item.description}</p>}
+                    <p className="mt-3 rounded-md bg-[#fff7ed] px-3 py-2 text-xs font-semibold text-[#333]">Quotation required · Final scope confirmed by our team</p>
+                    <Link to="/packages" className="mt-3 inline-flex items-center text-xs font-extrabold text-[#d97706] hover:underline">Explore package <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
                   </div>
-                  <p className="mt-2 min-h-8 text-[10px] leading-4 text-[#777]">{item.note}. Final price depends on actual size and quantity.</p>
-                  <Link to="/packages" className="mt-3 inline-flex items-center text-xs font-extrabold text-[#d97706] hover:underline">Explore package <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-                </div>
-              </article>
-            ))}
-          </div>
-          <div className="mt-2 flex justify-center sm:hidden"><Link to="/packages" className="text-xs font-extrabold text-[#d97706]">VIEW ALL PACKAGES <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link></div>
-          </div>
-        </section>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="market-catalogue mt-3"><ServicesCatalogueContent /></div>
 
