@@ -62,7 +62,7 @@ const matches = (rule: Row, value: any) => {
 export default function ConfiguredBookingForm({ serviceId, serviceName, initialNotes = '', quoteMode = false, initialOfferId = '' }: Props) {
   const { user, customerClient, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]), [offerOptions,setOfferOptions] = useState<Row[]>([]), [offerServices,setOfferServices] = useState<Row[]>([]);
+  const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]), [offerOptions,setOfferOptions] = useState<Row[]>([]), [offerServices,setOfferServices] = useState<Row[]>([]), [packageItems,setPackageItems] = useState<Row[]>([]);
   const [loading,setLoading] = useState(true), [error,setError] = useState('');
   const [answers,setAnswers] = useState<Record<string,any>>({}), [extras,setExtras] = useState<string[]>([]), [selectedOfferId,setSelectedOfferId] = useState('');
   const [quantity,setQuantity] = useState('1'), [date,setDate] = useState(''), [time,setTime] = useState(''), [location,setLocation] = useState('');
@@ -98,16 +98,18 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             .map((row:any)=>row.offer)
             .filter((offer:any)=>offer&&offer.offer_type!=='recurring'&&isBookingOfferCurrent(offer,now));
           const candidateIds=currentOffers.map((offer:any)=>offer.id);
+          const packageItemsResult=candidateIds.length?await db.from('booking_engine_package_items').select('id,offer_id,service_id,item_label,size_label,quantity,individual_price,complimentary,display_order,service:services!inner(id,name,is_active)').in('offer_id',candidateIds).eq('active',true).order('display_order'):{data:[],error:null};
           const linksResult=candidateIds.length
             ?await db.from('booking_engine_value_offer_services')
               .select('offer_id,relationship,quantity,service:services!inner(id,name,description,is_active)')
               .in('offer_id',candidateIds)
               .neq('relationship','trigger')
             :{data:[],error:null};
-          if(linksResult.error){
-            if(live)setError(linksResult.error.message);
+          if(linksResult.error||packageItemsResult.error){
+            if(live)setError(linksResult.error?.message||packageItemsResult.error?.message||'Could not load package contents.');
           }else{
             const allLinks=linksResult.data||[];
+            const allPackageItems=packageItemsResult.data||[];
             const eligibleOffers=currentOffers.filter((offer:any)=>{
               const linkedServices=allLinks.filter((link:any)=>
                 link.offer_id===offer.id&&(link.relationship==='included'||link.relationship==='recommended')
@@ -116,7 +118,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
               const included=linkedServices.filter((link:any)=>link.relationship==='included');
               // The server rejects an offer snapshot if any included or recommended catalogue service is inactive.
               // Keep the customer list aligned with that rule so estimate/submit cannot fail unexpectedly.
-              if(offer.offer_type==='package')return included.length>0&&linkedServicesActive;
+              if(offer.offer_type==='package'){const configured=allPackageItems.filter((item:any)=>item.offer_id===offer.id);return offer.price_mode==='fixed'&&Number(offer.price_value)>0&&configured.length>0&&configured.every((item:any)=>item.size_label?.trim()&&Number(item.quantity)>0&&(item.complimentary||Number(item.individual_price)>=0))&&linkedServicesActive;}
               return linkedServicesActive;
             }).sort((a:any,b:any)=>
               Number(Boolean(b.featured))-Number(Boolean(a.featured))||
@@ -132,6 +134,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             setConditions((cond.data||[]).filter((row:Row)=>activeIds.has(row.depends_on_question_id)));
             setScope(s.data||[]);
             setOfferOptions(eligibleOffers);
+            setPackageItems(allPackageItems.filter((item:any)=>eligibleOffers.some((offer:any)=>offer.id===item.offer_id)));
             loadedOffers=eligibleOffers;
             if(initialOfferId&&!eligibleOffers.some((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package'))setSelectedOfferId('');
             else if(initialOfferId&&eligibleOffers.some((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package'))setSelectedOfferId(initialOfferId);
@@ -294,7 +297,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     const lines = ['Hello Concept Cleaning Services, I would like to request a booking.', '', 'GUEST BOOKING REQUEST', 'Name: '+cleanName, 'WhatsApp: '+normalizedPhone, 'Service: '+serviceName, 'Preferred date: '+date, 'Preferred time: '+time, 'Service location: '+location.trim()];
     if (quantityEnabled) lines.push('Quantity: '+quantity+' '+quantityUnit);
     const selectedPackage = packageOffers.find((offer:any)=>offer.id===selectedOfferId);
-    if (selectedPackage) lines.push('Package: '+selectedPackage.title);
+    if (selectedPackage) { lines.push('Package: '+selectedPackage.title, 'Package price: '+formatKes(Number(selectedPackage.price_value)||0)); const items=packageItems.filter((item:any)=>item.offer_id===selectedPackage.id); if(items.length)lines.push('Package contents:',...items.map((item:any)=>'- '+(item.item_label||item.service?.name||'Service')+' | '+item.size_label+' | Qty '+item.quantity+(item.complimentary?' | COMPLIMENTARY':' | Included in package price'))); }
     const selectedAddons = addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id)));
     if (selectedAddons.length) lines.push('Optional extras: '+selectedAddons.map((offer:any)=>offer.title).join(', '));
     const selectedScopeExtras = groups.extra.filter((item:any)=>extras.includes(item.id));
@@ -473,20 +476,21 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       </div>;
     })}</section>}
     {packageOffers.length>0&&<section className="space-y-3 border-t pt-4">
-      <div><h3 className="text-sm font-semibold">Packages recommended for {serviceName}</h3><p className="text-xs text-muted-foreground">These offers are matched to the service you selected. Every service listed as complimentary is included at no additional charge.</p></div>
+      <div><h3 className="text-sm font-semibold">Packages recommended for {serviceName}</h3><p className="text-xs text-muted-foreground">These packages are matched to the service you selected. Review the exact service sizes, quantities and complimentary items before selecting.</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
         {packageOffers.map((offer:any)=>{
           const selected=selectedOfferId===offer.id;
           const included=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included');
+           const contents=packageItems.filter((item:any)=>item.offer_id===offer.id);
           const recommended=offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='recommended');
           return <button key={offer.id} type="button" aria-pressed={selected} onClick={()=>{setSelectedOfferId(selected?'':offer.id);setPrice(null);setAck(false);}} className={'flex h-full flex-col rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary '+(selected?'border-primary bg-primary/5 ring-1 ring-primary':'bg-background hover:border-primary/50')}>
             <span className="flex w-full flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{offer.title}</span>
               <span className="flex items-center gap-1.5">{offer.featured&&<Badge variant="secondary">Featured</Badge>}<Badge variant={selected?'default':'outline'}>{selected?'Selected':'Choose'}</Badge></span>
             </span>
-            {offer.description&&<span className="mt-2 text-xs leading-5 text-muted-foreground">{offer.description}</span>}
-            <span className="mt-3 text-sm font-semibold">{offer.price_mode==='fixed'?formatKes(Number(offer.price_value)||0):'Price confirmed after review'}</span>
-            {included.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Complimentary services · no extra charge</span><span className="mt-1 block space-y-1">{included.map((link:any,i:number)=><span key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600"/><span>{link.service?.name||'Service'}{Number(link.quantity)>1?' × '+link.quantity:''} <span className="font-semibold text-emerald-700">· FREE</span></span></span>)}</span></span>}
+            {offer.description&&!/Included services:|Price: To be quoted/i.test(offer.description)&&<span className="mt-2 text-xs leading-5 text-muted-foreground">{offer.description}</span>}
+            <span className="mt-3 text-sm font-semibold">{offer.price_mode==='fixed'?formatKes(Number(offer.price_value)||0):'Price not available'}</span>
+            {contents.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Package contents</span><span className="mt-1 block space-y-1">{contents.map((item:any,i:number)=><span key={item.id||i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600"/><span>{item.item_label||item.service?.name||'Service'} · {item.size_label} · Qty {item.quantity}{item.complimentary?<span className="font-semibold text-emerald-700"> · FREE</span>:''}</span></span>)}</span></span>}
             {recommended.length>0&&<span className="mt-3 block w-full border-t pt-2"><span className="block text-xs font-semibold">Optional complementary services</span><span className="mt-1 block space-y-1">{recommended.map((link:any,i:number)=><span key={i} className="block text-xs text-muted-foreground">• {link.service?.name||'Service'}</span>)}</span></span>}
             {offer.terms&&<span className="mt-3 block w-full border-t pt-2 text-xs text-muted-foreground">{offer.terms}</span>}
           </button>;
@@ -494,7 +498,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       </div>
       <button type="button" onClick={()=>{setSelectedOfferId('');setPrice(null);setAck(false);}} className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground">Continue with {serviceName} only</button>
     </section>}
-    {addonOffers.length>0&&<div className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Optional extras and upgrades</h3><p className="text-xs text-muted-foreground">Choose any additions you want. Their configured prices or discounts are included in the server-calculated estimate.</p><div className="space-y-2">{addonOffers.map((offer:any)=>{const key=bookingOfferSelectionKey(offer.id);const selected=extras.includes(key);const priceLabel=offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?Number(offer.price_value||0)+'% off':'included in quotation';return <label key={offer.id} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm"><Checkbox checked={selected} onCheckedChange={v=>{setExtras(old=>toggleBookingOfferSelection(old,offer.id,!!v));setPrice(null);}}/><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><b>{offer.title}</b><Badge variant="secondary">{priceLabel}</Badge></span>{offer.description&&<span className="mt-1 block text-xs text-muted-foreground">{offer.description}</span>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<span className="mt-1 block text-xs text-muted-foreground">Includes: {offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any)=>link.service?.name||'Service').join(', ')}</span>}</span></label>;})}</div></div>}
+    {addonOffers.length>0&&!selectedOfferId&&<div className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold">Optional extras and upgrades</h3><p className="text-xs text-muted-foreground">Choose any additions you want. Their configured prices or discounts are included in the server-calculated estimate.</p><div className="space-y-2">{addonOffers.map((offer:any)=>{const key=bookingOfferSelectionKey(offer.id);const selected=extras.includes(key);const priceLabel=offer.price_mode==='fixed'?'+'+formatKes(Number(offer.price_value)||0):offer.price_mode==='fixed_discount'?'-'+formatKes(Number(offer.price_value)||0):offer.price_mode==='percentage_discount'?Number(offer.price_value||0)+'% off':'included in quotation';return <label key={offer.id} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm"><Checkbox checked={selected} onCheckedChange={v=>{setExtras(old=>toggleBookingOfferSelection(old,offer.id,!!v));setPrice(null);}}/><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><b>{offer.title}</b><Badge variant="secondary">{priceLabel}</Badge></span>{offer.description&&<span className="mt-1 block text-xs text-muted-foreground">{offer.description}</span>}{offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').length>0&&<span className="mt-1 block text-xs text-muted-foreground">Includes: {offerServices.filter((link:any)=>link.offer_id===offer.id&&link.relationship==='included').map((link:any)=>link.service?.name||'Service').join(', ')}</span>}</span></label>;})}</div></div>}
     <div className="space-y-3 border-t pt-4"><h3 className="text-sm font-semibold">Service scope</h3>
       {groups.included.map(x=><p key={x.id} className="flex gap-2 text-sm"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600"/><span><b>{x.title}</b>{x.description?' — '+x.description:''}</span></p>)}
       {groups.excluded.map(x=><p key={x.id} className="text-sm text-muted-foreground">Not included: {x.title}{x.description?' — '+x.description:''}</p>)}
@@ -503,7 +507,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     {config.photo_mode !== 'none' && <div className="border-t pt-4"><h3 className="mb-2 text-sm font-semibold">Service photos {config.photo_mode === 'required' ? '*' : '(optional)'}</h3>{draftId && requestItemId ? <BookingEnginePhotoUpload requestId={draftId} itemId={requestItemId} minPhotos={config.photo_mode === 'required' ? Math.max(1, Number(config.photo_min) || 1) : 0} maxPhotos={Number(config.photo_max) > 0 ? Number(config.photo_max) : undefined} onCountChange={setPhotoCount} /> : <p className="text-xs text-muted-foreground">Review your details first to create a secure draft, then upload clear photos of the service area.</p>}</div>}
     <div className="space-y-1"><Label>Additional notes (optional)</Label><Textarea rows={2} value={notes} onChange={e=>{setNotes(e.target.value);setPrice(null);}}/></div>
     <div className="rounded-xl border border-dashed p-3 sm:p-4">
-      <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="text-sm font-semibold">Ready to see your estimate?</p><p className="mt-1 text-xs text-muted-foreground">We’ll check your selected options against the approved service pricing. No price is guessed in the browser.</p></div></div>
+      <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="text-sm font-semibold">Ready to see your estimate?</p><p className="mt-1 text-xs text-muted-foreground">We’ll calculate your service estimate using approved pricing. A selected package uses its approved final package price.</p></div></div>
       <Button className="mt-3 w-full" onClick={()=>void review()} disabled={saving}>{saving?'Calculating your estimate…':'Calculate my estimate'}</Button>
     </div>
     {!authLoading&&!user&&<section className="space-y-3 rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-4">
@@ -512,8 +516,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <Button type="button" className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]" onClick={sendGuestWhatsApp}>Send booking request via WhatsApp</Button>
       <p className="text-[11px] text-muted-foreground">WhatsApp opens with your details prefilled. Review and press Send in WhatsApp. Attach any requested photos in the chat. Your appointment is not confirmed until our team replies.</p>
     </section>}
-    {price&&<Card className="overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{price.status==='quotation_required'?'Quotation required':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
-      {price.status==='priced'?<div><p className="text-xs text-muted-foreground">Estimated total</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will prepare a formal quotation. No price has been assumed.</p>}
+    {price&&<Card className="overflow-hidden border-primary/40 shadow-sm"><CardHeader className="bg-primary/5 pb-3"><div className="flex items-center justify-between gap-2"><CardTitle className="text-sm">Your estimate</CardTitle><Badge variant="outline">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Package price':'Calculated by server'}</Badge></div></CardHeader><CardContent className="space-y-4 p-4">
+      {price.status==='priced'?<div><p className="text-xs text-muted-foreground">{selectedOfferId&&packageOffers.some((offer:any)=>offer.id===selectedOfferId)?'Final package price':'Estimated total'}</p><p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">{formatKes(Number(price.total)||0)}</p></div>:<p className="text-sm">Our team will review the service scope and prepare the next steps.</p>}
       <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium">Your selections</p><div className="mt-2 flex flex-wrap gap-1.5">{quantityEnabled&&<Badge variant="secondary">{quantity} {quantityUnit}</Badge>}{selectedOfferId&&packageOffers.filter((offer:any)=>offer.id===selectedOfferId).map((offer:any)=><Badge key={offer.id} variant="secondary">Package: {offer.title}</Badge>)}{addonOffers.filter((offer:any)=>extras.includes(bookingOfferSelectionKey(offer.id))).map((offer:any)=><Badge key={offer.id} variant="secondary">Extra: {offer.title}</Badge>)}{questions.filter(q=>visibility[q.id]?.visible&&answers[q.question_key]!==undefined&&answers[q.question_key]!=='' ).map(q=><Badge key={q.id} variant="secondary">{q.label}: {Array.isArray(answers[q.question_key])?answers[q.question_key].join(', '):String(answers[q.question_key])}</Badge>)}</div>{Array.isArray(price.selected_addons)&&price.selected_addons.length>0&&<div className="mt-3 border-t pt-3"><p className="text-xs font-semibold">Optional extras included in this estimate</p><ul className="mt-2 space-y-1.5">{price.selected_addons.map((addon:any)=><li key={addon.id} className="flex items-start justify-between gap-3 text-xs"><span>{addon.title}</span><span className="shrink-0 font-medium tabular-nums">{addon.price_mode==='fixed'?'+'+formatKes(Number(addon.price_value)||0):addon.price_mode==='fixed_discount'?'-'+formatKes(Number(addon.calculated_amount??addon.price_value)||0):addon.price_mode==='percentage_discount'?Number(addon.price_value||0)+'% discount':'Included in quotation'}</span></li>)}</ul></div>}</div>
       <p className="text-xs text-muted-foreground">This is an estimate, not a confirmed appointment. Our team will review your request and confirm availability.</p>
       <label className="flex items-start gap-2 text-sm"><Checkbox checked={ack} onCheckedChange={v=>setAck(!!v)}/><span>I have reviewed and acknowledge the included and excluded service scope.</span></label>

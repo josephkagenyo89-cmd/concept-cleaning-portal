@@ -18,6 +18,7 @@ export default function AdminBookingEngineRequests(){
  const [requests,setRequests]=useState<Row[]>([]);
  const [clients,setClients]=useState<Row[]>([]);
  const [items,setItems]=useState<Row[]>([]);
+ const [requestOffers,setRequestOffers]=useState<Record<string,Row>>({});
  const [services,setServices]=useState<Row[]>([]);
  const [events,setEvents]=useState<Row[]>([]);
  const [photos,setPhotos]=useState<Row[]>([]);
@@ -36,12 +37,14 @@ export default function AdminBookingEngineRequests(){
   const rows=r.data??[];setRequests(rows);setSelectedId(old=>old&&rows.some((x:Row)=>x.id===old)?old:(rows[0]?.id??''));
   const clientIds=[...new Set(rows.map((x:Row)=>x.customer_id).filter(Boolean))];
   const requestIds=rows.map((x:Row)=>x.id);
-  const [c,i]=await Promise.all([
+  const [c,i,o]=await Promise.all([
    clientIds.length?db.from('clients').select('id,full_name,phone,email').in('id',clientIds):Promise.resolve({data:[],error:null}),
-   requestIds.length?db.from('booking_engine_request_items').select('*').in('request_id',requestIds).order('display_order'):Promise.resolve({data:[],error:null})
+   requestIds.length?db.from('booking_engine_request_items').select('*').in('request_id',requestIds).order('display_order'):Promise.resolve({data:[],error:null}),
+   requestIds.length?db.from('booking_engine_request_offers').select('request_id,offer_snapshot').in('request_id',requestIds):Promise.resolve({data:[],error:null})
   ]);
-  if(c.error||i.error)toast({title:'Some request details could not be loaded',description:c.error?.message||i.error?.message,variant:'destructive'});
+  if(c.error||i.error||o.error)toast({title:'Some request details could not be loaded',description:c.error?.message||i.error?.message||o.error?.message,variant:'destructive'});
   setClients(c.data??[]);setItems(i.data??[]);
+  const offerMap:Record<string,Row>={};(o.data??[]).forEach((row:Row)=>{offerMap[row.request_id]=row.offer_snapshot||{};});setRequestOffers(offerMap);
   const serviceIds=[...new Set((i.data??[]).map((x:Row)=>x.service_id))];
   if(serviceIds.length){const s=await db.from('services').select('id,name,service_code').in('id',serviceIds);if(s.error)toast({title:'Could not load service names',description:s.error.message,variant:'destructive'});setServices(s.data??[]);}else setServices([]);
   const roleRows=await db.from('user_roles').select('user_id,role').in('role',['admin','super_admin']);
@@ -130,6 +133,7 @@ export default function AdminBookingEngineRequests(){
     <Card><CardHeader><CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base"><span>{selected.request_number}</span><Badge>{statusLabel(selected.status)}</Badge></CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
      <div className="grid gap-2 sm:grid-cols-2"><div><span className="text-xs text-muted-foreground">Customer</span><p className="font-medium">{client?.full_name||'Customer record unavailable'}</p><p className="text-xs text-muted-foreground">{client?.phone||''}</p></div><div><span className="text-xs text-muted-foreground">Preferred schedule</span><p>{selected.requested_date||'Not specified'} {selected.requested_time||''}</p></div><div className="sm:col-span-2"><span className="text-xs text-muted-foreground">Location</span><p>{selected.service_location||'Not provided'}</p></div></div>
      {selected.customer_notes&&<div className="rounded border p-3"><b className="text-xs">Customer notes</b><p className="mt-1 whitespace-pre-wrap">{selected.customer_notes}</p></div>}
+     {requestOffers[selected.id]?.offer_type==='package'&&<div className="rounded border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><b className="text-xs">Selected package · {requestOffers[selected.id].title}</b><b className="text-sm">KES {Number(requestOffers[selected.id].price_value||0).toLocaleString('en-KE')}</b></div><div className="mt-2 space-y-1">{(requestOffers[selected.id].package_items||[]).map((part:any)=> <p key={part.id} className="text-xs">{part.name} · {part.size_label} · Qty {part.quantity}{part.complimentary?' · Complimentary':' · Included in package price'}</p>)}</div></div>}
      <div className="rounded border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><b className="text-xs">Assigned reviewer</b><span className="text-xs text-muted-foreground">{staff.find(x=>x.user_id===selected.assigned_to)?.full_name||'Unassigned'}</span></div><select className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm" value={selected.assigned_to||''} onChange={e=>void assign(e.target.value)} disabled={saving}><option value="">Unassigned</option>{staff.map(member=><option key={member.user_id} value={member.user_id}>{member.full_name||member.user_id}</option>)}</select></div>
      <div><b className="text-xs">Requested services</b><div className="mt-2 space-y-2">{selectedItems.map(item=><div key={item.id} className="rounded border p-3">
       <div className="flex flex-wrap justify-between gap-2"><b>{serviceName(item.service_id)}</b><span className="text-xs text-muted-foreground">Qty {item.quantity??1}</span></div>

@@ -48,6 +48,8 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
    toast({ title: 'Complete the service, size/variant, quantity and individual price', variant: 'destructive' }); return;
   }
   setSaving(true);
+  const unpublish=await db.from('booking_engine_value_offers').update({active:false,featured:false,updated_at:new Date().toISOString()}).eq('id',offerId);
+  if(unpublish.error){toast({title:'Could not return package to draft',description:unpublish.error.message,variant:'destructive'});setSaving(false);return;}
   const row = { offer_id: offerId, service_id: draft.service_id, item_label: draft.item_label.trim() || null, size_label: draft.size_label.trim(), quantity, individual_price: draft.complimentary ? 0 : price, complimentary: draft.complimentary, display_order: items.length, active: true };
   const r = editingItemId
    ? await db.from('booking_engine_package_items').update(row).eq('id', editingItemId).select('*').single()
@@ -59,6 +61,8 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
  const editItem = (item: Item) => { setEditingItemId(item.id || null); setDraft({ ...item }); };
  const removeItem = async (item: Item) => {
   if (!item.id) return;
+  const unpublish=await db.from('booking_engine_value_offers').update({active:false,featured:false,updated_at:new Date().toISOString()}).eq('id',offerId);
+  if(unpublish.error){toast({title:'Could not return package to draft',description:unpublish.error.message,variant:'destructive'});return;}
   const r = await db.from('booking_engine_package_items').delete().eq('id', item.id);
   if (r.error) toast({ title: 'Could not remove package item', description: r.error.message, variant: 'destructive' });
   else setItems(old => old.filter(x => x.id !== item.id));
@@ -71,13 +75,13 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
   const finalPrice = items.filter(i => i.active && !i.complimentary).reduce((sum, i) => sum + Number(i.individual_price) * Number(i.quantity), 0);
   if (finalPrice <= 0) { toast({ title: 'The package final price must be greater than zero', variant: 'destructive' }); return; }
   setSaving(true);
-  const r = await db.from('booking_engine_value_offers').update({ price_mode: 'fixed', price_value: finalPrice, currency: 'KES', updated_at: new Date().toISOString() }).eq('id', offerId).select('id').single();
+  const r = await db.from('booking_engine_value_offers').update({ active:false, featured:false, price_mode: 'fixed', price_value: finalPrice, currency: 'KES', updated_at: new Date().toISOString() }).eq('id', offerId).select('id').single();
   if (r.error) toast({ title: 'Package price was not saved', description: r.error.message, variant: 'destructive' });
   else toast({ title: 'Package price saved', description: 'Final customer price: KSh ' + finalPrice.toLocaleString('en-KE') });
   setSaving(false);
  };
  return <Card>
-  <CardHeader><CardTitle className="text-base">Package contents, sizes and individual prices</CardTitle><p className="text-sm text-muted-foreground">Configure each package separately. These prices do not change the normal service catalogue. Customers see the service, size, quantity and one final package price.</p></CardHeader>
+  <CardHeader><CardTitle className="text-base">Package contents, sizes and individual prices</CardTitle><p className="text-sm text-muted-foreground">Configure each package separately. These prices do not change the normal service catalogue. Customers see the service, size, quantity and one final package price. Editing a published package automatically returns it to draft for reapproval.</p></CardHeader>
   <CardContent className="space-y-4">
    <div className="space-y-1"><Label>Select package to configure</Label><Select value={offerId} onValueChange={setOfferId}><SelectTrigger><SelectValue placeholder="Choose a package" /></SelectTrigger><SelectContent>{packages.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}</SelectContent></Select></div>
    {selected && <>
