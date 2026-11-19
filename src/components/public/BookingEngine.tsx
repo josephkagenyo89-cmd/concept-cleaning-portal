@@ -511,14 +511,34 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const waNoMatch = waLink(phone, `Hello Concept Cleaning Services, I am looking for: ${query.trim()}`);
 
   return (
-    <section id="booking" aria-label="Book a service" className="w-full max-w-3xl rounded-3xl bg-white p-4 text-[#0F172A] shadow-2xl sm:p-6 lg:p-8">
-      <style>{`.be-rise{animation:be-rise .35s ease both}@keyframes be-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){.be-rise{animation:none}}`}</style>
+    <section id="booking" aria-label="Book a service" className="relative w-full overflow-visible rounded-[26px] border border-slate-200/80 bg-white text-slate-900 shadow-[0_24px_70px_-35px_rgba(15,23,42,.35)]">
+      <style>{`
+        .be-rise{animation:be-rise .35s ease both}
+        @keyframes be-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+        .be-field{height:48px;width:100%;border:1px solid #dbe2ea;border-radius:12px;background:#fff;padding:0 13px;font-size:14px;font-weight:600;color:#172033;outline:none;transition:border-color .18s,box-shadow .18s}
+        .be-field:focus{border-color:#f68b1e;box-shadow:0 0 0 3px rgba(246,139,30,.13)}
+        .be-textarea{width:100%;border:1px solid #dbe2ea;border-radius:12px;background:#fff;padding:12px 13px;font-size:14px;color:#172033;outline:none;transition:border-color .18s,box-shadow .18s}
+        .be-textarea:focus{border-color:#f68b1e;box-shadow:0 0 0 3px rgba(246,139,30,.13)}
+        .be-step{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#94a3b8}
+        .be-step-active{color:#fff}
+        .be-step-dot{display:grid;height:27px;width:27px;place-items:center;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:11px}
+        .be-step-active .be-step-dot{background:#f68b1e;color:#fff;box-shadow:0 0 0 4px rgba(246,139,30,.13)}
+        @media (prefers-reduced-motion:reduce){.be-rise{animation:none}}
+      `}</style>
+      <div className="rounded-t-[25px] bg-gradient-to-r from-[#172033] via-[#202b3d] to-[#303b4d] px-5 py-5 text-white sm:px-7 sm:py-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#ffbd75]">Concept Cleaning · Smart Booking</p><h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">Book your cleaning, your way.</h2><p className="mt-1 max-w-xl text-xs leading-5 text-white/70 sm:text-sm">Choose a service, tell us about your space and request your preferred time. Our team will confirm the details.</p></div>
+          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-bold text-white/85"><span className="h-2 w-2 rounded-full bg-emerald-400" />LIVE SERVICE CATALOGUE</div>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2"><div className="be-step be-step-active"><span className="be-step-dot">1</span>Choose service</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className={`be-step ${selected ? 'be-step-active' : ''}`}><span className="be-step-dot">2</span>Job details</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className="be-step"><span className="be-step-dot">3</span>Request confirmation</div></div>
+      </div>
+      <div className="p-4 sm:p-6 lg:p-7">
 
       {!selected ? (
         <div ref={wrapRef} className="be-rise">
-          <h2 className="text-xl font-black tracking-tight sm:text-2xl">What do you need today?</h2>
+          <div className="mb-4"><h3 className="text-lg font-black tracking-tight text-[#172033] sm:text-xl">What service can we help you with?</h3><p className="mt-1 text-sm text-slate-500">Search by service name or browse a category below.</p></div>
           <div className="relative mt-4">
-            <div className="flex items-center gap-2 rounded-2xl bg-[#F1F5F9] px-4 ring-2 ring-transparent transition focus-within:bg-white focus-within:ring-[#0F172A]">
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 shadow-sm transition focus-within:border-[#f68b1e] focus-within:bg-white focus-within:ring-4 focus-within:ring-orange-100">
               <Search className="h-5 w-5 shrink-0 text-[#475569]" aria-hidden="true" />
               <input
                 ref={inputRef}
@@ -534,7 +554,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
                 onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); ensureLoaded(); }}
                 onKeyDown={onKeyDown}
                 placeholder="Try “sofa”, “cockroaches”, “office”…"
-                className="h-14 min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:font-medium placeholder:text-[#64748B]"
+                className="h-14 min-w-0 flex-1 bg-transparent text-base font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
               />
               {query && (
                 <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); inputRef.current?.focus(); }} className="rounded-full p-1.5 text-[#475569] hover:bg-[#E2E8F0]">
@@ -594,15 +614,15 @@ export default function BookingEngine({ phone }: { phone: string }) {
         </div>
       ) : (
         <div className="be-rise">
-          <button type="button" onClick={change} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#475569] hover:text-[#0F172A]"><ArrowLeft className="h-4 w-4" />Change service</button>
-          <div className="mt-3 overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-[#d97706]">Step 2 of 3</p><h3 className="mt-1 text-lg font-black text-[#172033]">Tell us about your booking</h3><p className="mt-1 text-xs text-slate-500">A few details help us prepare an accurate response.</p></div><button type="button" onClick={change} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-[#f68b1e] hover:bg-orange-50 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />Change service</button></div>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <ServiceVisual
               image={serviceImage(selected)}
               alt={selected.name}
               loading="eager"
               className="h-40 w-full object-cover sm:h-48"
             />
-            <div className="bg-[#F1F5F9] p-4">
+            <div className="bg-gradient-to-r from-slate-50 to-orange-50/70 p-4">
               <p className="text-xs font-bold text-[#475569]">{selected.category}{selected.estimated_duration ? ` · ${selected.estimated_duration}` : ''}</p>
               <h2 className="mt-0.5 text-lg font-black leading-snug">{selected.name}</h2>
               {selected.short_description && (
@@ -614,7 +634,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
             <label className="block md:col-span-1">
               <span className="text-sm font-bold">Service address / estate / building</span>
-              <input type="text" required autoComplete="street-address" maxLength={500} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Spirittan Apartments, Pipeline, Embakasi" className="mt-1.5 h-12 w-full rounded-xl border border-[#E2E8F0] px-3 text-sm font-semibold outline-none focus:border-[#0F172A]" />
+              <input type="text" required autoComplete="street-address" maxLength={500} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Spirittan Apartments, Pipeline, Embakasi" className="be-field mt-1.5" />
               <span className="mt-1 block text-xs text-[#64748B]">Include the estate, building, road or a nearby landmark. Add access details when our team contacts you.</span>
             </label>
 
@@ -646,7 +666,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
                 value={customerNotes}
                 onChange={(e) => setCustomerNotes(e.target.value)}
                 placeholder={contextPrompt}
-                className="mt-1.5 w-full resize-y rounded-xl border border-[#E2E8F0] px-3 py-3 text-sm font-medium outline-none focus:border-[#0F172A]"
+                className="be-textarea mt-1.5 resize-y"
               />
               <span className="mt-1 block text-xs text-[#64748B]">These details help us understand the job before confirming the price and appointment.</span>
             </label>
@@ -765,7 +785,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
             </div>
           )}
 
-          <div className="mt-5 rounded-2xl border border-[#E2E8F0] p-4" aria-live="polite">
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-orange-50/50 p-5" aria-live="polite">
             {ready ? (
               <div className="be-rise">
                 <p className="text-xs font-bold text-[#475569]">Estimated total</p>
@@ -791,7 +811,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
               type="button"
               disabled={!submissionReady}
               onClick={() => go('booking')}
-              className="h-12 rounded-xl bg-[#F97316] font-extrabold text-[#172033] hover:bg-[#FB923C] disabled:opacity-40"
+              className="h-12 rounded-xl bg-[#f68b1e] font-extrabold text-white shadow-md shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-[#e77d10] disabled:opacity-40"
             >
               {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : <>Book now <ArrowRight className="ml-1.5 h-4 w-4" /></>}
             </Button>
@@ -800,7 +820,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
               variant="outline"
               disabled={!submissionReady}
               onClick={() => go('quotation')}
-              className="h-12 rounded-xl border-[#E2E8F0] font-bold disabled:opacity-40"
+              className="h-12 rounded-xl border-slate-300 font-bold text-slate-800 transition hover:border-[#f68b1e] hover:bg-orange-50 disabled:opacity-40"
             >
               Get quotation
             </Button>
@@ -810,6 +830,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           </p>
         </div>
       )}
+      </div>
     </section>
   );
 }
