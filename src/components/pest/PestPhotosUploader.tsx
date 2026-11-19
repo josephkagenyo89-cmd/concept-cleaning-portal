@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImageToWebP } from '@/lib/imageCompression';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -31,13 +32,23 @@ export default function PestPhotosUploader({ jobId }: { jobId: string }) {
   const upload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploading(true);
-    for (const file of Array.from(files)) {
-      const path = `${jobId}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, '_')}`;
-      const { error: upErr } = await (supabase as any).storage.from('pest-photos').upload(path, file, { upsert: false });
-      if (upErr) { toast({ title: upErr.message, variant: 'destructive' }); continue; }
-      await (supabase as any).from('pest_photos').insert({ pest_job_id: jobId, storage_path: path, kind, uploaded_by: user!.id });
-    }
-    setUploading(false);
+    try {
+      for (const file of Array.from(files)) {
+        const compressed = await compressImageToWebP(file);
+        const token = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2);
+        const safeName = file.name.replace(/[^\w.\-]+/g, '_').replace(/\.[^.]+$/, '');
+        const path = `${jobId}/${token}-${safeName}.webp`;
+        const { error: upErr } = await (supabase as any).storage.from('pest-photos').upload(path, compressed, { contentType: 'image/webp', upsert: false });
+        if (upErr) throw upErr;
+        const { error: rowErr } = await (supabase as any).from('pest_photos').insert({ pest_job_id: jobId, storage_path: path, kind, uploaded_by: user!.id });
+        if (rowErr) {
+          await (supabase as any).storage.from('pest-photos').remove([path]);
+          throw rowErr;
+        }
+      }
+    } catch (error: any) {
+      toast({ title: 'Photo upload failed', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally { setUploading(false); }
     if (fileRef.current) fileRef.current.value = '';
     load();
   };
@@ -56,7 +67,7 @@ export default function PestPhotosUploader({ jobId }: { jobId: string }) {
           <option value="after">After</option>
           <option value="evidence">Infestation evidence</option>
         </select>
-        <input ref={fileRef} type="file" accept="image/*" multiple onChange={(e) => upload(e.target.files)} className="text-sm" />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => upload(e.target.files)} className="text-sm" />
         {uploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
       {photos.length === 0 ? <p className="text-sm text-muted-foreground">No photos uploaded.</p> :
@@ -72,7 +83,7 @@ export default function PestPhotosUploader({ jobId }: { jobId: string }) {
           ))}
         </div>
       }
-      <p className="text-xs text-muted-foreground"><Upload className="h-3 w-3 inline mr-1" /> Photos are stored privately in Lovable Cloud.</p>
+      <p className="text-xs text-muted-foreground"><Upload className="h-3 w-3 inline mr-1" /> JPG, PNG or WebP images are converted to WebP (maximum 20 KB each) and stored privately.</p>
     </Card>
   );
 }

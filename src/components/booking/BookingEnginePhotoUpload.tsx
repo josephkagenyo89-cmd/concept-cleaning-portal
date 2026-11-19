@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImageToWebP } from '@/lib/imageCompression';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,8 +11,6 @@ type PhotoRow = { id: string; storage_path: string; photo_category: string; orig
 type Props = { requestId: string; itemId: string; minPhotos?: number; maxPhotos?: number; onCountChange?: (count: number) => void };
 const db = supabase as any;
 const BUCKET = 'booking-engine-photos';
-const MAX_FILE_BYTES = 1 * 1024 * 1024;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const CATEGORIES = [
   { value: 'overall_area', label: 'Overall area' },
   { value: 'problem_area', label: 'Problem area' },
@@ -53,24 +52,14 @@ export default function BookingEnginePhotoUpload({ requestId, itemId, minPhotos 
       toast({ title: 'Photo limit reached', description: 'You can upload a maximum of ' + maxPhotos + ' photos.', variant: 'destructive' });
       return;
     }
-    for (const file of selected) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        toast({ title: 'Unsupported photo format', description: 'Use JPG, PNG or WebP images.', variant: 'destructive' });
-        return;
-      }
-      if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
-        toast({ title: 'Photo is too large', description: 'Each image must be 1 MB or smaller.', variant: 'destructive' });
-        return;
-      }
-    }
-
     setBusy(true);
     try {
       for (const file of selected) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'photo';
+        const compressed = await compressImageToWebP(file);
+        const safeName = (file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-96) || 'photo') + '.webp';
         const token = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2);
         const path = requestId + '/' + itemId + '/' + token + '-' + safeName;
-        const stored = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+        const stored = await supabase.storage.from(BUCKET).upload(path, compressed, { contentType: 'image/webp', upsert: false });
         if (stored.error) throw stored.error;
         const metadata = await db.from('booking_engine_request_photos').insert({
           request_id: requestId,
@@ -78,8 +67,8 @@ export default function BookingEnginePhotoUpload({ requestId, itemId, minPhotos 
           storage_path: path,
           photo_category: category,
           original_filename: file.name,
-          mime_type: file.type,
-          file_size_bytes: file.size,
+          mime_type: 'image/webp',
+          file_size_bytes: compressed.size,
         });
         if (metadata.error) {
           await supabase.storage.from(BUCKET).remove([path]);
@@ -115,7 +104,7 @@ export default function BookingEnginePhotoUpload({ requestId, itemId, minPhotos 
 
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs text-muted-foreground">JPG, PNG or WebP · maximum 1 MB each</p>
+      <p className="text-xs text-muted-foreground">JPG, PNG or WebP · converted to WebP · maximum 20 KB each</p>
       <Badge variant={photos.length >= minPhotos ? 'secondary' : 'outline'}>{photos.length}{minPhotos ? ' / at least ' + minPhotos : ' uploaded'}{maxPhotos ? ' · max ' + maxPhotos : ''}</Badge>
     </div>
     <div className="flex flex-col gap-2 sm:flex-row">

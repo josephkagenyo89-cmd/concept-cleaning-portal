@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImageToWebP } from '@/lib/imageCompression';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,27 +113,6 @@ const SPONSORED_MEDIA_PREFIX = 'sponsored-campaigns';
 const SPONSORED_MEDIA_MAX_BYTES = 20 * 1024;
 type SponsoredMediaItem = { name: string; metadata?: Record<string, unknown> };
 
-async function compressSponsoredImage(file: File): Promise<Blob> {
- if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('Choose a JPG, PNG or WebP image.');
- const bitmap=await createImageBitmap(file);
- try {
-  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
-  if(!ctx) throw new Error('Your browser could not prepare this image.');
-  const scales=[1,.85,.7,.58,.48,.38,.3,.24,.19,.15,.12],qualities=[.82,.7,.58,.46,.34,.24,.16,.1];
-  for(const scale of scales){
-   const factor=Math.min(scale,1600/Math.max(bitmap.width,bitmap.height));
-   canvas.width=Math.max(1,Math.round(bitmap.width*factor));canvas.height=Math.max(1,Math.round(bitmap.height*factor));
-   ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-   for(const quality of qualities){
-    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',quality));
-    if(!blob||blob.type!=='image/webp') throw new Error('This browser cannot encode WebP images.');
-    if(blob.size<=SPONSORED_MEDIA_MAX_BYTES)return blob;
-   }
-  }
-  throw new Error('This image cannot be reduced to 20 KB. Try a simpler image with fewer details.');
- } finally {bitmap.close();}
-}
-
 function SponsoredMediaPicker({value,onChange}:{value:string;onChange:(url:string)=>void}){
  const [open,setOpen]=useState(false),[items,setItems]=useState<SponsoredMediaItem[]>([]),[search,setSearch]=useState('');
  const [loading,setLoading]=useState(false),[uploading,setUploading]=useState(false),[deleting,setDeleting]=useState('');
@@ -149,7 +129,7 @@ function SponsoredMediaPicker({value,onChange}:{value:string;onChange:(url:strin
  const upload=async(file?:File)=>{
   if(!file)return;setUploading(true);
   try{
-   const compressed=await compressSponsoredImage(file);
+   const compressed=await compressImageToWebP(file,SPONSORED_MEDIA_MAX_BYTES);
    if(compressed.size>SPONSORED_MEDIA_MAX_BYTES)throw new Error('The compressed image exceeds the 20 KB maximum.');
    const base=file.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,36)||'campaign-image';
    const name=base+'-'+crypto.randomUUID()+'.webp';
