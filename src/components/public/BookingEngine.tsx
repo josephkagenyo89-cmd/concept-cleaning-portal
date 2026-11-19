@@ -603,14 +603,53 @@ export default function BookingEngine({ phone }: { phone: string }) {
             )}
           </div>
 
-          {categories.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Browse by category">
-              {categories.map((c) => (
-                <button key={c} type="button" aria-pressed={category === c} className={chip(category === c)}
-                  onClick={() => { setCategory(category === c ? '' : c); setActive(0); setOpen(true); ensureLoaded(); inputRef.current?.focus(); }}>{c}</button>
-              ))}
+          <div className="mt-5" role="group" aria-label="Popular booking categories">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-black uppercase tracking-[.14em] text-slate-500">Shop services by category</p>
+              <span className="text-[10px] font-semibold text-slate-400">Tap a category to see matching services</span>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { label: 'Car Interior Cleaning', query: 'car interior' },
+                { label: 'Carpet & Rug Cleaning', query: 'carpet rug' },
+                { label: 'Deep Cleaning', query: 'deep cleaning' },
+                { label: 'Fumigation & Pest Control', query: 'fumigation pest control' },
+                { label: 'General Cleaning', query: 'general cleaning' },
+                { label: 'Post Construction / Move-In', query: 'post construction move in' },
+                { label: 'Sofa / Upholstery Cleaning', query: 'sofa upholstery' },
+              ].map((item) => {
+                const activeQuickPick = query.toLocaleLowerCase() === item.query;
+                return (
+                  <button key={item.label} type="button" aria-pressed={activeQuickPick}
+                    onClick={() => {
+                      setCategory('');
+                      setQuery(item.query);
+                      setActive(0);
+                      setOpen(true);
+                      ensureLoaded();
+                      inputRef.current?.focus();
+                    }}
+                    className={`group flex min-h-[58px] items-center justify-between gap-2 rounded-lg border px-3 py-3 text-left text-xs font-extrabold leading-4 transition duration-200 hover:-translate-y-0.5 hover:border-[#f68b1e] hover:bg-[#fff7ed] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e] sm:text-[13px] ${activeQuickPick ? 'border-[#f68b1e] bg-[#fff3e4] text-[#9a4f08] shadow-sm' : 'border-slate-200 bg-white text-slate-700'}`}>
+                    <span>{item.label}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-[#e88924] transition-transform group-hover:translate-x-1" />
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => {
+                setCategory('');
+                setQuery('');
+                setOpen(false);
+                document.getElementById('featured-packages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+                className="group flex min-h-[58px] items-center justify-between gap-2 rounded-lg border border-dashed border-[#f0a24e] bg-[#fff8ef] px-3 py-3 text-left text-xs font-extrabold leading-4 text-[#a45b0a] transition duration-200 hover:-translate-y-0.5 hover:border-[#e88924] hover:bg-[#fff0dc] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e] sm:text-[13px]">
+                <span className="min-w-0">
+                  <span className="block">Monthly offer</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold text-[#a45b0a]/75">{globalDiscount.active ? `${globalDiscount.percentage}% OFF · VIEW PACKAGES` : 'Explore featured packages'}</span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="be-rise">
