@@ -64,7 +64,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
   const whatsapp = waLink(phone, 'Hello Concept Cleaning Services, I would like to enquire about your services.');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#172033]">
+    <div className="min-h-screen bg-[#f1f1f2] text-[#313133]">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-3" aria-label={company + ' home'}>
@@ -81,7 +81,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                className={({ isActive }) => 'transition-colors hover:text-teal-700 ' + (isActive ? 'text-teal-700' : 'text-slate-600')}
+                className={({ isActive }) => 'transition-colors hover:text-orange-700 ' + (isActive ? 'text-orange-700' : 'text-slate-600')}
               >
                 {item.label}
               </NavLink>
@@ -92,7 +92,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
             <Button asChild variant="outline" className="border-slate-200 bg-white text-slate-800">
               <Link to="/marketplace">Customer booking</Link>
             </Button>
-            <Button asChild className="bg-teal-700 text-white hover:bg-teal-800">
+            <Button asChild className="bg-orange-600 text-white hover:bg-orange-700">
               <a href={whatsapp} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
               </a>
@@ -117,7 +117,7 @@ function MarketingLayout({ children }: { children: ReactNode }) {
                 {item.label}
               </Link>
             ))}
-            <Link to="/marketplace" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold text-teal-700">
+            <Link to="/marketplace" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-semibold text-orange-700">
               Book a service
             </Link>
           </nav>
@@ -126,14 +126,14 @@ function MarketingLayout({ children }: { children: ReactNode }) {
 
       <main>{children}</main>
 
-      <footer className="mt-16 bg-[#102A2A] text-white">
+      <footer className="mt-16 bg-[#282828] text-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
           <div className="md:col-span-2">
             <p className="text-lg font-extrabold">{company}</p>
             <p className="mt-3 max-w-md text-sm leading-6 text-white/70">
               Professional residential, commercial, upholstery, carpet, car interior cleaning and pest-control services in Nairobi and surrounding areas.
             </p>
-            <Link to="/" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white hover:text-teal-200">
+            <Link to="/" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white hover:text-orange-200">
               Return to homepage <ArrowRight className="h-4 w-4" />
             </Link>
             <SocialLinks />
@@ -161,10 +161,10 @@ function MarketingLayout({ children }: { children: ReactNode }) {
           © {new Date().getFullYear()} {company}. All rights reserved.
         </p>
       </footer>
-      <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-slate-200 bg-white text-teal-800 sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-slate-200 bg-white text-orange-800 sm:hidden">
         <a href={'tel:' + phone} className="flex flex-col items-center gap-1 py-2 text-xs font-semibold"><Phone className="h-5 w-5" />Call</a>
         <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 py-2 text-xs font-semibold"><MessageCircle className="h-5 w-5" />WhatsApp</a>
-        <Link to="/marketplace" className="flex flex-col items-center gap-1 bg-teal-700 py-2 text-xs font-bold text-white"><Sparkles className="h-5 w-5" />Book now</Link>
+        <Link to="/marketplace" className="flex flex-col items-center gap-1 bg-orange-600 py-2 text-xs font-bold text-white"><Sparkles className="h-5 w-5" />Book now</Link>
       </div>
     </div>
   );
@@ -174,7 +174,7 @@ function PageHero({ eyebrow, title, description }: { eyebrow: string; title: str
   return (
     <section className="bg-[#0B3D3B] px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-teal-200">{eyebrow}</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-orange-200">{eyebrow}</p>
         <h1 className="mt-4 max-w-4xl text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">{title}</h1>
         <p className="mt-5 max-w-3xl text-sm leading-7 text-white/80 sm:text-base">{description}</p>
       </div>
@@ -189,13 +189,13 @@ function PageCta({ title, description }: { title: string; description: string })
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex flex-col justify-between gap-5 rounded-3xl bg-teal-700 p-7 text-white sm:p-10 lg:flex-row lg:items-center">
+      <div className="flex flex-col justify-between gap-5 rounded-3xl bg-orange-600 p-7 text-white sm:p-10 lg:flex-row lg:items-center">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-black sm:text-3xl">{title}</h2>
           <p className="mt-2 text-sm leading-6 text-white/80">{description}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button asChild className="bg-white text-teal-800 hover:bg-teal-50"><Link to="/marketplace">Book a service <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button asChild className="bg-white text-orange-800 hover:bg-teal-50"><Link to="/marketplace">Book a service <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           <Button asChild variant="outline" className="border-white/50 bg-transparent text-white hover:bg-white/10 hover:text-white"><a href={href} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp us</a></Button>
         </div>
       </div>
@@ -224,10 +224,10 @@ function ServiceCard({ service, category }: { service: PublicService; category: 
       </Link>
       <div className="p-5">
         <h3 className="text-lg font-extrabold leading-snug text-slate-900">
-          <Link to={'/service/' + encodeURIComponent(service.slug || service.id)} className="hover:text-teal-700">{service.name}</Link>
+          <Link to={'/service/' + encodeURIComponent(service.slug || service.id)} className="hover:text-orange-700">{service.name}</Link>
         </h3>
         <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{summary}</p>
-        <Link to={'/service/' + encodeURIComponent(service.slug || service.id)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700 hover:text-teal-900">
+        <Link to={'/service/' + encodeURIComponent(service.slug || service.id)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-orange-700 hover:text-teal-900">
           View service <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -260,9 +260,9 @@ function CategoryCard({ category }: { category: ServiceCategory }) {
     >
       <img src={categoryImage(category.name, category.image_key)} alt="" loading="lazy" className="h-52 w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
       <div className="p-6">
-        <h2 className="text-xl font-black text-slate-900 group-hover:text-teal-700">{category.name}</h2>
+        <h2 className="text-xl font-black text-slate-900 group-hover:text-orange-700">{category.name}</h2>
         <p className="mt-3 text-sm leading-7 text-slate-600">{categoryPurpose(category)}</p>
-        <span className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-teal-700">Explore category <ArrowRight className="h-4 w-4" /></span>
+        <span className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-orange-700">Explore category <ArrowRight className="h-4 w-4" /></span>
       </div>
     </Link>
   );
@@ -312,7 +312,7 @@ export function HomeContentSections() {
   }, []);
 
   return (
-    <div className="bg-[var(--bg)] text-[var(--text)]" style={{ "--primary": "#0F766E", "--primary-dark": "#115E59", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
+    <div className="bg-[var(--bg)] text-[var(--text)]" style={{ "--primary": "#D97706", "--primary-dark": "#B45309", "--secondary": "#0284C7", "--cta": "#F97316", "--cta-text": "#0F172A", "--cta-hover": "#EA580C", "--whatsapp": "#25D366", "--whatsapp-text": "#0B3D1E", "--success": "#16A34A", "--bg": "#F8FAFC", "--surface": "#FFFFFF", "--text": "#0F172A", "--muted": "#475569", "--border": "#E2E8F0", "--error": "#DC2626" } as React.CSSProperties}>
         <section id="cleaning-services-nairobi" className="border-y border-[var(--border)] bg-white py-14 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
@@ -380,22 +380,22 @@ export function HomeContentSections() {
               </div>
             </div>
 
-            <div className="mt-14 grid gap-8 rounded-3xl bg-[#F1F8F8] p-6 sm:p-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+            <div className="mt-14 grid gap-8 rounded-3xl bg-[#FFF7ED] p-6 sm:p-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0F766E]">For every kind of property</p>
-                <h2 className="mt-3 text-2xl font-black tracking-tight text-[#102A2A] sm:text-3xl">Residential and Commercial Cleaning Across Nairobi</h2>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#D97706]">For every kind of property</p>
+                <h2 className="mt-3 text-2xl font-black tracking-tight text-[#282828] sm:text-3xl">Residential and Commercial Cleaning Across Nairobi</h2>
                 <p className="mt-4 text-sm leading-7 text-[#475569] sm:text-base">Concept Cleaning Services supports homes and a variety of business environments. Depending on the service, property requirements and agreed scope, we can discuss cleaning for:</p>
                 <ul className="mt-5 grid gap-2 text-sm font-semibold text-[#334155] sm:grid-cols-2">
-                  {['Homes and apartments', 'Offices and business premises', 'Shops and retail spaces', 'Schools and learning institutions', 'Restaurants and hospitality spaces', 'Warehouses and industrial premises', 'Gyms, studios and shared facilities', 'Common areas and managed properties'].map((item) => <li key={item} className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0F766E]" />{item}</li>)}
+                  {['Homes and apartments', 'Offices and business premises', 'Shops and retail spaces', 'Schools and learning institutions', 'Restaurants and hospitality spaces', 'Warehouses and industrial premises', 'Gyms, studios and shared facilities', 'Common areas and managed properties'].map((item) => <li key={item} className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D97706]" />{item}</li>)}
                 </ul>
               </div>
               <div>
-                <h3 className="text-xl font-black tracking-tight text-[#102A2A]">Why Choose Concept Cleaning Services?</h3>
+                <h3 className="text-xl font-black tracking-tight text-[#282828]">Why Choose Concept Cleaning Services?</h3>
                 <div className="mt-5 space-y-4">
-                  <div><h4 className="font-extrabold text-[#102A2A]">Cleaning planned around your needs</h4><p className="mt-1 text-sm leading-7 text-[#475569]">We discuss your priorities and the property requirements so the work can be tailored to the areas that matter to you.</p></div>
-                  <div><h4 className="font-extrabold text-[#102A2A]">Professional cleaning approach</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Our team uses suitable cleaning methods and equipment for the task, surface and material being cleaned.</p></div>
-                  <div><h4 className="font-extrabold text-[#102A2A]">Options for homes and businesses</h4><p className="mt-1 text-sm leading-7 text-[#475569]">From domestic housekeeping to office and commercial cleaning, you can enquire about services for different property types.</p></div>
-                  <div><h4 className="font-extrabold text-[#102A2A]">Straightforward booking and enquiries</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Use the booking engine above to find a service, request a quotation or send an enquiry to our team.</p></div>
+                  <div><h4 className="font-extrabold text-[#282828]">Cleaning planned around your needs</h4><p className="mt-1 text-sm leading-7 text-[#475569]">We discuss your priorities and the property requirements so the work can be tailored to the areas that matter to you.</p></div>
+                  <div><h4 className="font-extrabold text-[#282828]">Professional cleaning approach</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Our team uses suitable cleaning methods and equipment for the task, surface and material being cleaned.</p></div>
+                  <div><h4 className="font-extrabold text-[#282828]">Options for homes and businesses</h4><p className="mt-1 text-sm leading-7 text-[#475569]">From domestic housekeeping to office and commercial cleaning, you can enquire about services for different property types.</p></div>
+                  <div><h4 className="font-extrabold text-[#282828]">Straightforward booking and enquiries</h4><p className="mt-1 text-sm leading-7 text-[#475569]">Use the booking engine above to find a service, request a quotation or send an enquiry to our team.</p></div>
                 </div>
               </div>
             </div>
@@ -525,7 +525,7 @@ export function ServicesCatalogueContent() {
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Browse by category</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Browse by category</p>
           <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Available service categories</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">These categories are taken directly from active services in our catalogue.</p>
         </div>
@@ -545,9 +545,9 @@ export function ServicesCatalogueContent() {
               >
                 <img src={categoryImage(category)} alt="" loading="lazy" className="h-48 w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
                 <div className="p-5">
-                  <h2 className="text-lg font-black text-slate-900 group-hover:text-teal-700">{category}</h2>
+                  <h2 className="text-lg font-black text-slate-900 group-hover:text-orange-700">{category}</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">Explore the cleaning and property-care services available under {category}.</p>
-                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700">Explore services <ArrowRight className="h-4 w-4" /></span>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-orange-700">Explore services <ArrowRight className="h-4 w-4" /></span>
                 </div>
               </Link>
             ))}
@@ -670,7 +670,7 @@ export function ServiceCategoryPage() {
         <section className="mx-auto max-w-7xl px-4 py-20">
           <h1 className="text-2xl font-black text-slate-900">Category not found</h1>
           <p className="mt-3 text-sm text-slate-600">This category may no longer be available.</p>
-          <Link to="/services" className="mt-5 inline-flex items-center gap-2 font-bold text-teal-700">Browse all categories <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/services" className="mt-5 inline-flex items-center gap-2 font-bold text-orange-700">Browse all categories <ArrowRight className="h-4 w-4" /></Link>
         </section>
       ) : (
         <>
@@ -678,11 +678,11 @@ export function ServiceCategoryPage() {
           <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Available in this category</p>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Available in this category</p>
                 <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Explore {category.name}</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
               </div>
-              <Link to="/services" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700"><ArrowRight className="h-4 w-4 rotate-180" /> All categories</Link>
+              <Link to="/services" className="inline-flex items-center gap-2 text-sm font-bold text-orange-700"><ArrowRight className="h-4 w-4 rotate-180" /> All categories</Link>
             </div>
             {services.length ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -692,7 +692,7 @@ export function ServiceCategoryPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-8">
                 <h3 className="font-extrabold text-slate-900">Services are being updated</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">There are no active services listed in this category at the moment. Contact our team if you need help with this type of service.</p>
-                <Link to="/contact" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal-700">Contact our team <ArrowRight className="h-4 w-4" /></Link>
+                <Link to="/contact" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-orange-700">Contact our team <ArrowRight className="h-4 w-4" /></Link>
               </div>
             )}
           </section>
@@ -747,7 +747,7 @@ export function AboutPage() {
 
       <section className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Who we are</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Who we are</p>
           <h2 className="mt-3 text-2xl font-black text-slate-900 sm:text-3xl">A professional cleaning company serving homes and businesses since 2023</h2>
           <p className="mt-4 text-sm leading-7 text-slate-600">
             Founded in 2023, Concept Cleaning Services provides residential and commercial cleaning, deep cleaning, upholstery and carpet care, car interior cleaning, fumigation and pest-control solutions. We serve customers in Nairobi and selected areas of Kiambu, Kajiado and Machakos counties.
@@ -755,17 +755,17 @@ export function AboutPage() {
           <p className="mt-4 text-sm leading-7 text-slate-600">
             Every property and cleaning requirement is different. We focus on understanding the space, identifying the service required and helping clients choose a suitable solution. Our aim is to make arranging professional cleaning and pest control straightforward, with clear communication from enquiry to service delivery.
           </p>
-          <Button asChild className="mt-7 bg-teal-700 text-white hover:bg-teal-800"><Link to="/services">Explore our services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button asChild className="mt-7 bg-orange-600 text-white hover:bg-orange-700"><Link to="/services">Explore our services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
         <div className="rounded-3xl bg-[#E7F2F1] p-7 sm:p-9">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-800">Our commitment</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-800">Our commitment</p>
           <h2 className="mt-3 text-2xl font-black text-slate-900">Careful work. Professional standards. Customer focus.</h2>
           <p className="mt-4 text-sm leading-7 text-slate-700">
             From routine home cleaning to specialist upholstery care and pest-control requirements, we approach each request with attention to the property, the service scope and the client’s needs.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {['Residential cleaning', 'Commercial cleaning', 'Deep cleaning', 'Fumigation and pest control'].map((item) => (
-              <div key={item} className="flex items-center gap-2 rounded-xl bg-white/80 p-3 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 shrink-0 text-teal-700" />{item}</div>
+              <div key={item} className="flex items-center gap-2 rounded-xl bg-white/80 p-3 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 shrink-0 text-orange-700" />{item}</div>
             ))}
           </div>
         </div>
@@ -774,14 +774,14 @@ export function AboutPage() {
       <section className="bg-white py-14">
         <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <article className="rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-9">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Our mission</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Our mission</p>
             <h2 className="mt-3 text-2xl font-black text-slate-900">What guides our work</h2>
             <p className="mt-4 text-sm leading-7 text-slate-700">
               To provide exceptional residential and commercial cleaning, deep cleaning, fumigation and pest-control services through professional expertise, modern equipment and customer-focused solutions. We are committed to creating cleaner, healthier and more comfortable environments for homes, workplaces and businesses across Nairobi and its surrounding regions.
             </p>
           </article>
           <article className="rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-9">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Our vision</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Our vision</p>
             <h2 className="mt-3 text-2xl font-black text-slate-900">Where we aim to go</h2>
             <p className="mt-4 text-sm leading-7 text-slate-700">
               To become one of Kenya’s most trusted and recognised providers of professional cleaning and pest-control solutions, setting high standards in service quality, reliability, innovation and customer satisfaction while contributing to healthier living and working environments.
@@ -792,14 +792,14 @@ export function AboutPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">How we work</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">How we work</p>
           <h2 className="mt-3 text-3xl font-black text-slate-900">The values behind every service</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">Our values shape how we communicate with customers, approach each property and deliver cleaning and pest-control services.</p>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {values.map(([heading, description], index) => (
             <article key={heading} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><CheckCircle2 className="h-5 w-5" /></div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-orange-700"><CheckCircle2 className="h-5 w-5" /></div>
               <h3 className="mt-4 text-lg font-extrabold text-slate-900">{index + 1}. {heading}</h3>
               <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
             </article>
@@ -809,11 +809,11 @@ export function AboutPage() {
 
       <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Where we serve</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Where we serve</p>
           <h2 className="mt-3 text-2xl font-black text-slate-900">Cleaning services in Nairobi and surrounding counties</h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Our service coverage includes Nairobi and selected areas in Kiambu, Kajiado and Machakos. Availability can depend on the service and exact property location, so contact us to confirm coverage for your request.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {['Nairobi', 'Kiambu', 'Kajiado', 'Machakos'].map((area) => <div key={area} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4"><MapPin className="h-5 w-5 text-teal-700" /><span className="font-bold text-slate-800">{area}</span></div>)}
+            {['Nairobi', 'Kiambu', 'Kajiado', 'Machakos'].map((area) => <div key={area} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4"><MapPin className="h-5 w-5 text-orange-700" /><span className="font-bold text-slate-800">{area}</span></div>)}
           </div>
         </div>
       </section>
@@ -912,7 +912,7 @@ export function GalleryPage() {
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center gap-3">
-          <ImageIcon className="h-6 w-6 text-teal-700" />
+          <ImageIcon className="h-6 w-6 text-orange-700" />
           <div><h2 className="text-2xl font-black text-slate-900">Project photographs</h2><p className="mt-1 text-sm text-slate-600">Images are sourced from the existing service gallery records.</p></div>
         </div>
         {loading ? (
@@ -933,7 +933,7 @@ export function GalleryPage() {
             <ImageIcon className="mx-auto h-9 w-9 text-slate-400" />
             <h3 className="mt-4 text-lg font-extrabold text-slate-900">Project photographs are being added</h3>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">The existing service records do not currently contain gallery photographs available for this page. Explore the service catalogue to learn about the work we offer.</p>
-            <Button asChild className="mt-5 bg-teal-700 text-white hover:bg-teal-800"><Link to="/services">Explore services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+            <Button asChild className="mt-5 bg-orange-600 text-white hover:bg-orange-700"><Link to="/services">Explore services <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
         )}
       </section>
@@ -984,27 +984,27 @@ export function ContactPage() {
           <p className="mt-3 max-w-xl text-sm leading-7 text-slate-600">Use the contact details below to reach the team. For service requests, you can also browse the catalogue and submit a booking request online.</p>
           <div className="mt-7 space-y-4">
             <a href={'tel:' + phone} className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 hover:border-teal-300">
-              <Phone className="mt-1 h-5 w-5 text-teal-700" /><span><span className="block font-extrabold text-slate-900">Call us</span><span className="mt-1 block text-sm text-slate-600">{phone}</span></span>
+              <Phone className="mt-1 h-5 w-5 text-orange-700" /><span><span className="block font-extrabold text-slate-900">Call us</span><span className="mt-1 block text-sm text-slate-600">{phone}</span></span>
             </a>
             <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 hover:border-teal-300">
-              <MessageCircle className="mt-1 h-5 w-5 text-teal-700" /><span><span className="block font-extrabold text-slate-900">WhatsApp</span><span className="mt-1 block text-sm text-slate-600">Send an enquiry or discuss your service requirements.</span></span>
+              <MessageCircle className="mt-1 h-5 w-5 text-orange-700" /><span><span className="block font-extrabold text-slate-900">WhatsApp</span><span className="mt-1 block text-sm text-slate-600">Send an enquiry or discuss your service requirements.</span></span>
             </a>
             <a href={'mailto:' + email} className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 hover:border-teal-300">
-              <Mail className="mt-1 h-5 w-5 text-teal-700" /><span><span className="block font-extrabold text-slate-900">Email</span><span className="mt-1 block break-all text-sm text-slate-600">{email}</span></span>
+              <Mail className="mt-1 h-5 w-5 text-orange-700" /><span><span className="block font-extrabold text-slate-900">Email</span><span className="mt-1 block break-all text-sm text-slate-600">{email}</span></span>
             </a>
             <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5">
-              <MapPin className="mt-1 h-5 w-5 text-teal-700" /><span><span className="block font-extrabold text-slate-900">Service base</span><span className="mt-1 block text-sm text-slate-600">{address}</span></span>
+              <MapPin className="mt-1 h-5 w-5 text-orange-700" /><span><span className="block font-extrabold text-slate-900">Service base</span><span className="mt-1 block text-sm text-slate-600">{address}</span></span>
             </div>
           </div>
         </div>
         <div className="rounded-3xl bg-[#E7F2F1] p-7 sm:p-9">
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-800">Service coverage</p>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-800">Service coverage</p>
           <h2 className="mt-3 text-2xl font-black text-slate-900">Nairobi and surrounding areas</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">Our service coverage includes Nairobi, selected parts of Kiambu, Kajiado and Machakos. Availability depends on the service and exact location, so please contact us to confirm your area.</p>
           <ul className="mt-6 space-y-3 text-sm text-slate-700">
-            {['Westlands', 'Kilimani', 'Karen', 'Lavington', 'Runda', 'Ruaka', 'Ruiru', 'Thika', 'Kitengela', 'Ongata Rongai'].map((area) => <li key={area} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-700" />{area}</li>)}
+            {['Westlands', 'Kilimani', 'Karen', 'Lavington', 'Runda', 'Ruaka', 'Ruiru', 'Thika', 'Kitengela', 'Ongata Rongai'].map((area) => <li key={area} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-orange-700" />{area}</li>)}
           </ul>
-          <Button asChild className="mt-8 bg-teal-700 text-white hover:bg-teal-800"><Link to="/marketplace">Start a booking <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button asChild className="mt-8 bg-orange-600 text-white hover:bg-orange-700"><Link to="/marketplace">Start a booking <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
       </section>
       <PageCta title="Prefer to speak with us first?" description="I would like to talk to your team about my cleaning or pest-control requirements." />
@@ -1034,15 +1034,15 @@ export function HomeGalleryPreview() {
     <section id="gallery" className="scroll-mt-24 bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Our gallery</p><h2 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">A look at our cleaning work</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Explore photographs attached to the services in our existing catalogue.</p></div>
-          <Link to="/gallery" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700">View gallery <ArrowRight className="h-4 w-4" /></Link>
+          <div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Our gallery</p><h2 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">A look at our cleaning work</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Explore photographs attached to the services in our existing catalogue.</p></div>
+          <Link to="/gallery" className="inline-flex items-center gap-2 text-sm font-bold text-orange-700">View gallery <ArrowRight className="h-4 w-4" /></Link>
         </div>
         {items.length ? (
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {items.map((item) => <Link key={item.url} to="/gallery" className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"><img src={item.url} alt={item.alt} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105" /><p className="p-4 text-sm font-bold text-slate-800">{item.serviceName}</p></Link>)}
           </div>
         ) : (
-          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"><p className="text-sm text-slate-600">Project photographs will appear here as they are added to the service gallery.</p><Link to="/gallery" className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-teal-700">Visit the gallery page <ArrowRight className="h-4 w-4" /></Link></div>
+          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"><p className="text-sm text-slate-600">Project photographs will appear here as they are added to the service gallery.</p><Link to="/gallery" className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-orange-700">Visit the gallery page <ArrowRight className="h-4 w-4" /></Link></div>
         )}
       </div>
     </section>
