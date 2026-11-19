@@ -9,6 +9,7 @@ import {
   ChevronDown, PanelLeftClose, PanelLeftOpen, Search, Bell, Handshake,
   CalendarDays, ReceiptText, UserRound,
 } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
 import { useBlockingNotices } from '@/components/notices/useBlockingNotices';
@@ -16,10 +17,9 @@ import { loadAllSettings } from '@/lib/settings';
 import { setPdfSettings } from '@/lib/documentPdf';
 import { requestBrowserNotificationPermission } from '@/lib/customerNotifications';
 
-type NavItem = { to: string; icon: React.ComponentType<{ className?: string }>; label: string; end?: boolean };
+type NavItem = { to: string; icon: ComponentType<{ className?: string }>; label: string; end?: boolean };
 const navGroups: { label: string; items: NavItem[] }[] = [
   { label: 'Workspace', items: [
-    { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
     { to: '/admin/approval-centre', icon: ClipboardCheck, label: 'Approval Centre' },
   ]},
   { label: 'Sales & CRM', items: [
@@ -39,7 +39,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     { to: '/admin/feedback', icon: Star, label: 'Feedback' },
   ]},
   { label: 'Finance', items: [
-    { to: '/admin/accounting/overview', icon: Calculator, label: 'Accounting & Finance' },
     { to: '/admin/discount-approvals', icon: Wallet, label: 'Discount Approvals' },
     { to: '/admin/discount-reports', icon: PieChart, label: 'Discount Reports' },
     { to: '/admin/commissions', icon: ReceiptText, label: 'Commissions' },
