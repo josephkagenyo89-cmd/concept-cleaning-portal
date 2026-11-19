@@ -60,7 +60,7 @@ const matches = (rule: Row, value: any) => {
 };
 
 export default function ConfiguredBookingForm({ serviceId, serviceName, initialNotes = '', quoteMode = false, initialOfferId = '' }: Props) {
-  const { user, customerClient } = useAuth();
+  const { user, customerClient, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [config,setConfig] = useState<any>(null), [questions,setQuestions] = useState<Row[]>([]), [conditions,setConditions] = useState<Row[]>([]), [scope,setScope] = useState<Row[]>([]), [offerOptions,setOfferOptions] = useState<Row[]>([]), [offerServices,setOfferServices] = useState<Row[]>([]);
   const [loading,setLoading] = useState(true), [error,setError] = useState('');
@@ -150,6 +150,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
             const eligibleInitialPackage=loadedOffers.find((offer:any)=>offer.id===initialOfferId&&offer.offer_type==='package');
             setSelectedOfferId(restoredOffer?.offer_type==='package'?restoredOffer.id:(eligibleInitialPackage?.id||''));
             setAnswers(parsed.answers || {});
+            setGuestName(parsed.guestName || '');
+            setGuestPhone(parsed.guestPhone || '');
             const restoredExtras = Array.isArray(parsed.extras) ? parsed.extras : [];
             setExtras(restoredOffer&&restoredOffer.offer_type!=='package'
               ? Array.from(new Set([...restoredExtras,bookingOfferSelectionKey(restoredOffer.id)]))
@@ -276,8 +278,8 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
 
   const sendGuestWhatsApp = () => {
     const cleanName = guestName.trim();
-    const cleanPhone = guestPhone.trim().replace(/[()\\s-]/g, '');
-    const normalizedPhone = /^0[17]\\d{8}$/.test(cleanPhone) ? '+254' + cleanPhone.slice(1) : /^254[17]\\d{8}$/.test(cleanPhone) ? '+' + cleanPhone : /^\\+[1-9]\\d{7,14}$/.test(cleanPhone) ? cleanPhone : '';
+    const cleanPhone = guestPhone.trim().replace(/[()\s-]/g, '');
+    const normalizedPhone = /^0[17]\d{8}$/.test(cleanPhone) ? '+254' + cleanPhone.slice(1) : /^254[17]\d{8}$/.test(cleanPhone) ? '+' + cleanPhone : /^\+[1-9]\d{7,14}$/.test(cleanPhone) ? cleanPhone : '';
     if (!cleanName) { toast({title:'Enter your name',description:'We need your name for the booking request.',variant:'destructive'}); return; }
     if (!normalizedPhone) { toast({title:'Enter a valid WhatsApp number',description:'Use 07XXXXXXXX or +2547XXXXXXXX.',variant:'destructive'}); return; }
     if (!date || date < today()) { toast({title:'Choose a valid preferred date',variant:'destructive'}); return; }
@@ -305,7 +307,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
     else lines.push('', 'Pricing: Please confirm the applicable price and any quotation requirements.');
     lines.push('', 'I understand this is a booking request, not a confirmed appointment. Please confirm availability and next steps.');
     if (config.photo_mode !== 'none') lines.push('I can attach the requested service photos in this WhatsApp chat.');
-    window.open('https://wa.me/254796563741?text='+encodeURIComponent(lines.join('\\n')), '_blank', 'noopener,noreferrer');
+    window.open('https://wa.me/254796563741?text='+encodeURIComponent(lines.join('\n')), '_blank', 'noopener,noreferrer');
   };
 
   const review = async () => {
@@ -504,7 +506,7 @@ export default function ConfiguredBookingForm({ serviceId, serviceName, initialN
       <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary"/><div><p className="text-sm font-semibold">Ready to see your estimate?</p><p className="mt-1 text-xs text-muted-foreground">We’ll check your selected options against the approved service pricing. No price is guessed in the browser.</p></div></div>
       <Button className="mt-3 w-full" onClick={()=>void review()} disabled={saving}>{saving?'Calculating your estimate…':'Calculate my estimate'}</Button>
     </div>
-    {!user&&<section className="space-y-3 rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-4">
+    {!authLoading&&!user&&<section className="space-y-3 rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-4">
       <div><h3 className="text-sm font-semibold">Prefer booking through WhatsApp?</h3><p className="mt-1 text-xs text-muted-foreground">No account or sign-up is needed. Your selected service and booking details will be sent to our team for confirmation.</p></div>
       <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label htmlFor="guest-booking-name">Your name</Label><Input id="guest-booking-name" autoComplete="name" maxLength={120} value={guestName} onChange={e=>setGuestName(e.target.value)} placeholder="Full name"/></div><div className="space-y-1"><Label htmlFor="guest-booking-phone">Your WhatsApp number</Label><Input id="guest-booking-phone" type="tel" autoComplete="tel" maxLength={20} value={guestPhone} onChange={e=>setGuestPhone(e.target.value)} placeholder="07XXXXXXXX or +2547XXXXXXXX"/></div></div>
       <Button type="button" className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]" onClick={sendGuestWhatsApp}>Send booking request via WhatsApp</Button>
