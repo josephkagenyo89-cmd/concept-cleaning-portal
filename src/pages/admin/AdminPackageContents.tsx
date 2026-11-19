@@ -23,6 +23,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
  const [offerId, setOfferId] = useState('');
  const [items, setItems] = useState<Item[]>([]);
  const [draft, setDraft] = useState<Item>(emptyItem());
+ const [editingItemId, setEditingItemId] = useState<string | null>(null);
  const [loading, setLoading] = useState(false);
  const [saving, setSaving] = useState(false);
  const selected = packages.find(p => p.id === offerId);
@@ -48,11 +49,14 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
   }
   setSaving(true);
   const row = { offer_id: offerId, service_id: draft.service_id, item_label: draft.item_label.trim() || null, size_label: draft.size_label.trim(), quantity, individual_price: draft.complimentary ? 0 : price, complimentary: draft.complimentary, display_order: items.length, active: true };
-  const r = await db.from('booking_engine_package_items').insert(row).select('*').single();
+  const r = editingItemId
+   ? await db.from('booking_engine_package_items').update(row).eq('id', editingItemId).select('*').single()
+   : await db.from('booking_engine_package_items').insert(row).select('*').single();
   if (r.error) toast({ title: 'Package item was not added', description: r.error.message, variant: 'destructive' });
-  else { setItems(old => [...old, { ...r.data, quantity: String(r.data.quantity), individual_price: r.data.individual_price == null ? '' : String(r.data.individual_price), item_label: r.data.item_label || '', size_label: r.data.size_label || '' }]); setDraft(emptyItem(offerId)); }
+  else { const saved = { ...r.data, quantity: String(r.data.quantity), individual_price: r.data.individual_price == null ? '' : String(r.data.individual_price), item_label: r.data.item_label || '', size_label: r.data.size_label || '' }; setItems(old => editingItemId ? old.map(x => x.id === editingItemId ? saved : x) : [...old, saved]); setDraft(emptyItem(offerId)); setEditingItemId(null); }
   setSaving(false);
  };
+ const editItem = (item: Item) => { setEditingItemId(item.id || null); setDraft({ ...item }); };
  const removeItem = async (item: Item) => {
   if (!item.id) return;
   const r = await db.from('booking_engine_package_items').delete().eq('id', item.id);
@@ -81,7 +85,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><div><p className="font-semibold">{selected.title}</p><p className="text-xs text-muted-foreground">{items.length} configured items · {selected.active ? 'Published' : 'Draft'}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">Calculated final price</p><p className="text-xl font-bold">KSh {total.toLocaleString('en-KE')}</p></div></div>
     {loading ? <p className="text-sm text-muted-foreground">Loading package items…</p> : <div className="space-y-2">{items.map((item, index) => {
       const service = activeServices.find(s => s.id === item.service_id);
-      return <div key={item.id || index} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="min-w-0"><p className="font-medium">{item.item_label || service?.name || 'Service'} <span className="font-normal text-muted-foreground">· {item.size_label} · Qty {item.quantity}</span></p><p className="text-xs text-muted-foreground">{service?.name || 'Unavailable service'} · {item.complimentary ? 'Complimentary' : 'KSh ' + (Number(item.individual_price) || 0).toLocaleString('en-KE') + ' each'}</p></div><div className="flex items-center gap-2"><Badge variant={item.complimentary ? 'secondary' : 'outline'}>{item.complimentary ? 'FREE' : 'Chargeable'}</Badge><Button size="icon" variant="ghost" onClick={() => void removeItem(item)} aria-label="Remove package item"><Trash2 className="h-4 w-4" /></Button></div></div>;
+      return <div key={item.id || index} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="min-w-0"><p className="font-medium">{item.item_label || service?.name || 'Service'} <span className="font-normal text-muted-foreground">· {item.size_label} · Qty {item.quantity}</span></p><p className="text-xs text-muted-foreground">{service?.name || 'Unavailable service'} · {item.complimentary ? 'Complimentary' : 'KSh ' + (Number(item.individual_price) || 0).toLocaleString('en-KE') + ' each'}</p></div><div className="flex items-center gap-2"><Badge variant={item.complimentary ? 'secondary' : 'outline'}>{item.complimentary ? 'FREE' : 'Chargeable'}</Badge><Button size="sm" variant="outline" onClick={() => editItem(item)}>Edit</Button><Button size="icon" variant="ghost" onClick={() => void removeItem(item)} aria-label="Remove package item"><Trash2 className="h-4 w-4" /></Button></div></div>;
     })}{!items.length && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No contents configured yet. Add each included service below.</p>}</div>}
     <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
      <div className="font-semibold text-sm">Add a service to this package</div>
@@ -94,7 +98,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
       <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={draft.complimentary} onCheckedChange={v => setField('complimentary',v===true)} />This item is complimentary (FREE)</label>
      </div>
      <p className="text-xs text-muted-foreground">Catalogue base price is only a suggested starting value. Confirm the package-specific price. The final package total uses individual price × quantity for chargeable items.</p>
-     <Button onClick={() => void addItem()} disabled={saving || !draft.service_id}><Plus className="mr-2 h-4 w-4" />Add service</Button>
+     <div className="flex flex-wrap gap-2"><Button onClick={() => void addItem()} disabled={saving || !draft.service_id}><Plus className="mr-2 h-4 w-4" />{editingItemId ? 'Save item changes' : 'Add service'}</Button>{editingItemId && <Button variant="outline" onClick={() => { setEditingItemId(null); setDraft(emptyItem(offerId)); }}>Cancel edit</Button>}</div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Save the calculated price before approving and publishing this package.</p><Button onClick={() => void savePrice()} disabled={saving || !items.length}><Save className="mr-2 h-4 w-4" />{saving ? 'Saving…' : 'Save final package price'}</Button></div>
    </>}
