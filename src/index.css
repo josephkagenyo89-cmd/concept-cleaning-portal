@@ -77,78 +77,146 @@
 }
 
 
-/* Teal / blue / orange brand system for the non-ERP application.
-   RouteTheme enables this on #root for all routes except /admin/erp. */
+/* Homepage white, charcoal and orange design system for the public site,
+   marketplace, customer portal, login and agent experience. Admin/ERP stays isolated. */
 #root.ccs-modern-theme {
-  --ccs-primary: #0F766E;
-  --ccs-primary-dark: #115E59;
-  --ccs-secondary: #0284C7;
-  --ccs-cta: #F97316;
-  --ccs-cta-text: #0F172A;
-  --ccs-cta-hover: #EA580C;
+  --ccs-primary: #282828;
+  --ccs-primary-dark: #1f1f1f;
+  --ccs-secondary: #4b4b4b;
+  --ccs-cta: #f68b1e;
+  --ccs-cta-text: #282828;
+  --ccs-cta-hover: #e8790c;
   --ccs-whatsapp: #25D366;
   --ccs-whatsapp-text: #0B3D1E;
-  --ccs-success: #16A34A;
-  --ccs-page-bg: #F8FAFC;
-  --ccs-surface: #FFFFFF;
-  --ccs-text: #0F172A;
-  --ccs-muted: #475569;
-  --ccs-border: #E2E8F0;
-  --ccs-error: #DC2626;
+  --ccs-success: #16834a;
+  --ccs-page-bg: #f5f5f5;
+  --ccs-surface: #ffffff;
+  --ccs-text: #282828;
+  --ccs-muted: #686868;
+  --ccs-border: #e5e5e5;
+  --ccs-error: #c62828;
 
   color-scheme: light;
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  --background: 0 0% 96%;
+  --foreground: 0 0% 16%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 0 0% 16%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 175 77% 26%;
+  --popover-foreground: 0 0% 16%;
+  --primary: 0 0% 16%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 200 98% 39%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 35%;
-  --accent: 24 94% 53%;
-  --accent-foreground: 222 47% 11%;
-  --destructive: 0 72% 51%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 16%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 40%;
+  --accent: 32 92% 54%;
+  --accent-foreground: 0 0% 16%;
+  --destructive: 0 72% 40%;
   --destructive-foreground: 0 0% 100%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 175 77% 26%;
+  --border: 0 0% 89%;
+  --input: 0 0% 89%;
+  --ring: 32 92% 54%;
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-primary: 175 77% 26%;
+  --sidebar-foreground: 0 0% 16%;
+  --sidebar-primary: 0 0% 16%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222 47% 11%;
-  --sidebar-border: 214 32% 91%;
-  --sidebar-ring: 175 77% 26%;
-  --sidebar-muted: 215 16% 35%;
-  --success: 142 71% 36%;
+  --sidebar-accent: 0 0% 95%;
+  --sidebar-accent-foreground: 0 0% 16%;
+  --sidebar-border: 0 0% 89%;
+  --sidebar-ring: 32 92% 54%;
+  --sidebar-muted: 0 0% 40%;
+  --success: 142 71% 31%;
   --success-foreground: 0 0% 100%;
-  --info: 200 98% 39%;
+  --info: 0 0% 30%;
   --info-foreground: 0 0% 100%;
-  --market: 175 77% 26%;
+  --market: 0 0% 16%;
   --market-foreground: 0 0% 100%;
-  --market-soft: 210 40% 96%;
-  --tier-bronze: 24 94% 53%;
-  --tier-silver: 200 98% 39%;
-  --tier-gold: 175 77% 26%;
+  --market-soft: 0 0% 96%;
+  --tier-bronze: 32 92% 54%;
+  --tier-silver: 0 0% 45%;
+  --tier-gold: 32 92% 54%;
 }
 
-/* Remap shared brand utility classes only while the non-ERP theme is active. */
+/* Reuse the homepage palette for legacy shared brand utility classes. */
 #root.ccs-modern-theme .bg-brand-forest { background-color: var(--ccs-primary) !important; }
 #root.ccs-modern-theme .text-brand-forest { color: var(--ccs-primary) !important; }
 #root.ccs-modern-theme .border-brand-forest { border-color: var(--ccs-primary) !important; }
-#root.ccs-modern-theme .bg-brand-paper { background-color: var(--ccs-page-bg) !important; }
+#root.ccs-modern-theme .bg-brand-paper,
+#root.ccs-modern-theme .bg-brand-sand { background-color: var(--ccs-page-bg) !important; }
 #root.ccs-modern-theme .text-brand-ink,
 #root.ccs-modern-theme .text-brand-slate { color: var(--ccs-text) !important; }
 #root.ccs-modern-theme .border-brand-sand { border-color: var(--ccs-border) !important; }
-#root.ccs-modern-theme .bg-brand-sand { background-color: var(--ccs-page-bg) !important; }
 #root.ccs-modern-theme .bg-brand-panel { background-color: var(--ccs-primary-dark) !important; }
 #root.ccs-modern-theme .text-brand-cream { color: #FFFFFF !important; }
 
+/* Legacy teal and blue accents are normalised to charcoal/orange on non-ERP routes.
+   Status colours (success, warning, danger) and WhatsApp green are intentionally retained. */
+#root.ccs-modern-theme [class~="bg-teal-50"],
+#root.ccs-modern-theme [class~="bg-teal-100"],
+#root.ccs-modern-theme [class~="bg-sky-50"],
+#root.ccs-modern-theme [class~="bg-blue-50"] { background-color: #fff7ed !important; }
+#root.ccs-modern-theme [class~="bg-teal-500"],
+#root.ccs-modern-theme [class~="bg-teal-600"],
+#root.ccs-modern-theme [class~="bg-teal-700"],
+#root.ccs-modern-theme [class~="bg-teal-800"],
+#root.ccs-modern-theme [class~="bg-sky-500"],
+#root.ccs-modern-theme [class~="bg-sky-600"],
+#root.ccs-modern-theme [class~="bg-blue-500"],
+#root.ccs-modern-theme [class~="bg-blue-600"],
+#root.ccs-modern-theme [class~="bg-blue-700"] { background-color: #282828 !important; }
+#root.ccs-modern-theme [class~="text-teal-500"],
+#root.ccs-modern-theme [class~="text-teal-600"],
+#root.ccs-modern-theme [class~="text-teal-700"],
+#root.ccs-modern-theme [class~="text-teal-800"],
+#root.ccs-modern-theme [class~="text-sky-500"],
+#root.ccs-modern-theme [class~="text-sky-600"],
+#root.ccs-modern-theme [class~="text-sky-700"],
+#root.ccs-modern-theme [class~="text-blue-500"],
+#root.ccs-modern-theme [class~="text-blue-600"],
+#root.ccs-modern-theme [class~="text-blue-700"] { color: #282828 !important; }
+#root.ccs-modern-theme [class~="border-teal-200"],
+#root.ccs-modern-theme [class~="border-teal-300"],
+#root.ccs-modern-theme [class~="border-teal-500"],
+#root.ccs-modern-theme [class~="border-teal-600"],
+#root.ccs-modern-theme [class~="border-sky-200"],
+#root.ccs-modern-theme [class~="border-blue-200"],
+#root.ccs-modern-theme [class~="border-blue-300"] { border-color: #f68b1e !important; }
+#root.ccs-modern-theme [class~="hover:bg-teal-50"]:hover,
+#root.ccs-modern-theme [class~="hover:bg-sky-50"]:hover,
+#root.ccs-modern-theme [class~="hover:bg-blue-50"]:hover { background-color: #fff7ed !important; }
+#root.ccs-modern-theme [class~="hover:bg-teal-600"]:hover,
+#root.ccs-modern-theme [class~="hover:bg-teal-700"]:hover,
+#root.ccs-modern-theme [class~="hover:bg-blue-600"]:hover { background-color: #e8790c !important; }
+#root.ccs-modern-theme [class~="hover:text-teal-700"]:hover,
+#root.ccs-modern-theme [class~="hover:text-teal-800"]:hover,
+#root.ccs-modern-theme [class~="hover:text-blue-700"]:hover { color: #e8790c !important; }
+
+/* Consistent non-ERP form controls, focus treatment and page canvas. */
+#root.ccs-modern-theme { background: #f5f5f5; color: #282828; }
+#root.ccs-modern-theme input:not([type="checkbox"]):not([type="radio"]),
+#root.ccs-modern-theme select,
+#root.ccs-modern-theme textarea {
+  border-color: #dedede;
+  border-radius: 8px;
+}
+#root.ccs-modern-theme input:focus-visible,
+#root.ccs-modern-theme select:focus-visible,
+#root.ccs-modern-theme textarea:focus-visible,
+#root.ccs-modern-theme button:focus-visible,
+#root.ccs-modern-theme a:focus-visible {
+  outline: 2px solid #f68b1e;
+  outline-offset: 2px;
+}
+#root.ccs-modern-theme button,
+#root.ccs-modern-theme a { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  #root.ccs-modern-theme *, #root.ccs-modern-theme *::before, #root.ccs-modern-theme *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
 
 /* Enterprise ERP workspace: scoped so marketplace/customer screens remain unchanged. */
 .erp-workspace {
