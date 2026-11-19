@@ -241,6 +241,49 @@ export default function LandingPage() {
           <BookingEngine phone={phone} />
         </section>
 
+        <section id="featured-packages" className="mt-3 rounded bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#d97706]">Curated cleaning combinations</p>
+              <h2 className="mt-1 text-xl font-black text-[#282828] sm:text-2xl">Featured Packages</h2>
+              <p className="mt-1 text-xs text-[#777]">More value in one booking, with a complimentary service included.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" aria-label="Scroll featured packages left" onClick={() => document.getElementById('ccs-featured-packages-track')?.scrollBy({ left: -320, behavior: 'smooth' })} className="grid h-10 w-10 place-items-center rounded-full border border-[#ddd] bg-white text-[#333] shadow-sm transition hover:border-[#f68b1e] hover:bg-[#fff5eb] hover:text-[#d97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e]"><ChevronRight className="h-5 w-5 rotate-180" /></button>
+              <button type="button" aria-label="Scroll featured packages right" onClick={() => document.getElementById('ccs-featured-packages-track')?.scrollBy({ left: 320, behavior: 'smooth' })} className="grid h-10 w-10 place-items-center rounded-full border border-[#ddd] bg-white text-[#333] shadow-sm transition hover:border-[#f68b1e] hover:bg-[#fff5eb] hover:text-[#d97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f68b1e]"><ChevronRight className="h-5 w-5" /></button>
+              <Link to="/packages" className="ml-1 hidden text-xs font-extrabold text-[#d97706] hover:underline sm:inline">VIEW ALL <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+            </div>
+          </div>
+          <div id="ccs-featured-packages-track" className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:thin]">
+            {[
+              { name: 'Fresh Home Package', image: categoryImage('Residential Cleaning', 'residential'), services: 'Sofa, mattress and carpet cleaning', gift: 'Complimentary carpet cleaning', note: 'Complimentary carpet limit applies' },
+              { name: 'Complete Home Reset', image: categoryImage('Residential Cleaning', 'residential'), services: 'Full house, kitchen and bathroom deep cleaning', gift: 'Complimentary fumigation', note: 'Final scope confirmed during quotation' },
+              { name: 'Premium Home Refresh', image: categoryImage('Residential Cleaning', 'residential'), services: 'Sofa, mattress and general house cleaning', gift: 'Complimentary fumigation', note: 'Quantities and property size determine price' },
+              { name: 'Sofa Revival Package', image: categoryImage('Upholstery Cleaning', 'upholstery'), services: 'Sofa, dining chair and cushion cleaning', gift: 'Complimentary carpet cleaning', note: 'Complimentary carpet limit applies' },
+              { name: 'Sleep Comfort Package', image: categoryImage('Mattress Cleaning', 'upholstery'), services: 'Mattress, headboard and bedroom deep cleaning', gift: 'Complimentary carpet cleaning', note: 'Complimentary carpet limit applies' },
+              { name: 'Car Interior Revival', image: categoryImage('Car Interior', 'car'), services: 'Interior detailing, seats and vacuuming', gift: 'Complimentary dashboard shine', note: 'Vehicle requirements determine price' },
+            ].map((item) => (
+              <article key={item.name} className="group w-[250px] shrink-0 snap-start overflow-hidden rounded-lg border border-[#e9e9e9] bg-white transition duration-200 hover:-translate-y-1 hover:border-[#f3a34d] hover:shadow-lg sm:w-[280px]">
+                <div className="relative h-36 overflow-hidden bg-[#f5f5f5]">
+                  <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <span className="absolute left-3 top-3 rounded bg-[#16834a] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">Complimentary service</span>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-extrabold text-[#292929]">{item.name}</h3>
+                  <p className="mt-1 min-h-10 text-xs leading-5 text-[#666]">{item.services}</p>
+                  <div className="mt-3 rounded-md bg-[#fff7ed] px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#a45b0a]">Included at no extra charge</p>
+                    <p className="mt-0.5 text-xs font-extrabold text-[#333]">{item.gift}</p>
+                  </div>
+                  <p className="mt-2 min-h-8 text-[10px] leading-4 text-[#777]">{item.note}. Final price depends on actual size and quantity.</p>
+                  <Link to="/packages" className="mt-3 inline-flex items-center text-xs font-extrabold text-[#d97706] hover:underline">Explore package <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-center sm:hidden"><Link to="/packages" className="text-xs font-extrabold text-[#d97706]">VIEW ALL PACKAGES <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link></div>
+        </section>
+
         <div className="market-catalogue mt-3"><ServicesCatalogueContent /></div>
 
         <section className="mt-3 rounded bg-white px-5 py-7 shadow-sm">
