@@ -324,3 +324,142 @@
     overflow-y: auto;
   }
 }
+
+
+/* Reference-led ERP shell: navy navigation, bright KPI tiles and compact responsive workspace. */
+.erp-workspace .erp-sidebar {
+  background: #071a3b !important;
+  border-right: 1px solid #102b55 !important;
+  color: #e7eefb !important;
+  box-shadow: 2px 0 12px rgb(2 12 30 / 12%);
+}
+.erp-workspace .erp-sidebar > div:first-child {
+  border-color: #18345d !important;
+}
+.erp-workspace .erp-sidebar > div:first-child > div:first-child {
+  background: #c9a227 !important;
+  color: #071a3b !important;
+  border-radius: 10px !important;
+}
+.erp-workspace .erp-sidebar > div:first-child div,
+.erp-workspace .erp-sidebar > div:first-child div div {
+  color: #f8fafc !important;
+}
+.erp-workspace .erp-sidebar > div:nth-child(2) {
+  border-color: #18345d !important;
+}
+.erp-workspace .erp-sidebar nav button {
+  color: #8fa5c6 !important;
+}
+.erp-workspace .erp-sidebar nav button:hover {
+  color: #fff !important;
+}
+.erp-workspace .erp-sidebar nav a {
+  color: #d7e2f3 !important;
+  border-radius: 7px !important;
+}
+.erp-workspace .erp-sidebar nav a:hover {
+  color: #fff !important;
+  background: #132f59 !important;
+}
+.erp-workspace .erp-sidebar nav a[aria-current="page"] {
+  color: #fff !important;
+  background: #1764d8 !important;
+  box-shadow: inset 3px 0 0 #f2c94c !important;
+}
+.erp-workspace .erp-sidebar nav a[aria-current="page"] svg {
+  color: #fff !important;
+}
+.erp-workspace .erp-sidebar > div:last-child {
+  border-color: #18345d !important;
+}
+.erp-workspace .erp-sidebar > div:last-child > div {
+  background: #10284c !important;
+  border: 1px solid #1b3a67;
+}
+.erp-workspace .erp-sidebar > div:last-child > div * {
+  color: #d7e2f3 !important;
+}
+.erp-workspace .erp-sidebar > div:last-child button {
+  border-color: #29456d !important;
+  color: #d7e2f3 !important;
+}
+.erp-workspace .erp-sidebar > div:last-child button:hover {
+  background: #351e2b !important;
+  color: #fecaca !important;
+}
+.erp-workspace .erp-main > header {
+  min-height: 64px;
+  background: #fff !important;
+}
+.erp-workspace .erp-main > header a {
+  border-radius: 999px !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div {
+  min-height: 112px;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 11px !important;
+  box-shadow: 0 5px 14px rgb(15 23 42 / 10%) !important;
+  color: #fff !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a:nth-child(1) > div {
+  background: linear-gradient(125deg, #3478f6, #2447c6) !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a:nth-child(2) > div {
+  background: linear-gradient(125deg, #13b981, #087b61) !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a:nth-child(3) > div {
+  background: linear-gradient(125deg, #ff9c25, #e65b08) !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a:nth-child(4) > div {
+  background: linear-gradient(125deg, #e83e91, #a91b68) !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div * {
+  color: #fff !important;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div svg {
+  opacity: .9;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div .text-xs {
+  opacity: .86;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div .text-xl,
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div .sm\\:text-2xl {
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 + div > div,
+.erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 + div > section {
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+@media (min-width: 1280px) {
+  .erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .erp-workspace .erp-sidebar {
+    width: min(88vw, 320px) !important;
+  }
+  .erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div {
+    min-height: 106px;
+  }
+  .erp-workspace .erp-page > div.grid.min-w-0.grid-cols-1 > a > div .text-xl {
+    font-size: 1.2rem;
+  }
+  .erp-workspace .erp-main > header {
+    padding-inline: 10px !important;
+  }
+}
