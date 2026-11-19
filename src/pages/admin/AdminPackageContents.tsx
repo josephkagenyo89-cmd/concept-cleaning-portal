@@ -26,6 +26,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
  const [editingItemId, setEditingItemId] = useState<string | null>(null);
  const [loading, setLoading] = useState(false);
  const [saving, setSaving] = useState(false);
+ const [customizePrice, setCustomizePrice] = useState(false);
  const selected = packages.find(p => p.id === offerId);
  const total = items.filter(i => i.active && !i.complimentary).reduce((sum, i) => sum + (Number(i.individual_price) || 0) * (Number(i.quantity) || 0), 0);
 
@@ -55,10 +56,10 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
    ? await db.from('booking_engine_package_items').update(row).eq('id', editingItemId).select('*').single()
    : await db.from('booking_engine_package_items').insert(row).select('*').single();
   if (r.error) toast({ title: 'Package item was not added', description: r.error.message, variant: 'destructive' });
-  else { const saved = { ...r.data, quantity: String(r.data.quantity), individual_price: r.data.individual_price == null ? '' : String(r.data.individual_price), item_label: r.data.item_label || '', size_label: r.data.size_label || '' }; setItems(old => editingItemId ? old.map(x => x.id === editingItemId ? saved : x) : [...old, saved]); setDraft(emptyItem(offerId)); setEditingItemId(null); }
+  else { const saved = { ...r.data, quantity: String(r.data.quantity), individual_price: r.data.individual_price == null ? '' : String(r.data.individual_price), item_label: r.data.item_label || '', size_label: r.data.size_label || '' }; setItems(old => editingItemId ? old.map(x => x.id === editingItemId ? saved : x) : [...old, saved]); setDraft(emptyItem(offerId)); setEditingItemId(null); setCustomizePrice(false); }
   setSaving(false);
  };
- const editItem = (item: Item) => { setEditingItemId(item.id || null); setDraft({ ...item }); };
+ const editItem = (item: Item) => { setEditingItemId(item.id || null); setDraft({ ...item }); setCustomizePrice(!item.complimentary); };
  const removeItem = async (item: Item) => {
   if (!item.id) return;
   const unpublish=await db.from('booking_engine_value_offers').update({active:false,featured:false,updated_at:new Date().toISOString()}).eq('id',offerId);
@@ -81,7 +82,7 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
   setSaving(false);
  };
  return <Card>
-  <CardHeader><CardTitle className="text-base">Package contents, sizes and individual prices</CardTitle><p className="text-sm text-muted-foreground">Choose the exact catalogue service/variant, set quantity and package-specific price, or mark it complimentary. Catalogue prices are only prefilled suggestions and are never changed. Customers see all included services and one final package price. Editing a published package automatically returns it to draft for reapproval.</p></CardHeader>
+  <CardHeader><CardTitle className="text-base">Build your package</CardTitle><p className="text-sm text-muted-foreground">Choose a package, add the services and quantities, then save its total price. Service variants and standard prices are filled in from your catalogue. Customers see one package price, not individual service prices.</p></CardHeader>
   <CardContent className="space-y-4">
    <div className="space-y-1"><Label>Select package to configure</Label><Select value={offerId} onValueChange={setOfferId}><SelectTrigger><SelectValue placeholder="Choose a package" /></SelectTrigger><SelectContent>{packages.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}</SelectContent></Select></div>
    {selected && <>
@@ -91,18 +92,18 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
       return <div key={item.id || index} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="min-w-0"><p className="font-medium">{item.item_label || service?.name || 'Service'} <span className="font-normal text-muted-foreground">· {item.size_label} · Qty {item.quantity}</span></p><p className="text-xs text-muted-foreground">{service?.name || 'Unavailable service'} · {item.complimentary ? 'Complimentary' : 'KSh ' + (Number(item.individual_price) || 0).toLocaleString('en-KE') + ' each'}</p></div><div className="flex items-center gap-2"><Badge variant={item.complimentary ? 'secondary' : 'outline'}>{item.complimentary ? 'FREE' : 'Chargeable'}</Badge><Button size="sm" variant="outline" onClick={() => editItem(item)}>Edit</Button><Button size="icon" variant="ghost" onClick={() => void removeItem(item)} aria-label="Remove package item"><Trash2 className="h-4 w-4" /></Button></div></div>;
     })}{!items.length && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No contents configured yet. Add each included service below.</p>}</div>}
     <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-     <div className="font-semibold text-sm">Add a service</div>
+     <div className="font-semibold text-sm">{editingItemId ? "Edit included service" : "Add what is included"}</div>
      <div className="grid gap-3 sm:grid-cols-2">
-      <div className="space-y-1 sm:col-span-2"><Label>Catalogue service</Label><Select value={draft.service_id} onValueChange={v => { const service=activeServices.find(x=>x.id===v); setField('service_id', v); if(service){ const parts=service.name.split(' - '); setField('item_label', parts[0]); setField('size_label', parts.length>1?parts.slice(1).join(' - '):(service.pricing_unit||'Standard')); if(service.base_price!=null)setField('individual_price',String(service.base_price)); } }}><SelectTrigger><SelectValue placeholder="Choose the service and size/variant" /></SelectTrigger><SelectContent>{activeServices.map(s => <SelectItem key={s.id} value={s.id}>{s.name}{s.base_price!=null?' · KSh '+Number(s.base_price).toLocaleString('en-KE'):''}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-1 sm:col-span-2"><Label>Choose service or size</Label><Select value={draft.service_id} onValueChange={v => { const service=activeServices.find(x=>x.id===v); setField('service_id', v); if(service){ const parts=service.name.split(' - '); setField('item_label', parts[0]); setField('size_label', parts.length>1?parts.slice(1).join(' - '):(service.pricing_unit||'Standard')); if(service.base_price!=null)setField('individual_price',String(service.base_price)); } }}><SelectTrigger><SelectValue placeholder="Select a service / size" /></SelectTrigger><SelectContent>{activeServices.map(s => <SelectItem key={s.id} value={s.id}>{s.name}{s.base_price!=null?' · KSh '+Number(s.base_price).toLocaleString('en-KE'):''}</SelectItem>)}</SelectContent></Select></div>
       <div className="rounded-md bg-muted/40 p-3 text-sm sm:col-span-2"><p className="font-medium">{draft.service_id?activeServices.find(s=>s.id===draft.service_id)?.name||'Selected service':'Choose a catalogue service above'}</p><p className="text-xs text-muted-foreground">The service name and size/variant are taken directly from the catalogue selection. No separate size or display label is needed.</p></div>
       <div className="space-y-1"><Label>Quantity</Label><Input type="number" min="0.01" step="0.01" value={draft.quantity} onChange={e => setField('quantity',e.target.value)} /></div>
-      <div className="space-y-1"><Label>Individual package price (KSh)</Label><Input type="number" min="0" step="0.01" disabled={draft.complimentary} value={draft.complimentary ? '0' : draft.individual_price} onChange={e => setField('individual_price',e.target.value)} placeholder="Enter approved price" /></div>
-      <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={draft.complimentary} onCheckedChange={v => setField('complimentary',v===true)} />This item is complimentary (FREE)</label>
+      <div className="space-y-1"><Label>Item type</Label><label className="flex h-10 items-center gap-2 rounded-md border px-3 text-sm"><Checkbox checked={draft.complimentary} onCheckedChange={v => setField('complimentary',v===true)} />Include free</label></div>
+      {!draft.complimentary && <div className="sm:col-span-2"><button type="button" className="text-xs font-medium text-muted-foreground underline underline-offset-4" onClick={() => setCustomizePrice(v => !v)}>{customizePrice ? "Hide price adjustment" : "Adjust this item’s price (optional)"}</button>{customizePrice && <div className="mt-2 space-y-1"><Label>Item price (KSh)</Label><Input type="number" min="0" step="0.01" value={draft.individual_price} onChange={e => setField('individual_price',e.target.value)} placeholder="Catalogue price is prefilled" /><p className="text-xs text-muted-foreground">Only change this when the package needs a special item price.</p></div>}</div>}
      </div>
-     <p className="text-xs text-muted-foreground">The selected catalogue variant supplies the customer-facing service and size. Confirm the package-specific price; the final total is individual price × quantity for chargeable items.</p>
-     <div className="flex flex-wrap gap-2"><Button onClick={() => void addItem()} disabled={saving || !draft.service_id}><Plus className="mr-2 h-4 w-4" />{editingItemId ? 'Save item changes' : 'Add service'}</Button>{editingItemId && <Button variant="outline" onClick={() => { setEditingItemId(null); setDraft(emptyItem(offerId)); }}>Cancel edit</Button>}</div>
+     <p className="text-xs text-muted-foreground">Standard catalogue price is used automatically. Tick “Include free” for complimentary items. You can optionally adjust an item price.</p>
+     <div className="flex flex-wrap gap-2"><Button onClick={() => void addItem()} disabled={saving || !draft.service_id}><Plus className="mr-2 h-4 w-4" />{editingItemId ? 'Save item changes' : 'Add service'}</Button>{editingItemId && <Button variant="outline" onClick={() => { setEditingItemId(null); setDraft(emptyItem(offerId)); setCustomizePrice(false); }}>Cancel edit</Button>}</div>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Save the calculated price before approving and publishing this package.</p><Button onClick={() => void savePrice()} disabled={saving || !items.length}><Save className="mr-2 h-4 w-4" />{saving ? 'Saving…' : 'Save final package price'}</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs text-muted-foreground">Your final customer price is calculated from the included items. Editing a published package returns it to draft for approval.</p></div><Button onClick={() => void savePrice()} disabled={saving || !items.length}><Save className="mr-2 h-4 w-4" />{saving ? 'Saving…' : 'Save package price'}</Button></div>
    </>}
   </CardContent>
  </Card>;
