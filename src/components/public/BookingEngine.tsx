@@ -511,7 +511,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
   const waNoMatch = waLink(phone, `Hello Concept Cleaning Services, I am looking for: ${query.trim()}`);
 
   return (
-    <section id="booking" aria-label="Book a service" className="relative w-full overflow-visible rounded-[26px] border border-slate-200/80 bg-white text-slate-900 shadow-[0_24px_70px_-35px_rgba(15,23,42,.35)]">
+    <section id="booking-engine-widget" aria-label="Book a service" className="relative w-full overflow-visible rounded-[26px] border border-slate-200/80 bg-white text-slate-900 shadow-[0_24px_70px_-35px_rgba(15,23,42,.35)]">
       <style>{`
         .be-rise{animation:be-rise .35s ease both}
         @keyframes be-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -530,7 +530,7 @@ export default function BookingEngine({ phone }: { phone: string }) {
           <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#ffbd75]">Concept Cleaning · Smart Booking</p><h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">Book your cleaning, your way.</h2><p className="mt-1 max-w-xl text-xs leading-5 text-white/70 sm:text-sm">Choose a service, tell us about your space and request your preferred time. Our team will confirm the details.</p></div>
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-bold text-white/85"><span className="h-2 w-2 rounded-full bg-emerald-400" />LIVE SERVICE CATALOGUE</div>
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2"><div className="be-step be-step-active"><span className="be-step-dot">1</span>Choose service</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className={`be-step ${selected ? 'be-step-active' : ''}`}><span className="be-step-dot">2</span>Job details</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className="be-step"><span className="be-step-dot">3</span>Request confirmation</div></div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2"><div className={`be-step ${!selected ? 'be-step-active' : ''}`}><span className="be-step-dot">1</span>Choose service</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className={`be-step ${selected ? 'be-step-active' : ''}`}><span className="be-step-dot">2</span>Job details</div><div className="hidden h-px w-8 bg-white/20 sm:block" /><div className="be-step"><span className="be-step-dot">3</span>Request confirmation</div></div>
       </div>
       <div className="p-4 sm:p-6 lg:p-7">
 
