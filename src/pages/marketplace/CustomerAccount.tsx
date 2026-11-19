@@ -205,7 +205,7 @@ export default function CustomerAccount() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 md:gap-4">
         <Button asChild variant="outline"><Link to="/my/bookings"><CalendarCheck className="mr-2 h-4 w-4" />My bookings</Link></Button>
         <Button asChild variant="outline"><Link to="/my/documents"><FileText className="mr-2 h-4 w-4" />My documents</Link></Button>
-        <Button asChild variant="outline"><Link to="/my/messages"><Bell className="mr-2 h-4 w-4" />Notifications</Link></Button>
+        <Button asChild variant="outline"><Link to="/my/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link></Button>
         <Button asChild variant="outline"><Link to="/my/support"><LifeBuoy className="mr-2 h-4 w-4" />Support</Link></Button>
         <Button asChild variant="outline"><Link to="/my"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link></Button>
         <Button variant="outline" onClick={async () => { await signOut(); navigate('/'); }}>
