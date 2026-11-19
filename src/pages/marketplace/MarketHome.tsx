@@ -5,7 +5,6 @@ import ServiceCard from '@/components/marketplace/ServiceCard';
 import { MarketService, categoryImage, fetchMarketServices, groupByCategory } from '@/lib/marketplace';
 import ServiceVisual from '@/components/marketplace/ServiceVisual';
 import { trackCategoryClick } from '@/lib/marketplaceBehavior';
-import MarketPackagesSection from '@/components/marketplace/MarketPackagesSection';
 
 export default function MarketHome() {
   const [services, setServices] = useState<MarketService[]>([]);
@@ -82,8 +81,6 @@ export default function MarketHome() {
           </p>
         )}
       </section>
-
-      <MarketPackagesSection variant="home" />
 
       <section id="all-services" className="mx-auto max-w-7xl px-4 pt-1 md:px-8">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
