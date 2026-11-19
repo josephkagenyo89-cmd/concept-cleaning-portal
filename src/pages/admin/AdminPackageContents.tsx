@@ -12,7 +12,7 @@ import { Plus, Save, Trash2 } from 'lucide-react';
 
 const db = supabase as any;
 type Package = { id: string; title: string; price_value: number | null; active: boolean; offer_type: string };
-type Service = { id: string; name: string; base_price: number | null; pricing_model: string | null; pricing_unit: string | null; is_active: boolean };
+type Service = { id: string; name: string; base_price?: number | null; pricing_model?: string | null; pricing_unit?: string | null; is_active: boolean };
 type Item = { id?: string; offer_id: string; service_id: string; item_label: string; size_label: string; quantity: string; individual_price: string; complimentary: boolean; display_order: number; active: boolean };
 
 const emptyItem = (offerId = ''): Item => ({ offer_id: offerId, service_id: '', item_label: '', size_label: '', quantity: '1', individual_price: '', complimentary: false, display_order: 0, active: true });
@@ -76,7 +76,6 @@ export default function AdminPackageContents({ offers, services }: { offers: Pac
   else toast({ title: 'Package price saved', description: 'Final customer price: KSh ' + finalPrice.toLocaleString('en-KE') });
   setSaving(false);
  };
- const selectedService = activeServices.find(s => s.id === draft.service_id);
  return <Card>
   <CardHeader><CardTitle className="text-base">Package contents, sizes and individual prices</CardTitle><p className="text-sm text-muted-foreground">Configure each package separately. These prices do not change the normal service catalogue. Customers see the service, size, quantity and one final package price.</p></CardHeader>
   <CardContent className="space-y-4">
