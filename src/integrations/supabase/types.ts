@@ -4677,6 +4677,7 @@ export type Database = {
           discount_type: string | null
           discount_value: number | null
           id: string
+          lead_id: string | null
           line_items: Json | null
           local_id: string | null
           price: number
@@ -4702,6 +4703,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           id?: string
+          lead_id?: string | null
           line_items?: Json | null
           local_id?: string | null
           price: number
@@ -4727,6 +4729,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           id?: string
+          lead_id?: string | null
           line_items?: Json | null
           local_id?: string | null
           price?: number
@@ -4744,6 +4747,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

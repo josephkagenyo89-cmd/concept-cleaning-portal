@@ -419,7 +419,7 @@ export default function AdminLeadProfile() {
     ? new Date(`${websiteRequest.preferred_date}T00:00:00`)
     : undefined;
   const quoteRole = roles.includes('super_admin') ? 'super_admin' : 'admin';
-  const quoteReady = quoteLineItems.length > 0 && quoteTotal > 0 && quoteLineItems.every((item: any) => Number.isFinite(item.unitPrice) && item.unitPrice >= 0);
+  const quoteReady = quoteLineItems.length > 0 && quoteTotal > 0 && quoteLineItems.every((item: any) => Number.isFinite(item.unitPrice) && item.unitPrice > 0);
 
   const waNumber = ((lead.whatsapp_number || lead.phone || '') as string).replace(/\D/g, '');
   const waFormatted = waNumber.startsWith('0')
@@ -574,7 +574,7 @@ export default function AdminLeadProfile() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Prepare ERP Quotation</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Review each line and enter the approved unit price. This creates a quotation linked to this lead; it does not create an operational booking.
+              Review each line and enter the unit price to quote. This creates a quotation linked to this lead; it does not create an operational booking.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -633,8 +633,8 @@ export default function AdminLeadProfile() {
                     if (error) {
                       toast({ title: 'Quotation saved, but lead status could not be updated', description: error.message, variant: 'destructive' });
                     } else {
+                      setLead((current: any) => ({ ...current, status: 'proposal' }));
                       toast({ title: 'Lead moved to Proposal' });
-                      await loadData();
                     }
                   }}
                 />
