@@ -3,6 +3,7 @@
 
 create table if not exists public.website_service_requests (
   id uuid primary key default gen_random_uuid(),
+  client_submission_id uuid not null unique,
   request_reference text not null unique,
   lead_id uuid not null unique references public.leads(id) on delete restrict,
   customer_type text not null check (customer_type in ('guest', 'registered')),
@@ -76,6 +77,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
+  v_submission_id uuid := nullif(p_payload->>'client_submission_id', '')::uuid;
   v_request_id uuid := gen_random_uuid();
   v_lead_id uuid;
   v_reference text;
@@ -88,6 +90,12 @@ declare
   v_item_count integer;
   v_valid_count integer;
 begin
+  if v_submission_id is null then
+    raise exception 'A valid submission token is required';
+  end if;
+  -- Serialize concurrent retries using the same token.
+  perform pg_advisory_xact_lock(hashtextextended(v_submission_id::text, 0));
+
   if v_name is null or v_phone is null or v_location is null then
     raise exception 'Name, phone and service location are required';
   end if;
@@ -101,6 +109,25 @@ begin
      or jsonb_array_length(p_payload->'items') < 1
      or jsonb_array_length(p_payload->'items') > 30 then
     raise exception 'Select between 1 and 30 services';
+  end if;
+
+  select r.id, r.request_reference, r.lead_id
+    into v_request_id, v_reference, v_lead_id
+  from public.website_service_requests r
+  where r.client_submission_id = v_submission_id;
+
+  if found then
+    select coalesce(string_agg(i.service_name, ', ' order by i.service_name), '')
+      into v_service_interest
+    from public.website_service_request_items i
+    where i.request_id = v_request_id;
+    return jsonb_build_object(
+      'request_id', v_request_id,
+      'request_reference', v_reference,
+      'lead_id', v_lead_id,
+      'service_summary', v_service_interest,
+      'duplicate', true
+    );
   end if;
 
   select count(*), count(distinct x.service_id)
@@ -144,12 +171,12 @@ begin
     upper(substr(replace(v_request_id::text, '-', ''), 1, 6));
 
   insert into public.website_service_requests (
-    id, request_reference, lead_id, customer_type, customer_name,
+    id, client_submission_id, request_reference, lead_id, customer_type, customer_name,
     customer_phone, customer_email, service_location, property_type,
     property_name, preferred_date, preferred_time, payment_preference,
     instructions, selected_assets
   ) values (
-    v_request_id, v_reference, v_lead_id, v_customer_type, v_name,
+    v_request_id, v_submission_id, v_reference, v_lead_id, v_customer_type, v_name,
     v_phone, v_email, v_location,
     nullif(p_payload->>'property_type', ''),
     nullif(p_payload->>'property_name', ''),
@@ -179,7 +206,8 @@ begin
     'request_id', v_request_id,
     'request_reference', v_reference,
     'lead_id', v_lead_id,
-    'service_summary', v_service_interest
+    'service_summary', v_service_interest,
+    'duplicate', false
   );
 end;
 $$;
