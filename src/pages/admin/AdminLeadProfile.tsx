@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import QuotationActions from '@/components/booking/QuotationActions';
 import {
   ArrowLeft,
   Phone,
@@ -59,7 +61,7 @@ const statusLabel = (value: string) =>
 export default function AdminLeadProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, roles } = useAuth();
 
   const [lead, setLead] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
@@ -68,6 +70,7 @@ export default function AdminLeadProfile() {
   const [transaction, setTransaction] = useState<any>(null);
   const [websiteRequest, setWebsiteRequest] = useState<any>(null);
   const [websiteRequestItems, setWebsiteRequestItems] = useState<any[]>([]);
+  const [quoteUnitPrices, setQuoteUnitPrices] = useState<Record<string, string>>({});
 
   const loadTransaction = async (bookingId: string | null) => {
     if (!bookingId) {
@@ -118,6 +121,19 @@ export default function AdminLeadProfile() {
   useEffect(() => {
     if (id) loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (!websiteRequestItems.length) return;
+    setQuoteUnitPrices((current) => {
+      const next = { ...current };
+      websiteRequestItems.forEach((item: any) => {
+        if (next[item.id] === undefined) {
+          next[item.id] = String(Number(item.base_price_snapshot || 0));
+        }
+      });
+      return next;
+    });
+  }, [websiteRequestItems]);
 
   const loadData = async () => {
     setLoading(true);
@@ -362,11 +378,11 @@ export default function AdminLeadProfile() {
 
     toast({
       title: 'Lead converted',
-      description: 'The existing Clients CRM record is now linked to this lead.',
+      description: 'The existing Clients CRM record is now linked to this lead. You can now prepare the quotation.',
     });
 
     setSaving(false);
-    navigate(`/admin/clients/${client.id}`);
+    await loadData();
   };
 
   if (loading) {
@@ -391,6 +407,19 @@ export default function AdminLeadProfile() {
       </div>
     );
   }
+
+  const quoteLineItems = websiteRequestItems.map((item: any) => {
+    const quantity = Number(item.quantity) || 1;
+    const unitPrice = Number(quoteUnitPrices[item.id] ?? item.base_price_snapshot ?? 0);
+    return { name: item.service_name, quantity, unitPrice, total: quantity * unitPrice };
+  });
+  const quoteTotal = quoteLineItems.reduce((sum: number, item: any) => sum + item.total, 0);
+  const quoteServiceSummary = quoteLineItems.map((item: any) => `${item.name} × ${item.quantity}`).join(', ');
+  const quoteServiceDate = websiteRequest?.preferred_date
+    ? new Date(`${websiteRequest.preferred_date}T00:00:00`)
+    : undefined;
+  const quoteRole = roles.includes('super_admin') ? 'super_admin' : 'admin';
+  const quoteReady = quoteLineItems.length > 0 && quoteTotal > 0 && quoteLineItems.every((item: any) => Number.isFinite(item.unitPrice) && item.unitPrice >= 0);
 
   const waNumber = ((lead.whatsapp_number || lead.phone || '') as string).replace(/\D/g, '');
   const waFormatted = waNumber.startsWith('0')
@@ -536,6 +565,81 @@ export default function AdminLeadProfile() {
             {websiteRequest.selected_assets?.length > 0 && <div className="text-sm"><p className="text-xs text-muted-foreground mb-1">Selected items</p><p>{websiteRequest.selected_assets.map((item: any) => typeof item === 'string' ? item : item.name || '').filter(Boolean).join(', ')}</p></div>}
             {websiteRequest.instructions && <div className="rounded-lg bg-muted/50 p-3 text-sm"><p className="text-xs text-muted-foreground mb-1">Customer instructions</p>{websiteRequest.instructions}</div>}
             <p className="text-xs text-muted-foreground">This is a service request, not an approved booking or quotation. Verify the customer, convert the lead when appropriate, and prepare the quotation through the existing ERP workflow.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {websiteRequest && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Prepare ERP Quotation</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Review each line and enter the approved unit price. This creates a quotation linked to this lead; it does not create an operational booking.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!lead.converted_client_id ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                Verify the customer's details and use <strong>Convert to Client</strong> above before preparing the quotation. This keeps the quotation attached to a verified ERP client record.
+              </div>
+            ) : websiteRequestItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No service lines are available for this request.</p>
+            ) : (
+              <>
+                <div className="rounded-lg bg-muted/40 p-3 text-sm">
+                  <p className="font-medium">{lead.full_name}</p>
+                  <p className="text-muted-foreground">{lead.phone}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Linked client ID: {lead.converted_client_id}</p>
+                </div>
+                <div className="space-y-3">
+                  {websiteRequestItems.map((item: any) => (
+                    <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-2 items-center rounded-lg border p-3">
+                      <div>
+                        <p className="text-sm font-medium">{item.service_name} × {item.quantity}</p>
+                        <p className="text-xs text-muted-foreground">ERP catalogue starting price: KES {Number(item.base_price_snapshot || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Unit price (KES)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={quoteUnitPrices[item.id] ?? String(Number(item.base_price_snapshot || 0))}
+                          onChange={(event) => setQuoteUnitPrices((current) => ({ ...current, [item.id]: event.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between border-t pt-3">
+                  <span className="text-sm font-medium">Quotation total</span>
+                  <span className="text-lg font-bold">KES {quoteTotal.toLocaleString()}</span>
+                </div>
+                <QuotationActions
+                  clientName={lead.full_name}
+                  clientId={lead.converted_client_id}
+                  clientPhone={lead.phone || websiteRequest.customer_phone}
+                  serviceName={quoteServiceSummary}
+                  serviceDate={quoteServiceDate}
+                  price={quoteTotal}
+                  userId={user?.id || ''}
+                  userName={profile?.full_name || user?.email || 'ERP Staff'}
+                  userRole={quoteRole}
+                  leadId={lead.id}
+                  lineItems={quoteLineItems}
+                  disabled={!quoteReady || !user?.id}
+                  onCreated={async () => {
+                    const { error } = await supabase.from('leads').update({ status: 'proposal' }).eq('id', lead.id);
+                    if (error) {
+                      toast({ title: 'Quotation saved, but lead status could not be updated', description: error.message, variant: 'destructive' });
+                    } else {
+                      toast({ title: 'Lead moved to Proposal' });
+                      await loadData();
+                    }
+                  }}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
       )}

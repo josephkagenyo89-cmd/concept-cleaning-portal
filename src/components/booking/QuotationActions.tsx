@@ -30,11 +30,13 @@ interface QuotationActionsProps {
   salespersonName?: string;
   salespersonId?: string;
   salespersonRole?: string;
+  leadId?: string;
+  onCreated?: (quotationNumber: string) => void | Promise<void>;
 }
 
 export default function QuotationActions({
   clientName, clientPhone, serviceName, serviceDate, price, userId, userName, userRole, clientId, disabled,
-  lineItems, salespersonName, salespersonId, salespersonRole,
+  lineItems, salespersonName, salespersonId, salespersonRole, leadId, onCreated,
 }: QuotationActionsProps) {
   const [generating, setGenerating] = useState(false);
 
@@ -55,6 +57,7 @@ export default function QuotationActions({
     const { data: savedQuotation, error: saveError } = await supabase.from('quotations').insert({
       quotation_number: quotationNumber,
       client_id: clientId || null,
+      lead_id: leadId || null,
       client_name: clientName,
       client_phone: clientPhone,
       service_name: resolvedItems.map(i => i.name).join(', '),
@@ -95,6 +98,8 @@ export default function QuotationActions({
       quotationId: (savedQuotation as any)?.id || undefined,
       status: 'draft',
     });
+
+    await onCreated?.(quotationNumber);
 
     return {
       quotationNumber,
