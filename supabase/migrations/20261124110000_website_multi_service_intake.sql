@@ -52,7 +52,6 @@ create policy "Admins can view website service requests"
   on public.website_service_requests for select to authenticated
   using (
     has_role(auth.uid(), 'admin'::app_role)
-    or has_role(auth.uid(), 'super_admin'::app_role)
   );
 
 create policy "Admins can view website service request items"
@@ -64,8 +63,7 @@ create policy "Admins can view website service request items"
     )
     and (
       has_role(auth.uid(), 'admin'::app_role)
-      or has_role(auth.uid(), 'super_admin'::app_role)
-    )
+      )
   );
 
 -- No anonymous policies: only the ERP service-role Edge Function can submit
