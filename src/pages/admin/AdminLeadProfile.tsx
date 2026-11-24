@@ -66,6 +66,8 @@ export default function AdminLeadProfile() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [transaction, setTransaction] = useState<any>(null);
+  const [websiteRequest, setWebsiteRequest] = useState<any>(null);
+  const [websiteRequestItems, setWebsiteRequestItems] = useState<any[]>([]);
 
   const loadTransaction = async (bookingId: string | null) => {
     if (!bookingId) {
@@ -120,7 +122,7 @@ export default function AdminLeadProfile() {
   const loadData = async () => {
     setLoading(true);
 
-    const [leadResult, activitiesResult, tasksResult] = await Promise.all([
+    const [leadResult, activitiesResult, tasksResult, websiteRequestResult] = await Promise.all([
       supabase.from('leads').select('*').eq('id', id).maybeSingle(),
       supabase
         .from('crm_activities')
@@ -132,6 +134,7 @@ export default function AdminLeadProfile() {
         .select('*')
         .eq('lead_id', id)
         .order('due_at', { ascending: true }),
+      supabase.from('website_service_requests').select('*').eq('lead_id', id).maybeSingle(),
     ]);
 
     if (leadResult.error) {
@@ -145,6 +148,17 @@ export default function AdminLeadProfile() {
     setLead(leadResult.data);
     setActivities(activitiesResult.data || []);
     setTasks(tasksResult.data || []);
+    setWebsiteRequest(websiteRequestResult.data || null);
+    if (websiteRequestResult.data?.id) {
+      const { data: requestItems } = await supabase
+        .from('website_service_request_items')
+        .select('*')
+        .eq('request_id', websiteRequestResult.data.id)
+        .order('created_at', { ascending: true });
+      setWebsiteRequestItems(requestItems || []);
+    } else {
+      setWebsiteRequestItems([]);
+    }
 
     if (leadResult.data?.booking_id) {
       await loadTransaction(leadResult.data.booking_id);
@@ -488,6 +502,43 @@ export default function AdminLeadProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {websiteRequest && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base">Website Service Request</CardTitle>
+              <Badge variant="outline">{websiteRequest.request_reference}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div><p className="text-xs text-muted-foreground">Request status</p><p className="font-medium capitalize">{websiteRequest.status.replaceAll('_', ' ')}</p></div>
+              <div><p className="text-xs text-muted-foreground">Customer type</p><p className="font-medium capitalize">{websiteRequest.customer_type}</p></div>
+              <div><p className="text-xs text-muted-foreground">Preferred date</p><p className="font-medium">{websiteRequest.preferred_date || 'Not specified'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Preferred time</p><p className="font-medium">{websiteRequest.preferred_time || 'Not specified'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Property type</p><p className="font-medium">{websiteRequest.property_type || 'Not specified'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Payment preference</p><p className="font-medium">{websiteRequest.payment_preference || 'To be discussed'}</p></div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Requested services</p>
+              <div className="divide-y rounded-lg border">
+                {websiteRequestItems.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+                    <span>{item.service_name} × {item.quantity}</span>
+                    <span className="text-muted-foreground">Starting price: KES {Number(item.base_price_snapshot || 0).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Starting prices are reference information only. Confirm scope and pricing before creating an ERP quotation.</p>
+            </div>
+            {websiteRequest.property_name && <p className="text-sm"><span className="text-muted-foreground">Property: </span>{websiteRequest.property_name}</p>}
+            {websiteRequest.selected_assets?.length > 0 && <div className="text-sm"><p className="text-xs text-muted-foreground mb-1">Selected items</p><p>{websiteRequest.selected_assets.map((item: any) => typeof item === 'string' ? item : item.name || '').filter(Boolean).join(', ')}</p></div>}
+            {websiteRequest.instructions && <div className="rounded-lg bg-muted/50 p-3 text-sm"><p className="text-xs text-muted-foreground mb-1">Customer instructions</p>{websiteRequest.instructions}</div>}
+            <p className="text-xs text-muted-foreground">This is a service request, not an approved booking or quotation. Verify the customer, convert the lead when appropriate, and prepare the quotation through the existing ERP workflow.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {transaction && (
         <Card>
