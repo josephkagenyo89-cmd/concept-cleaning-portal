@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.submit-client-review]
 verify_jwt = false
+
+[functions.website-service-intake]
+verify_jwt = false
