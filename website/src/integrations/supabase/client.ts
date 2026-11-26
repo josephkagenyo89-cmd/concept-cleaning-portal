@@ -2,8 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const SUPABASE_URL = import.meta.env.VITE_ERP_SUPABASE_URL || "https://bauvxqckhcymtdbttafv.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_ERP_SUPABASE_ANON_KEY;
+const SUPABASE_URL = (import.meta.env.VITE_ERP_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "https://bauvxqckhcymtdbttafv.supabase.co").trim();
+const rawPublishableKey = (import.meta.env.VITE_ERP_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
+const SUPABASE_PUBLISHABLE_KEY = rawPublishableKey || "dummy-publishable-key";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

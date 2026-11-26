@@ -36,7 +36,7 @@ export function clearERPSubmissionId(): void {
 }
 
 const ERP_INTAKE_URL = "https://bauvxqckhcymtdbttafv.supabase.co/functions/v1/website-service-intake";
-const ERP_PUBLIC_KEY = import.meta.env.VITE_ERP_SUPABASE_ANON_KEY as string | undefined;
+const ERP_PUBLIC_KEY = (import.meta.env.VITE_ERP_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
 
 export interface ERPService {
   id: string;
@@ -55,8 +55,8 @@ function getERPHeaders(): Record<string, string> {
     throw new Error("The service catalogue connection is not configured. Please contact Concept Cleaning Services.");
   }
   return {
+    // Publishable API keys are sent in apikey only; they are not JWT bearer tokens.
     apikey: ERP_PUBLIC_KEY,
-    Authorization: `Bearer ${ERP_PUBLIC_KEY}`,
     Accept: "application/json",
   };
 }
