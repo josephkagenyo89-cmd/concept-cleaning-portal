@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,24 +31,17 @@ import PortalProfile from "./pages/portal/PortalProfile";
 import PortalProperties from "./pages/portal/PortalProperties";
 import PortalAssets from "./pages/portal/PortalAssets";
 import NotFound from "./pages/NotFound";
+import ScrollToTop from "@/components/ScrollToTop";
 
 
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminLayout from "./pages/admin/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
-import AdminBookings from "./pages/admin/AdminBookings";
-import AdminServices from "./pages/admin/AdminServices";
-import AdminPortfolio from "./pages/admin/AdminPortfolio";
-import AdminInvoices from "./pages/admin/AdminInvoices";
-import AdminClients from "./pages/admin/AdminClients";
-import AdminProcurement from "./pages/admin/AdminProcurement";
-import AdminAccounting from "./pages/admin/AdminAccounting";
-import AdminHR from "./pages/admin/AdminHR";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminRewards from "./pages/admin/AdminRewards";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminBlog from "./pages/admin/AdminBlog";
+const ERP_LOGIN_URL = "https://concept-cleaning-portal.vercel.app/login";
+
+const ERPLoginRedirect = () => {
+  useEffect(() => {
+    window.location.replace(ERP_LOGIN_URL);
+  }, []);
+  return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Redirecting to staff login…</div>;
+};
 
 const queryClient = new QueryClient();
 
@@ -60,6 +54,7 @@ const App = () => (
         <AuthProvider>
         <CartProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             {/* Public */}
             <Route element={<PublicLayout />}>
@@ -90,24 +85,8 @@ const App = () => (
               <Route path="assets" element={<PortalAssets />} />
             </Route>
 
-            {/* Admin */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="bookings" element={<AdminBookings />} />
-              <Route path="services" element={<AdminServices />} />
-              <Route path="portfolio" element={<AdminPortfolio />} />
-              <Route path="invoices" element={<AdminInvoices />} />
-              <Route path="clients" element={<AdminClients />} />
-              <Route path="procurement" element={<AdminProcurement />} />
-              <Route path="accounting" element={<AdminAccounting />} />
-              <Route path="hr" element={<AdminHR />} />
-              <Route path="rewards" element={<AdminRewards />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="blog" element={<AdminBlog />} />
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
+            {/* Legacy website admin routes redirect to the authenticated ERP login. */}
+            <Route path="/admin/*" element={<ERPLoginRedirect />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

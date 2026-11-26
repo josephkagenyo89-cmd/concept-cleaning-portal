@@ -20,12 +20,12 @@ const Footer = () => (
             Nairobi's premium cleaning specialists. Homes, offices and vehicles — spotless, every time.
           </p>
           <div className="flex items-center gap-3 mt-5">
-            <a href="#" aria-label="Facebook" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-gold hover:border-gold hover:text-primary transition-all">
+            <span aria-hidden="true" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center">
               <Facebook className="w-4 h-4" />
-            </a>
-            <a href="#" aria-label="Instagram" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-gold hover:border-gold hover:text-primary transition-all">
+            </span>
+            <span aria-hidden="true" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center">
               <Instagram className="w-4 h-4" />
-            </a>
+            </span>
           </div>
         </div>
 
@@ -77,8 +77,8 @@ const Footer = () => (
       <div className="mt-14 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
         <p>© {new Date().getFullYear()} Concept Cleaning Services. All rights reserved.</p>
         <div className="flex gap-6">
-          <a href="#" className="hover:text-gold transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-gold transition-colors">Terms & Conditions</a>
+          <a href="https://concept-cleaning-portal.vercel.app/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">Privacy Policy</a>
+          <a href="https://concept-cleaning-portal.vercel.app/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">Terms & Conditions</a>
         </div>
       </div>
     </div>

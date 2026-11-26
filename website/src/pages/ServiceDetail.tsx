@@ -70,7 +70,7 @@ const ServiceDetail = () => {
         {service.keywords && <meta name="keywords" content={service.keywords} />}
         <meta property="og:title" content={service.meta_title || service.name} />
         <meta property="og:description" content={service.meta_description || service.description} />
-        <link rel="canonical" href={`https://concept-cleaning-kenya.lovable.app/services/${service.slug}`} />
+        <link rel="canonical" href={`https://www.conceptcleaningservices.co.ke/services/${service.slug}`} />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
