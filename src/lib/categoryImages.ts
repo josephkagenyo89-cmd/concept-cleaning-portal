@@ -93,3 +93,42 @@ export function invalidateCategoryImageMap(): void {
   categoryImageMapLoaded = false;
   categoryImageMapRequest = null;
 }
+
+export const CATEGORY_ORDER = [
+  'Residential Cleaning',
+  'Upholstery Cleaning',
+  'Carpet & Rug Cleaning',
+  'Car Interior Cleaning',
+  'Commercial Cleaning',
+  'Fumigation & Pest Control',
+];
+
+export function categoryImage(
+  category: string,
+  imageKey?: string | null,
+): string {
+  const key = imageKey?.trim().toLowerCase();
+
+  if (key && CATEGORY_IMAGE_BY_KEY[key]) {
+    return CATEGORY_IMAGE_BY_KEY[key];
+  }
+
+  const normalizedName = normalizeCategoryName(category);
+
+  if (categoryImageMap[normalizedName]) {
+    return categoryImageMap[normalizedName];
+  }
+
+  const legacyMatch = Object.entries(CATEGORY_IMAGES).find(
+    ([name]) => normalizeCategoryName(name) === normalizedName,
+  );
+
+  return legacyMatch?.[1] || residential;
+}
+
+export function serviceImage(
+  service: Pick<MarketService, 'image_url' | 'category'>
+): string {
+  return service.image_url || categoryImage(service.category);
+}
+
