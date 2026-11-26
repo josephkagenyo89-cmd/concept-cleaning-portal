@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BookOpen, Users, Wallet, CreditCard, ClipboardCheck,
   Settings, BarChart3, LogOut, Sparkles, Menu, X, Megaphone, MessageSquare,
   Receipt, DollarSign, FileText, PieChart, Landmark, Plus, ClipboardList, FolderOpen, UserCheck,
-  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Newspaper, Activity, Calculator, ChevronDown,
+  Settings2, Award, Star, Bug, Inbox, Briefcase, Building2, IdCard, Activity, Calculator, ChevronDown,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlockingNoticeModal from '@/components/notices/BlockingNoticeModal';
@@ -37,7 +37,6 @@ const navItems = [
   { to: '/admin/services', icon: Settings, label: 'Services' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/notices', icon: Megaphone, label: 'Notices' },
-  { to: '/admin/blog', icon: Newspaper, label: 'Blog' },
   { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/admin/settings', icon: Settings2, label: 'Settings' },
 ];

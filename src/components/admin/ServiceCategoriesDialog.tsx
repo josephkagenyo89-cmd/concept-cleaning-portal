@@ -39,7 +39,7 @@ import {
   CATEGORY_IMAGE_OPTIONS,
   categoryImage,
   invalidateCategoryImageMap,
-} from '@/lib/marketplace';
+} from '@/lib/categoryImages';
 import {
   ServiceCategory,
   ReconciliationService,

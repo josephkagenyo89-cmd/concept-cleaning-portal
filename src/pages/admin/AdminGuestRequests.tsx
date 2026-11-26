@@ -2,7 +2,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { waLink } from '@/components/public/PublicShell';
+const waLink = (phone: string, msg: string) => {
+  const normalizedPhone = (phone || '+254796563741').replace(/[^0-9]/g, '');
+  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(msg)}`;
+};
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -241,7 +244,7 @@ export default function AdminGuestRequests() {
             <h1 className="text-2xl font-bold tracking-tight">Guest Requests</h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Public landing-page booking and quotation enquiries. These are requests, not confirmed ERP bookings.
+            Guest booking and quotation enquiries awaiting review or conversion into CRM leads.
           </p>
         </div>
         <Button

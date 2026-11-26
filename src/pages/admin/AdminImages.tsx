@@ -3,7 +3,7 @@ import {
   fetchServiceCategories,
   type ServiceCategory,
 } from '@/lib/serviceCategories';
-import { categoryImage } from '@/lib/marketplace';
+import { categoryImage } from '@/lib/categoryImages';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
@@ -54,7 +54,7 @@ export default function AdminImages() {
       <div className="mb-4">
         <h1 className="text-lg font-bold">Category Images</h1>
         <p className="text-sm text-muted-foreground">
-          Marketplace artwork is served from the bundled image library.
+          Category artwork is served from the bundled image library.
           Category names and image assignments are loaded from the database.
         </p>
       </div>

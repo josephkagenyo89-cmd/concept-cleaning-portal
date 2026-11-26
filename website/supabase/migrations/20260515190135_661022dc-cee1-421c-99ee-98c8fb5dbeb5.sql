@@ -1,1 +1,0 @@
-ALTER TABLE public.blog_posts ADD COLUMN IF NOT EXISTS share_disabled boolean NOT NULL DEFAULT false;

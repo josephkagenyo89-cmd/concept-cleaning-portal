@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
@@ -17,12 +17,7 @@ import NetworkStatus from "@/components/NetworkStatus";
 import ErpPwaManager from "@/components/ErpPwaManager";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import OAuthConsent from "@/pages/OAuthConsent";
-import CustomerProfileRequiredDialog from "@/components/marketplace/CustomerProfileRequiredDialog";
-import GuestWhatsAppReturnDialog from "@/components/marketplace/GuestWhatsAppReturnDialog";
 import ScrollToTop from "@/components/ScrollToTop";
-import ScrollProgress from "@/components/ScrollProgress";
-import CookieBanner from "@/components/CookieBanner";
-import { captureUTMParams } from "@/lib/utm";
 // Lazy-loaded dashboard pages
 const AgentDashboard = lazy(() => import("@/pages/agent/AgentDashboard"));
 const AgentBooking = lazy(() => import("@/pages/agent/AgentBooking"));
@@ -73,62 +68,7 @@ const HrPositions = lazy(() => import("@/pages/admin/hr/HrPositions"));
 const HrPayroll = lazy(() => import("@/pages/admin/hr/HrPayroll"));
 const HrPayrollRun = lazy(() => import("@/pages/admin/hr/HrPayrollRun"));
 
-// Marketplace + customer portal
-const MarketplaceLayout = lazy(() => import("@/components/marketplace/MarketplaceLayout"));
-const MarketHome = lazy(() => import("@/pages/marketplace/MarketHome"));
-const MarketCategories = lazy(() => import("@/pages/marketplace/MarketCategories"));
-const MarketServiceDetail = lazy(() => import("@/pages/marketplace/MarketServiceDetail"));
-const CustomerAuth = lazy(() => import("@/pages/marketplace/CustomerAuth"));
-const CustomerBookings = lazy(() => import("@/pages/marketplace/CustomerBookings"));
-const CustomerDocuments = lazy(() => import("@/pages/marketplace/CustomerDocuments"));
-const CustomerMessages = lazy(() => import("@/pages/marketplace/CustomerMessages"));
-const CustomerAccount = lazy(() => import("@/pages/marketplace/CustomerAccount"));
-const CustomerDashboard = lazy(() => import("@/pages/marketplace/CustomerDashboard"));
-const CustomerSupport = lazy(() => import("@/pages/marketplace/CustomerSupport"));
-const CustomerNotifications = lazy(() => import("@/pages/marketplace/CustomerNotifications"));
-const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
-const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
-const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
-const ServicesPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServicesPage })));
-const ServiceCategoryPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ServiceCategoryPage })));
-const AboutPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.AboutPage })));
-const ContactPage = lazy(() => import("@/pages/public/MarketingPages").then((module) => ({ default: module.ContactPage })));
-const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
-const BlogPostPage = lazy(() => import("@/pages/public/BlogPostPage"));
-const AdminBlog = lazy(() => import("@/pages/admin/AdminBlog"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
-
-const marketplaceRoutes = (
-  <>
-  <Route path="/" element={<LandingPage />} />
-  <Route path="/services" element={<ServicesPage />} />
-  <Route path="/services/category/:categoryId/:categorySlug" element={<ServiceCategoryPage />} />
-  <Route path="/about" element={<AboutPage />} />
-  <Route path="/gallery" element={<Navigate to="/blog" replace />} />
-  <Route path="/contact" element={<ContactPage />} />
-  <Route path="/blog" element={<BlogIndex />} />
-  <Route path="/blog/:slug" element={<BlogPostPage />} />
-  <Route element={<MarketplaceLayout />}>
-    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-    <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-    <Route path="/marketplace" element={<MarketHome />} />
-    <Route path="/categories" element={<MarketCategories />} />
-    <Route path="/service/:id" element={<MarketServiceDetail />} />
-    <Route path="/customer-auth" element={<CustomerAuth />} />
-
-    <Route element={<CustomerGate />}>
-      <Route path="/my" element={<CustomerDashboard />} />
-      <Route path="/my/bookings" element={<CustomerBookings />} />
-      <Route path="/my/documents" element={<CustomerDocuments />} />
-      <Route path="/my/messages" element={<CustomerMessages />} />
-      <Route path="/my/notifications" element={<CustomerNotifications />} />
-      <Route path="/my/support" element={<CustomerSupport />} />
-    </Route>
-
-    <Route path="/my/account" element={<CustomerAccount />} />
-  </Route>
-  </>
-);
 
 const queryClient = new QueryClient();
 
@@ -144,7 +84,7 @@ function AdminGate() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/login" replace />;
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
@@ -231,7 +171,7 @@ function AgentGate() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAgent && !isAdmin) return <Navigate to="/" replace />;
+  if (!isAgent && !isAdmin) return <Navigate to="/login" replace />;
 
   if (isAgent && !isAdmin && profile?.status === 'pending') {
     return <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
@@ -266,36 +206,6 @@ function AgentGate() {
     </Suspense>
   );
 }
-function CustomerGate() {
-  const { user, loading, isCustomer, customerClient } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user || !isCustomer) {
-    const next = `${location.pathname}${location.search}`;
-    return <Navigate to={`/customer-auth?next=${encodeURIComponent(next)}`} replace />;
-  }
-
-  const profileIncomplete =
-    !customerClient ||
-    !customerClient.full_name?.trim() ||
-    !customerClient.phone?.trim() ||
-    !customerClient.location?.trim();
-
-  return (
-    <>
-      <Outlet />
-      {profileIncomplete && <CustomerProfileRequiredDialog />}
-    </>
-  );
- }
 function RouteTheme() {
   const location = useLocation();
 
@@ -311,132 +221,8 @@ function RouteTheme() {
   return null;
 }
 
-function MarketingPixelPageView() {
-  const location = useLocation();
-
-  useEffect(() => {
-    const trackPageView = () => {
-      if (localStorage.getItem("ccs_cookie_consent_v3") !== "accepted") return;
-
-      const pixelWindow = window as any;
-
-      // Preserve the existing Meta Pixel loader and initialization.
-      if (!pixelWindow.fbq) {
-        const fbq = function (...args: any[]) {
-          if ((fbq as any).callMethod) {
-            (fbq as any).callMethod.apply(fbq, args);
-          } else {
-            (fbq as any).queue.push(args);
-          }
-        } as any;
-
-        pixelWindow.fbq = fbq;
-        if (!pixelWindow._fbq) pixelWindow._fbq = fbq;
-        fbq.push = fbq;
-        fbq.loaded = true;
-        fbq.version = "2.0";
-        fbq.queue = [];
-
-        const script = document.createElement("script");
-        script.async = true;
-        script.src = "https://connect.facebook.net/en_US/fbevents.js";
-        const firstScript = document.getElementsByTagName("script")[0];
-
-        if (firstScript?.parentNode) {
-          firstScript.parentNode.insertBefore(script, firstScript);
-        } else {
-          document.head.appendChild(script);
-        }
-
-        fbq("init", "1436547675288965");
-      }
-
-      // Initialize TikTok only after optional tracking consent.
-      if (!pixelWindow.ttq) {
-        pixelWindow.TiktokAnalyticsObject = "ttq";
-
-        const ttq: any = pixelWindow.ttq = [];
-        ttq.methods = [
-          "page", "track", "identify", "instances", "debug", "on", "off",
-          "once", "ready", "alias", "group", "enableCookie", "disableCookie",
-          "holdConsent", "revokeConsent", "grantConsent"
-        ];
-
-        ttq.setAndDefer = (target: any, method: string) => {
-          target[method] = (...args: any[]) =>
-            target.push([method, ...args]);
-        };
-
-        for (const method of ttq.methods) {
-          ttq.setAndDefer(ttq, method);
-        }
-
-        ttq.instance = (pixelId: string) => {
-          const instance = ttq._i?.[pixelId] || [];
-          for (const method of ttq.methods) {
-            ttq.setAndDefer(instance, method);
-          }
-          return instance;
-        };
-
-        ttq.load = (pixelId: string, options?: any) => {
-          const scriptUrl =
-            "https://analytics.tiktok.com/i18n/pixel/events.js";
-
-          ttq._i = ttq._i || {};
-          ttq._i[pixelId] = [];
-          ttq._i[pixelId]._u = scriptUrl;
-
-          ttq._t = ttq._t || {};
-          ttq._t[pixelId] = Date.now();
-
-          ttq._o = ttq._o || {};
-          ttq._o[pixelId] = options || {};
-
-          const script = document.createElement("script");
-          script.type = "text/javascript";
-          script.async = true;
-          script.src = `${scriptUrl}?sdkid=${pixelId}&lib=ttq`;
-
-          const firstScript = document.getElementsByTagName("script")[0];
-
-          if (firstScript?.parentNode) {
-            firstScript.parentNode.insertBefore(script, firstScript);
-          } else {
-            document.head.appendChild(script);
-          }
-        };
-
-        ttq.load("DBQDVPJC77U4J2JRA24G");
-      }
-
-      const pageKey = location.pathname + location.search;
-
-      if (pixelWindow.__ccsMetaLastPageView !== pageKey) {
-        pixelWindow.__ccsMetaLastPageView = pageKey;
-        pixelWindow.fbq("track", "PageView");
-      }
-
-      if (pixelWindow.__ccsTikTokLastPageView !== pageKey) {
-        pixelWindow.__ccsTikTokLastPageView = pageKey;
-        pixelWindow.ttq.page();
-      }
-    };
-
-    trackPageView();
-    window.addEventListener("ccs-cookie-consent-updated", trackPageView);
-    return () => window.removeEventListener("ccs-cookie-consent-updated", trackPageView);
-  }, [location.pathname, location.search]);
-
-  return null;
-}
-function UTMTracker() {
-  captureUTMParams();
-  return null;
-}
-
 function AppRoutes() {
-  const { user, isAdmin, isAgent, isCustomer } = useAuth();
+  const { user, isAdmin, isAgent } = useAuth();
   useOfflineSync();
 
   const suspenseFallback = (
@@ -448,8 +234,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={suspenseFallback}>
       <Routes>
-        {/* Public marketplace + customer portal — always renders immediately, no auth wait */}
-        {marketplaceRoutes}
+        <Route path="/" element={<Navigate to={user ? (isAdmin ? '/admin' : isAgent ? '/agent' : '/login') : '/login'} replace />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -461,11 +246,6 @@ function AppRoutes() {
         {/* Admin & agent — each gated independently, only these wait on auth */}
         <Route path="/admin/*" element={<AdminGate />} />
         <Route path="/agent/*" element={<AgentGate />} />
-
-        {/* Logged-in staff landing on "/" get bounced to their dashboard */}
-        {user && !isCustomer && (
-          <Route path="/" element={<Navigate to={isAdmin ? '/admin' : isAgent ? '/agent' : '/'} replace />} />
-        )}
 
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -481,15 +261,10 @@ const App = () => (
       <NetworkStatus />
       <BrowserRouter>
         <RouteTheme />
-        <MarketingPixelPageView />
-        <UTMTracker />
-        <ScrollProgress />
         <ScrollToTop />
         <AuthProvider>
           <ErpPwaManager />
           <AppRoutes />
-          <GuestWhatsAppReturnDialog />
-          <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
