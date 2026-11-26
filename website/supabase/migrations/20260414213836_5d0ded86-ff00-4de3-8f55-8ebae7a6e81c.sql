@@ -1,0 +1,1 @@
+UPDATE services SET category = 'Package', description = 'Complete car interior and exterior cleaning. Includes: Interior Cleaning, Seat Shampooing, Dashboard Polish, Exterior Wash.' WHERE slug = 'car-detailing-combo';
