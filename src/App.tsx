@@ -114,7 +114,6 @@ function AdminGate() {
         <Route path="clients" element={<AdminClients />} />
         <Route path="clients/:id" element={<AdminClientProfile />} />
         <Route path="notices" element={<AdminNotices />} />
-        <Route path="blog" element={<AdminBlog />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="feedback" element={<AdminFeedback />} />
