@@ -135,6 +135,12 @@ const Auth = () => {
               </Button>
             </form>
 
+            {mode === "signup" && (
+              <Button asChild variant="outline" className="w-full mt-3 rounded-full">
+                <a href="https://concept-cleaning-portal.vercel.app/login">Admin / Staff Login</a>
+              </Button>
+            )}
+
             <p className="text-center text-sm text-muted-foreground mt-5">
               {mode === "signup" ? "Already have an account? " : "New to Concept? "}
               <button onClick={() => setMode(mode === "signup" ? "login" : "signup")} className="text-primary font-medium hover:text-terracotta">
