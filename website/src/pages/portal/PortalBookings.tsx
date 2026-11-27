@@ -8,6 +8,8 @@ import { Calendar, RotateCw, ClipboardList } from "lucide-react";
 const statusStyle: Record<string, string> = {
   pending: "bg-gold/10 text-gold-foreground",
   received: "bg-blue-50 text-blue-700",
+  under_review: "bg-sky-50 text-sky-700",
+  quoted: "bg-gold/10 text-gold-foreground",
   new: "bg-blue-50 text-blue-700",
   contacted: "bg-sky-50 text-sky-700",
   qualified: "bg-emerald/10 text-emerald",

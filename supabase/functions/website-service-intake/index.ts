@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     p_user_id: verifiedUserId,
   });
   if (error) {
-    const clientError = /required|allowed length|Invalid|Select between|quantity|duplicate|unavailable/i.test(error.message);
+    const clientError = /required|allowed length|Invalid|Select between|quantity|duplicate|unavailable|sign in|profile|submission token|different request owner|associated/i.test(error.message);
     return json({ error: clientError ? error.message : "Unable to submit your request. Please try again." }, clientError ? 400 : 500, origin);
   }
   return json({ success: true, ...data }, data?.duplicate ? 200 : 201, origin);
