@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
   const rateLimitSecret = Deno.env.get("GUEST_REQUEST_RATE_LIMIT_SECRET");
   const clientIp = req.headers.get("cf-connecting-ip")?.trim();
   if (!rateLimitSecret || rateLimitSecret.length < 32 || !clientIp ||
-      clientIp.length > 64 || /[\\s,]/.test(clientIp)) {
+      clientIp.length > 64 || /[\s,]/.test(clientIp)) {
     return json({ error: "Request protection is temporarily unavailable." }, 503, origin);
   }
 
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     itemIds.add(item.service_id);
   }
   if (payload.preferred_date != null &&
-      (typeof payload.preferred_date !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.preferred_date))) {
+      (typeof payload.preferred_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(payload.preferred_date))) {
     return json({ error: "Preferred date must use YYYY-MM-DD." }, 400, origin);
   }
   if (payload.selected_assets != null && !Array.isArray(payload.selected_assets)) {
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
   let verifiedUserId: string | null = null;
   if (payload.customer_type === "registered") {
     const authorization = req.headers.get("Authorization") ?? "";
-    const match = authorization.match(/^Bearer\\s+(.+)$/i);
+    const match = authorization.match(/^Bearer\s+(.+)$/i);
     const accessToken = match?.[1]?.trim();
     const publicKey = req.headers.get("apikey");
     if (!accessToken || !publicKey || accessToken === publicKey) {
