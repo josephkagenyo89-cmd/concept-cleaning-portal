@@ -144,7 +144,33 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid submission token. Please refresh and try again." }, 400, origin);
   }
 
-  const { data, error } = await admin.rpc("submit_website_service_request", { p_payload: payload });
+  let verifiedUserId: string | null = null;
+  if (payload.customer_type === "registered") {
+    const authorization = req.headers.get("Authorization") ?? "";
+    const match = authorization.match(/^Bearer\\s+(.+)$/i);
+    const accessToken = match?.[1]?.trim();
+    const publicKey = req.headers.get("apikey");
+    if (!accessToken || !publicKey || accessToken === publicKey) {
+      return json({ error: "Sign in is required to submit a registered-customer request." }, 401, origin);
+    }
+
+    const customerClient = createClient(supabaseUrl, publicKey, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: authData, error: authError } = await customerClient.auth.getUser(accessToken);
+    if (authError || !authData.user) {
+      return json({ error: "Your customer session is invalid or expired. Please sign in again." }, 401, origin);
+    }
+    verifiedUserId = authData.user.id;
+  }
+
+  // Never trust a user id supplied in the browser payload.
+  delete payload.user_id;
+  const { data, error } = await admin.rpc("submit_website_service_request_with_owner", {
+    p_payload: payload,
+    p_user_id: verifiedUserId,
+  });
   if (error) {
     const clientError = /required|allowed length|Invalid|Select between|quantity|duplicate|unavailable/i.test(error.message);
     return json({ error: clientError ? error.message : "Unable to submit your request. Please try again." }, clientError ? 400 : 500, origin);

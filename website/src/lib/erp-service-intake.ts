@@ -72,10 +72,19 @@ export async function fetchERPServices(): Promise<ERPService[]> {
 }
 
 export async function submitERPServiceRequest(payload: Record<string, unknown>): Promise<{ request_reference: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const isRegistered = payload.customer_type === "registered";
+  if (isRegistered && !session?.access_token) {
+    throw new Error("Your customer session has expired. Please sign in again before submitting.");
+  }
+  const headers = getERPHeaders();
+  if (isRegistered && session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
   const response = await fetch(ERP_INTAKE_URL, {
     method: "POST",
     headers: {
-      ...getERPHeaders(),
+      ...headers,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
